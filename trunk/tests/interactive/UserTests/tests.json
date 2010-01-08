@@ -1,0 +1,15 @@
+{
+    "common":{
+        "request": [
+        	"getNoDataHtml",
+        	"postNoDataHtml",
+        	"getWithDataHtml",
+        	"postWithDataHtml",
+        	"getNoDataJson",
+        	"postNoDataJson",
+        	"getWithDataJson",
+        	"postWithDataJson",
+        	
+        ]
+    }
+}

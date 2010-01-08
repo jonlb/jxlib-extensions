@@ -1,0 +1,428 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--*************************************************************************
+Filename        :   build.xml
+Project         :   jx
+Document Type   :   XML
+Purpose         :   build file for ant tool
+
+Author     Date            Description
+M.Adair    09-July-2007  initial version copied from fusion
+
+$Id: build.xml 491 2009-07-24 22:05:00Z pagameba $
+***************************************************************************-->
+<project basedir="." default="deploy" name="jx">
+<!-- ===================== Property Definitions =========================== -->
+<!--
+  Each of the following properties are used in the build script.
+  Values for these properties are set by the first place they are
+  defined, from the following list:
+
+  * Definitions on the "ant" command line (ant -Dfoo=bar compile).
+
+  * Definitions from a "build.properties" file in the top level
+    source directory of this application.
+
+  * Definitions from a "build.properties" file in the developer's
+    home directory.
+
+  * Default definitions in this build.xml file.
+
+  You will note below that property values can be composed based on the
+  contents of previously defined properties.  This is a powerful technique
+  that helps you minimize the number of changes required when your development
+  environment is modified.  Note that property composition is allowed within
+  "build.properties" files as well as in the "build.xml" script.
+-->
+  <property file="build.properties"/>
+  <property file="${user.home}/build.properties"/>
+  <property file="default.properties"/>  	
+
+<!-- ==================== File and Directory Names ======================== -->
+<!--
+
+  These properties generally define file and directory names (or paths) that
+  affect where the build process stores its outputs.
+
+  app.name             Base name of this application, used to
+                       construct filenames and directories.
+                       Defaults to "myapp".
+
+  app.path             Context path to which this application should be
+                       deployed (defaults to "/" plus the value of the
+                       "app.name" property).
+
+  app.version          Version number of this iteration of the application.
+
+  build.home           The directory into which the "prepare" and
+                       "compile" targets will generate their output.
+                       Defaults to "build".
+
+  dist.home            The name of the base directory in which
+                       distribution files are created.
+                       Defaults to "dist".
+                       
+  deploy.home          The name of the directory to deploy the library to.
+                       Defaults to the web site directory (../www).
+                       
+  docs.home            The name of the directory to deploy the api docs to.
+                       Defaults to the reference directory within the web 
+                       site directory (../www).
+-->
+
+  <property environment="env"/>
+  <property name="app.name" value="jxlib"/>
+  <property name="app.path" value="/${app.name}"/>
+  <property name="app.version" value="2.0.1"/>
+  <!-- when branching jxlib, modify build.xml in the branch to set the
+       correct jxlib.home value (add an extra ../) -->
+  <property name="jxlib.home" value="${basedir}/.."/>
+  <property name="build.home" value="${jxlib.home}/build"/>
+  <property name="dist.home" value="${jxlib.home}/dist"/>
+  <property name="deploy.home" value="${jxlib.home}/www"/>
+  <property name="docs.home" value="${jxlib.home}/www/reference"/>
+  <property name="vendor.home" value="${jxlib.home}/vendor"/>
+
+<!-- ==================== External Dependencies =========================== -->
+
+<!--
+  Use property values to define the locations of external libraries on which
+  your application will depend.  
+ 
+  YUIcompressor - we include a working version in the utils dir that comes with
+                  the source
+  NaturalDocs   - the api reference docs are built automagically from source using
+                  natural docs, we've included it in utils since we are dependent
+                  on a particular version
+  MooToolsCore  - the mootools core file to use.  We include a full build of mootools
+                  but you can replace it with your own minimal build if you like.
+  MooToolsMore  - the mootools more file to use.  We include a full build of mootools
+                  but you can replace it with your own minimal build if you like.
+                                    
+ -->
+  <property name="YUIcompressor" value="${basedir}/utils/yuicompressor-2.3.6.jar"/>
+  <property name="NaturalDocs"   value="${basedir}/utils/NaturalDocs-1.4/NaturalDocs"/>
+  <property name="MooToolsCore"  value="${basedir}/utils/mootools-1.2.2-core-nc.js" />
+  <property name="MooToolsMore"  value="${basedir}/utils/mootools-1.2.2.1-more.js" />
+
+<!-- ==================== Prepare Target ================================== -->
+
+<!--
+
+  The "prepare" target is used to create the "build" destination directory,
+  and copy the static contents of your web application to it.  If you need
+  to copy static files from external dependencies, you can customize the
+  contents of this task.
+
+  Normally, this task is executed indirectly when needed.
+
+-->
+
+  <target name="prepare" description="preparing core files" depends="clean">
+    <echo message="os name=${os.name}"/>
+    <echo message="os family=${osfamily}"/>
+    <echo message="Preparing core files"/>
+    <!-- Create build directories as needed -->
+    <mkdir dir="${build.home}"/>
+  	<mkdir dir="${build.home}/lib"/>
+    
+    <!-- Copy static content of the project  -->
+    <copy todir="${build.home}">
+      <fileset dir="${basedir}/src" includes="Source/** themes/** images/**"/>
+    </copy>
+    
+    <delete file="${build.home}/lib/jxlib.uncompressed.js"/>
+    <delete file="${build.home}/lib/jxlib.standalone.uncompressed.js"/>
+    <delete file="${build.home}/lib/jxlib.js"/>
+    <delete file="${build.home}/lib/jxlib.standalone.js"/>
+
+    <echo message="Concatenating javascript into jxlib"/>
+
+    <echo message="exec 1"/>
+  	<exec executable="php">
+		<arg line="${basedir}/utils/combine.php -filelist ${build.home}/Source/scripts.json -jsonFile ${build.home}/lib/jxlib.json -target ${build.home}/lib/jxlib.temp.js -basedir ${build.home}/Source" />
+	</exec>
+
+    <echo message="exec 2"/>
+  	<exec executable="php">
+		<arg line="${basedir}/utils/combine.php -filelist ${vendor.home}/mootools-core/current/Source/scripts.json -jsonFile ${build.home}/lib/core.json -target ${build.home}/lib/mootools-core.js -basedir ${vendor.home}/mootools-core/current/Source" />
+	</exec>
+  	<echo message="exec 3"/>
+    <exec executable="php">
+  		<arg line="${basedir}/utils/combine.php -filelist ${basedir}/../vendor/mootools-more/current/Source/scripts.json -jsonFile ${build.home}/lib/more.json -target ${build.home}/lib/mootools-more.js -basedir ${vendor.home}/mootools-more/current/Source" />
+	</exec>
+  	<echo message="exec 4"/>
+    <exec executable="php">
+  		<arg line="${basedir}/utils/createDeps.json.php -fileLoc ${build.home}/lib" />
+	</exec>
+  	<exec executable="php">
+  		<arg line="${basedir}/utils/combineFiles.php -filelist mootools-core,mootools-more,jxlib.temp -target ${build.home}/lib/jxlib.uncompressed.js -basedir ${build.home}/lib" />
+	</exec>
+  	<exec executable="php">
+  		<arg line="${basedir}/utils/combineFiles.php -filelist ../Source/license,jxlib.uncompressed -target ${build.home}/lib/jxlib.uncompressed.js -basedir ${build.home}/lib" />
+	</exec>
+  	<exec executable="php">
+  		<arg line="${basedir}/utils/combineFiles.php -filelist ../Source/license,jxlib.temp -target ${build.home}/lib/jxlib.standalone.uncompressed.js -basedir ${build.home}/lib" />
+	</exec>
+
+    <java jar="${YUIcompressor}" fork="true"
+          output="${build.home}/lib/jxlib.standalone.compressed.js">
+        <arg value="${build.home}/lib/jxlib.standalone.uncompressed.js"/>
+    </java>
+    <java jar="${YUIcompressor}" fork="true"
+          output="${build.home}/lib/jxlib.compressed.js">
+        <arg value="${build.home}/lib/jxlib.uncompressed.js"/>
+    </java>
+    
+  	<exec executable="php">
+  		<arg line="${basedir}/utils/combineFiles.php -filelist ../Source/license,jxlib.standalone.compressed -target ${build.home}/lib/jxlib.standalone.js -basedir ${build.home}/lib" />
+	</exec>
+  	<exec executable="php">
+  		<arg line="${basedir}/utils/combineFiles.php -filelist ../Source/license,jxlib.compressed -target ${build.home}/lib/jxlib.js -basedir ${build.home}/lib" />
+	</exec>
+    
+    <replace file="${build.home}/lib/jxlib.standalone.uncompressed.js" token="[version]" value="${app.version}"/>
+    <replace file="${build.home}/lib/jxlib.standalone.js" token="[version]" value="${app.version}"/>
+    <replace file="${build.home}/lib/jxlib.uncompressed.js" token="[version]" value="${app.version}"/>
+    <replace file="${build.home}/lib/jxlib.js" token="[version]" value="${app.version}"/>
+    
+    <delete file="${build.home}/lib/jxlib.standalone.compressed.js"/>
+    <delete file="${build.home}/lib/jxlib.compressed.js"/>
+  	<delete file="${build.home}/lib/jxlib.temp.js"/>
+
+    	
+    <copy file="${build.home}/images/a_pixel.png" todir="${build.home}/lib"/>
+    
+    <mkdir dir="${build.home}/themes"/>
+    
+  </target>
+
+  <target name="theme" description="create a theme based on the theme variable">
+    <echo message="Creating ${theme} theme"/>
+    <mkdir dir="${build.home}/lib/themes/${theme}"/>
+    <copy file="${build.home}/themes/${theme}/ie6.css" todir="${build.home}/lib/themes/${theme}/"/>
+    <copy file="${build.home}/themes/${theme}/ie7.css" todir="${build.home}/lib/themes/${theme}/"/>
+
+    <concat destfile="${build.home}/lib/themes/${theme}/jxtheme.uncompressed.css">
+        <filelist dir="${build.home}/themes/${theme}" files="reset.css"/>
+        <fileset dir="${build.home}/themes/${theme}/css" includes="**.css"/>
+    </concat>
+    
+    <copy todir="${build.home}/lib/themes/${theme}/images">
+      <fileset dir="${build.home}/themes/${theme}/images"/>
+    </copy>
+        
+    <java jar="${YUIcompressor}" fork="true"
+          output="${build.home}/lib/themes/${theme}/jxtheme.compressed.css">
+        <arg value="${build.home}/lib/themes/${theme}/jxtheme.uncompressed.css"/>
+    </java>
+    
+    <concat destfile="${build.home}/lib/themes/${theme}/jxtheme.css">
+      <filelist dir="${build.home}/themes/${theme}" files="license.css"/>
+      <filelist dir="${build.home}/lib/themes/${theme}" files="jxtheme.compressed.css"/>
+    </concat>
+    
+    <delete file="${build.home}/lib/themes/${theme}/jxtheme.compressed.css"/>
+    
+  </target>
+
+
+<!-- =================== Compress Target ================================== -->
+
+  <target description="Build the Jx library" name="build" depends="prepare">
+    <antcall target="theme">
+      <param name="theme" value="crispin"/>
+    </antcall>
+    <antcall target="theme">
+      <param name="theme" value="delicious"/>
+    </antcall>
+  </target>
+  
+  <target description="Copies JxLib files to www directory" name="copy" depends="build" >
+  	<copy todir="${deploy.home}/lib">
+        <fileset dir="${build.home}/lib"/>
+    </copy>
+  </target>
+	
+	
+  <target description="Deploy JxLib" name="deploy" depends="copy,builder,tests,docs">
+    <echo message="deploying files"/>
+    <copy todir="${deploy.home}/reference/tutorials/lib">
+        <fileset dir="${build.home}/lib"/>
+    </copy>
+    <copy todir="${deploy.home}/reference/examples/lib">
+        <fileset dir="${build.home}/lib"/>
+    </copy>
+  </target>
+	
+  <target description="Deploy source for www download builder" name="builder" depends="copy">
+	<delete dir="${deploy.home}/builder/src" />
+  	<delete dir="${deploy.home}/builder/assets" />
+  	<mkdir dir="${deploy.home}/builder/src"/>
+  	<mkdir dir="${deploy.home}/builder/assets"/>
+  	<mkdir dir="${deploy.home}/builder/assets/themes"/>
+  	<mkdir dir="${deploy.home}/builder/src/core"/>
+  	<mkdir dir="${deploy.home}/builder/src/more"/>
+  	<mkdir dir="${deploy.home}/builder/src/core/Source"/>
+  	<mkdir dir="${deploy.home}/builder/src/more/Source"/>
+  	<mkdir dir="${deploy.home}/builder/src/jxlib"/>
+  	<mkdir dir="${deploy.home}/builder/src/jxlib/Source"/>
+  	
+  	<copy todir="${deploy.home}/builder/src/core/Source">
+  		<fileset dir="${vendor.home}/mootools-core/current/Source" />
+  	</copy>
+	<copy todir="${deploy.home}/builder/src/more/Source">
+  		<fileset dir="${vendor.home}/mootools-more/current/Source" />
+  	</copy>
+	<copy todir="${deploy.home}/builder/src/jxlib/Source/">
+  		<fileset dir="${build.home}/Source" />
+  	</copy>
+	<copy todir="${deploy.home}/builder/assets/themes/">
+  		<fileset dir="${build.home}/lib/themes/" />
+  	</copy>
+  	<copy file="${build.home}/images/a_pixel.png" todir="${deploy.home}/builder/assets" />
+  	
+	<!-- Place JSON files -->
+  	<move file="${deploy.home}/lib/deps.json" todir="${deploy.home}/builder/work/" />
+  	<move file="${deploy.home}/lib/jxlib.json" todir="${deploy.home}/builder" />
+  	<move file="${deploy.home}/lib/core.json" todir="${deploy.home}/builder" />
+  	<move file="${deploy.home}/lib/more.json" todir="${deploy.home}/builder" />
+  </target>
+	
+	<target description="setup files for tests" name="tests" depends="builder">
+		<!-- Copy themes to the right locations -->
+		<copy todir="${basedir}/tests/interactive/UserTests/assets/themes">
+	  	    <fileset dir="${build.home}/lib/themes/"/>
+	  	</copy>
+		<copy file="${build.home}/lib/a_pixel.png" todir="${basedir}/tests/interactive/UserTests/assets/" />
+		
+		<delete dir="${deploy.home}/tests" />
+		<mkdir dir="${deploy.home}/tests"/>
+		<copy todir="${deploy.home}/tests">
+			<fileset dir="${basedir}/tests" />
+		</copy>
+		<delete file="${deploy.home}/tests/interactive/config.js"/>
+		<rename dest="${deploy.home}/tests/interactive/config.js" src="${deploy.home}/tests/interactive/config-www.js"/>
+		
+		<delete file="${deploy.home}/tests/interactive/test_frame.html"/>
+		<rename dest="${deploy.home}/tests/interactive/test_frame.html" src="${deploy.home}/tests/interactive/test_frame-www.html"/>
+				
+		
+	</target>
+  
+  <target description="Package Tutorials" name="tutorials" depends="build">
+    <echo message="packaging tutorials"/>
+    <mkdir dir="${build.home}/tutorials"/>
+    <copy todir="${build.home}/tutorials/lib">
+        <fileset dir="${build.home}/lib"/>
+    </copy>
+    <copy todir="${build.home}/tutorials/browsr">
+      <fileset dir="${deploy.home}/reference/tutorials/browsr"/>
+    </copy>
+  </target>
+	
+  <target description="Package Examples" name="examples" depends="build">
+    <echo message="packaging examples"/>
+    <mkdir dir="${build.home}/examples"/>
+    <copy todir="${build.home}/examples">
+        <fileset dir="${deploy.home}/reference/examples"/>
+    </copy>
+  	
+  </target>
+
+
+<!-- ==================== Documentation =================================== -->
+
+  <target description="Create documentation" name="docs" depends="prepare">
+
+    <mkdir dir="${build.home}/docs"/>
+    <mkdir dir="${build.home}/docs/api"/>
+    <echo message="Generating documentation"/>
+    <exec executable="cmd" os="Windows Vista, Windows XP" dir="${build.home}">
+      <arg line="/c perl ${NaturalDocs} -i ./Source -o framedhtml ./docs/api -p ${basedir}/utils/ndconfig -s jx -r"/>
+    </exec>
+    <exec executable="/usr/bin/env" os="Mac OS X, Linux" dir="${build.home}">
+      <arg line=" perl ${NaturalDocs} -i ./Source -o framedhtml ./docs/api -p ${basedir}/utils/ndconfig -s jx -r"/>
+    </exec>
+    <mkdir dir="${docs.home}/api"/>
+    <copy todir="${docs.home}/api">
+      <fileset dir="${build.home}/docs/api"/>
+    </copy>
+  </target>
+
+<!-- ==================== Dist Target ===================================== -->
+<!--
+
+  The "dist" target creates a binary distribution of your application
+  in a directory structure ready to be archived in a tar.gz or zip file.
+  Note that this target depends on two others:
+
+  * "compile" so that the entire web application (including external
+    dependencies) will have been assembled
+-->
+
+  <target name="dist" description="Create binary distribution" depends="clean,build,tutorials,examples">
+    
+    <echo message="Creating distribution archives"/>
+    <mkdir dir="${dist.home}"/>
+
+    <delete file="${dist.home}/${app.name}-${app.version}.tar.gz"/>
+    <delete file="${dist.home}/${app.name}-tutorials-${app.version}.tar.gz"/>
+    <delete file="${dist.home}/${app.name}-examples-${app.version}.tar.gz"/>
+    <delete file="${dist.home}/${app.name}-${app.version}.zip"/>
+    <delete file="${dist.home}/${app.name}-tutorials-${app.version}.zip"/>
+    <delete file="${dist.home}/${app.name}-examples-${app.version}.zip"/>
+
+    <!-- Create source zip file -->
+    <zip destfile="${dist.home}/${app.name}-${app.version}.zip" update="true">
+      <zipfileset dir="${build.home}/lib" prefix="${app.name}"/>
+    </zip>
+    <!-- Create tutorials zip file -->
+    <zip destfile="${dist.home}/${app.name}-tutorials-${app.version}.zip" update="true">
+      <zipfileset dir="${build.home}/tutorials" prefix="${app.name}"/>
+    </zip>
+    <!-- Create examples zip file -->
+    <zip destfile="${dist.home}/${app.name}-examples-${app.version}.zip" update="true">
+      <zipfileset dir="${build.home}/examples" prefix="${app.name}"/>
+    </zip>
+    
+    <!-- create tar file -->
+    <tar destfile="${dist.home}/${app.name}-${app.version}.tar">
+      <tarfileset dir="${build.home}/lib" prefix="${app.name}"/>
+    </tar>
+    <gzip src="${dist.home}/${app.name}-${app.version}.tar" destfile="${dist.home}/${app.name}-${app.version}.tar.gz"/>
+    
+    <delete file="${dist.home}/${app.name}-${app.version}.tar"/>
+    
+    <!-- create tar file -->
+    <tar destfile="${dist.home}/${app.name}-tutorials-${app.version}.tar">
+      <tarfileset dir="${build.home}/tutorials" prefix="${app.name}"/>
+    </tar>
+    <gzip src="${dist.home}/${app.name}-tutorials-${app.version}.tar" destfile="${dist.home}/${app.name}-tutorials-${app.version}.tar.gz"/>
+    
+    <delete file="${dist.home}/${app.name}-tutorials-${app.version}.tar"/>
+    
+    <!-- create tar file -->
+    <tar destfile="${dist.home}/${app.name}-examples-${app.version}.tar">
+      <tarfileset dir="${build.home}/examples" prefix="${app.name}"/>
+    </tar>
+    <gzip src="${dist.home}/${app.name}-examples-${app.version}.tar" destfile="${dist.home}/${app.name}-examples-${app.version}.tar.gz"/>
+    
+    <delete file="${dist.home}/${app.name}-examples-${app.version}.tar"/>
+    
+  </target>
+
+<!-- ==================== Clean Target ==================================== -->
+<!--
+
+  The "clean" target deletes any previous "build" and "dist" directory,
+  so that you can be ensured the application can be built from scratch.
+
+-->
+
+  <target description="Delete old build and dist directories" name="clean">
+    <echo message="Removing build directories"/>
+    <delete dir="${build.home}"/>
+    <delete dir="${dist.home}"/>
+  </target>
+
+</project>

@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--*************************************************************************
+Filename        :   build.xml
+Project         :   jxlib-extensions
+Document Type   :   XML
+Purpose         :   build file for ant tool
+
+Author     		Date            Description
+J.Bomgardner    April 5, 2009   initial version copied from jx project
+
+***************************************************************************-->
+<project basedir="." default="" name="jxlib-extensions">
+<!-- ===================== Property Definitions =========================== -->
+<!--
+  Each of the following properties are used in the build script.
+  Values for these properties are set by the first place they are
+  defined, from the following list:
+
+  * Definitions on the "ant" command line (ant -Dfoo=bar compile).
+
+  * Definitions from a "build.properties" file in the top level
+    source directory of this application.
+
+  * Definitions from a "build.properties" file in the developer's
+    home directory.
+
+  * Default definitions in this build.xml file.
+
+  You will note below that property values can be composed based on the
+  contents of previously defined properties.  This is a powerful technique
+  that helps you minimize the number of changes required when your development
+  environment is modified.  Note that property composition is allowed within
+  "build.properties" files as well as in the "build.xml" script.
+-->
+  <property file="build.properties"/>
+  <property file="${user.home}/build.properties"/>
+  <property file="default.properties"/>  	
+
+<!-- ==================== File and Directory Names ======================== -->
+<!--
+
+  These properties generally define file and directory names (or paths) that
+  affect where the build process stores its outputs.
+
+  app.name             Base name of this application, used to
+                       construct filenames and directories.
+                       Defaults to "myapp".
+
+  app.path             Context path to which this application should be
+                       deployed (defaults to "/" plus the value of the
+                       "app.name" property).
+
+  app.version          Version number of this iteration of the application.
+
+  build.home           The directory into which the "prepare" and
+                       "compile" targets will generate their output.
+                       Defaults to "build".
+
+  dist.home            The name of the base directory in which
+                       distribution files are created.
+                       Defaults to "dist".
+                       
+  deploy.home          The name of the directory to deploy the library to.
+                       Defaults to the web site directory (../www).
+                       
+  docs.home            The name of the directory to deploy the api docs to.
+                       Defaults to the reference directory within the web 
+                       site directory (../www).
+-->
+
+  <property environment="env"/>
+  <property name="app.name" value="jxlib-extensions"/>
+  <property name="app.path" value="/${app.name}"/>
+  <property name="app.version" value=".1-alpha"/>
+  <property name="build.home" value="${basedir}/../build-ext"/>
+  <property name="dist.home" value="${basedir}/../dist"/>
+  <property name="deploy.home" value="${basedir}/../www"/>
+  <property name="docs.home" value="${basedir}/../www/reference"/>
+
+<!-- ==================== External Dependencies =========================== -->
+
+<!--
+  Use property values to define the locations of external libraries on which
+  your application will depend.  
+ 
+  YUIcompressor - we include a working version in the utils dir that comes with
+                  the source
+  NaturalDocs   - the api reference docs are built automagically from source using
+                  natural docs, we've included it in utils since we are dependent
+                  on a particular version
+  MooToolsCore  - the mootools core file to use.  We include a full build of mootools
+                  but you can replace it with your own minimal build if you like.
+  MooToolsMore  - the mootools more file to use.  We include a full build of mootools
+                  but you can replace it with your own minimal build if you like.
+  
+  We use the versions from the JxLib project that has been added via svn:externals                  
+ -->
+  <property name="YUIcompressor" value="${basedir}/deps/jxlib/utils/yuicompressor-2.3.6.jar"/>
+  <property name="NaturalDocs"   value="${basedir}/deps/jxlib/utils/NaturalDocs-1.4/NaturalDocs"/>
+  <property name="MooToolsCore"  value="${basedir}/deps/jxlib/utils/mootools-1.2.1-core.js" />
+  <property name="MooToolsMore"  value="${basedir}/deps/jxlib/utils/mootools-1.2-more.js" />
+
+<!-- ==================== Prepare Target ================================== -->
+
+<!--
+
+  The "prepare" target is used to create the "build" destination directory,
+  and copy the static contents of your web application to it.  If you need
+  to copy static files from external dependencies, you can customize the
+  contents of this task.
+
+  Normally, this task is executed indirectly when needed.
+
+-->
+
+  <target name="prepare" description="preparing core files" depends="clean">
+    <echo message="os name=${os.name}" />
+    <echo message="os family=${os.family}" />
+    <echo message="Preparing core files" />
+    <!-- Create build directories as needed -->
+    <mkdir dir="${build.home}" />
+  	
+  	<!-- build jxlib -->
+  	<ant antfile="build.xml" target="build" dir="deps/jxlib/" inheritall="false" />
+  	
+  	<!-- Create base library using Combine.php -->
+  	<mkdir dir="${build.home}/lib" />
+  	<echo message="Creating jxlib-extensions library temp file"/>
+	<exec executable="${basedir}/utils/combine.php">
+		<arg line="-filelist ${basedir}/Source/scripts.json -type json -target ${build.home}/lib/jxlib-extensions.temp.js -basedir ${basedir}/Source" />
+	</exec>
+    
+  	<echo message="Creating jxlib-extensions uncompressed"/>
+    <concat destfile="${build.home}/lib/jxlib-extensions.uncompressed.js">
+        <filelist dir="${basedir}/utils" files="license-jxlib-extensions.txt"/>
+        <filelist dir="${build.home}/lib" files="jxlib-extensions.temp.js"/>
+    </concat>
+  	
+  	<echo message="Compressing js files"/>
+    <java jar="${YUIcompressor}" fork="true"
+          output="${build.home}/lib/jxlib-extensions.compressed.js">
+        <arg value="${build.home}/lib/jxlib-extensions.uncompressed.js"/>
+    </java>
+	
+	<!-- Create CSS Files -->
+	<echo message="Creating jxlib-extensions css library file"/>
+	<exec executable="${basedir}/utils/combine.php">
+		<arg line="-filelist ${basedir}/css/cssfiles.php -target ${build.home}/lib/jxlib-extensions.uncompressed.css -basedir ${basedir}/css" />
+	</exec>
+	
+	<echo message="Compress css file"/>
+   	<java jar="${YUIcompressor}" fork="true"
+          output="${build.home}/lib/jxlib-extensions.css">
+        <arg value="${build.home}/lib/jxlib-extensions.uncompressed.css"/>
+    </java>
+	
+	<!-- add licensing file -->
+	<concat destfile="${build.home}/lib/jxlib-extensions.js">
+      <filelist dir="${basedir}/utils" files="license-jxlib-extensions.txt"/>
+      <filelist dir="${build.home}/lib" files="jxlib-extensions.compressed.js"/>
+    </concat>
+  	
+	<!-- Update Version stamp -->
+	<replace file="${build.home}/lib/jxlib-extensions.uncompressed.js" token="[version]" value="${app.version}"/>
+    <replace file="${build.home}/lib/jxlib-extensions.js" token="[version]" value="${app.version}"/>
+   
+   	<delete file="${build.home}/lib/jxlib-extensions.compressed.js"/>
+    <delete file="${build.home}/lib/jxlib-extensions.temp.js"/>
+   
+  </target>
+
+  <target name="test-setup" description="Sets up files needed to successfully run tests" depends="prepare">
+  	<delete dir="${basedir}/Source/deps"/>
+  	<mkdir dir="${basedir}/Source/deps"/>
+  	
+  	<copy todir="${basedir}/Source/deps/themes">
+        <fileset dir="${basedir}/deps/build/lib/themes/"/>
+    </copy>
+  	
+  	<!-- Move stuff to /Source/deps for interactive testing -->
+  	<copy file="${basedir}/deps/build/lib/a_pixel.png" todir="${basedir}/Source/deps/"/>
+  	<copy file="${basedir}/deps/date.js" todir="${basedir}/Source/deps/"/>
+  	<copy file="${basedir}/deps/build/lib/jxlib.standalone.uncompressed.js"  tofile="${basedir}/Source/deps/jxlib.js"/>
+  	<copy file="${MooToolsCore}" tofile="${basedir}/Source/deps/mootools-core.js"/>
+  	<copy file="${MooToolsMore}" tofile="${basedir}/Source/deps/mootools-more.js"/>
+  	<copy todir="${basedir}/tests/interactive/UserTests/themes">
+  	    <fileset dir="${basedir}/deps/build/lib/themes/"/>
+  	</copy>
+  	
+  	<!-- move stuff to /tests/specs/js for spec tests -->
+  	<copy file="${basedir}/deps/build/lib/a_pixel.png" todir="${basedir}/tests/specs/js"/>
+  	<copy file="${basedir}/deps/date.js" todir="${basedir}/tests/specs/js"/>
+  	<copy file="${basedir}/deps/build/lib/jxlib.standalone.uncompressed.js"  tofile="${basedir}/tests/specs/js/jxlib.js"/>
+  	<copy file="${MooToolsCore}" tofile="${basedir}/tests/specs/js/mootools-core.js"/>
+  	<copy file="${MooToolsMore}" tofile="${basedir}/tests/specs/js/mootools-more.js"/>
+  	<copy file="${basedir}/../build-ext/lib/jxlib-extensions.uncompressed.js"  tofile="${basedir}/tests/specs/js/jxlib-extensions.js"/>
+  	  
+  </target>
+
+
+<!-- ==================== Documentation =================================== -->
+
+  <target description="Create documentation" name="docs" depends="prepare">
+
+    <mkdir dir="${build.home}/docs"/>
+    <mkdir dir="${build.home}/docs/api"/>
+    <echo message="Generating documentation"/>
+    <exec executable="cmd" os="Windows Vista, Windows XP" dir="${build.home}">
+      <arg line="/c perl ${NaturalDocs} -i ./js -o framedhtml ./docs/api -p ${basedir}/utils/ndconfig -s jx -r"/>
+    </exec>
+    <exec executable="/usr/bin/env" os="Mac OS X" dir="${build.home}">
+      <arg line=" perl ${NaturalDocs} -i ./js -o framedhtml ./docs/api -p ${basedir}/utils/ndconfig -s jx -r"/>
+    </exec>
+    <mkdir dir="${docs.home}/api"/>
+    <copy todir="${docs.home}/api">
+      <fileset dir="${build.home}/docs/api"/>
+    </copy>
+  </target>
+
+<!-- ==================== Dist Target ===================================== -->
+<!--
+
+  The "dist" target creates a binary distribution of your application
+  in a directory structure ready to be archived in a tar.gz or zip file.
+  Note that this target depends on two others:
+
+  * "compile" so that the entire web application (including external
+    dependencies) will have been assembled
+-->
+
+  
+<!-- ==================== Clean Target ==================================== -->
+<!--
+
+  The "clean" target deletes any previous "build" and "dist" directory,
+  so that you can be ensured the application can be built from scratch.
+
+-->
+
+  <target description="Delete old build and dist directories" name="clean">
+    <echo message="Removing build directories"/>
+    <delete dir="${build.home}"/>
+    <delete dir="${dist.home}"/>
+  </target>
+
+</project>

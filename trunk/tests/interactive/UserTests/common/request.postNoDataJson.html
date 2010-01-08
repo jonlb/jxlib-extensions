@@ -1,0 +1,57 @@
+<style type="text/css">
+	
+	.test pre {
+		margin-top: 5px;
+		background-color: gray;
+		border: black solid 1px;
+		display: block;
+		padding: 10px;
+	}
+	
+	.test .results {
+		background-color: red;
+		border: maroon 1px solid;
+		margin: 20px 0px;
+	}
+	
+	.test input {
+		margin-bottom: 10px;
+	}	
+	
+	.loader-init {
+		display: none;
+	}
+	
+	.ajax-loader {
+		display: block;
+		width: 199px;
+		height: 64px;
+		background-image: url('UserTests/assets/loadingcontent.gif');
+	}
+	
+	.results {
+		visibility: hidden;
+	}
+</style>
+<h2>POST requests, NO data</h2>
+
+<div class="test">
+	<input type="submit" id="post-request-success-test" value="Run test #1" />
+	<div class="results"></div>
+	
+</div>
+
+<div class="test">
+	<input type="submit" id="post-request-failure-test" value="Run test #2" />
+	<div class="results"></div>
+</div>
+
+<div class="test">
+	<input type="submit" id="post-request-error-test" value="Run test #3" />
+	<div class="results"></div>
+</div>
+
+<div class="test">
+	<input type="submit" id="post-request-debug-test" value="Run test #4" />
+	<div class="results"></div>
+</div>

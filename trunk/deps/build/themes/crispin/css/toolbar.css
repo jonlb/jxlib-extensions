@@ -1,0 +1,204 @@
+/**
+ * @project         Jx
+ * @revision        $Id: toolbar.css 289 2009-04-01 18:09:24Z pagameba $
+ * @author          Fred Warnock (fwarnock@dmsolutions.ca)
+ * @copyright       (c) 2006 DM Solutions Group Inc.
+ */
+
+/* ============== */
+/* TOOLBAR STYLES */
+/* ============== */
+
+/* Multiple toolbars can be housed in  the toolbar container.
+   The container will expand vertically to accomodate wrapped toolbars */
+
+.jxBarContainer {
+  /* Base setup */
+  display: block;
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+
+  margin: 0px;
+  padding: 0px;
+  border: 0px;
+
+  background-color: #f0f0f0;
+}
+
+.jxBarTop,
+.jxBarBottom {
+  /* Horizontally oriented toolbars */
+  /* Base setup */
+  width: 100%; /* fills the width, may be needed for JS style sniffing */
+  height: 28px;
+  background-image: url(images/toolbar.png);
+  background-repeat: repeat-x;
+  background-position: 0px 0px;
+  overflow: hidden;
+}
+
+.jxTabBox .jxTabBarTop {
+  background-image: url(images/tabbar.png);
+  background-position: 0px bottom;
+}
+
+.jxTabBox .jxTabBarBottom {
+  background-image: url(images/tabbar_bottom.png);
+  background-position: 0px top;
+}
+
+.jxBarLeft,
+.jxBarRight {
+  /* Vertically oriented toolbars */
+  /* Base setup */
+  width: auto;
+  height: 100%;
+  background-image: url(images/toolbar.png);
+  background-repeat: repeat-x;
+  background-position: 0px 0px;
+  float: left;
+  overflow: hidden;
+}
+
+.jxTabBox .jxTabBarLeft {
+  background-image: url(images/tabbar_left.png);
+  background-repeat: repeat-y;
+  background-position: right 0px;
+}
+
+.jxTabBox .jxTabBarRight {
+  background-image: url(images/tabbar_right.png);
+  background-repeat: repeat-y;
+  background-position: left 0px;
+}
+
+.jxBarTop .jxBarScroller,
+.jxBarBottom .jxBarScroller {
+  position: absolute;
+  /* much bigger than its container */
+  width: 10000%;
+  overflow: hidden;
+}
+
+.jxBarTop .jxBarScrollLeft,
+.jxBarBottom .jxBarScrollLeft {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+}
+
+.jxBarTop .jxBarScrollRight,
+.jxBarBottom .jxBarScrollRight {
+  position: absolute;
+  top: 0px;
+  right: 0px;
+}
+
+.jxBarTop .jxBarScrollLeft img.jxButtonIcon,
+.jxBarBottom .jxBarScrollLeft img.jxButtonIcon {
+  background-image: url(images/emblems.png);
+  background-position: 0px -80px;
+}
+
+.jxBarTop .jxBarScrollRight img.jxButtonIcon,
+.jxBarBottom .jxBarScrollRight img.jxButtonIcon {
+  background-image: url(images/emblems.png);
+  background-position: 0px -96px;
+}
+
+/* The jx toolbar and tabbar are both built out of a UL
+   The margins/padding are flattened out, and the list markers are hidden
+   UL's are floated left so multiple toolbars can be in the samae row.
+   In IE, the UL needs to have a specified width to prevent button wrapping.
+
+   The tab background uses the sliding door technique so tabs can expand to
+   accomodate content up to 200 px wide (top/bottom tabs) or 200px high
+   (left/right tabs).  All parts and states of the tab BG graphics are in the
+   same image so they can be treated like sprites.
+
+   Horizontal tabs can contain text or an image label.  Vertical tabs need an
+   image label.
+*/
+
+ul.jxToolbar,
+ul.jxTabBar {
+  /* Base setup */
+  display: block;
+  position: relative;
+  float: left;
+  list-style-type: none;
+
+  margin: 0px;  /* margins don't seem to work properly in IE */
+  padding: 0px;
+  border: none;
+}
+
+.jxBarTop ul.jxToolbar,
+.jxBarBottom ul.jxToolbar,
+.jxBarTop ul.jxTabBar,
+.jxBarBottom ul.jxTabBar {
+}
+
+/* LI's are floated to the left, to make a horizontal row of buttons*/
+
+li.jxToolItem {
+  /* Base setup */
+  display: block;
+  position: relative;
+  float: left;
+  font-size: 0px;
+  line-height: 0px;
+
+  padding: 0px;
+  margin: 0px;  /* margins don't seem to work properly in IE */
+  border: none;
+}
+
+/* Seperator height should match that of button images
+   and the margins+padding+border should add up to the same total too. */
+
+li.jxToolItem  span.jxBarSeparator {
+  /* Base setup */
+  display: block;
+  position: relative;
+  float: left;
+  font-size: 0px;
+  line-height: 0px;
+
+  border: 0px;
+  margin: 0px;  /* margins don't seem to work properly in IE */
+  padding: 4px;
+  background-repeat: no-repeat;
+  background-position: center center;
+}
+
+.jxBarTop  li.jxToolItem  span.jxBarSeparator,
+.jxBarBottom  li.jxToolItem  span.jxBarSeparator {
+  /* width/height should be defined */
+  width: 8px;
+  height: 20px;
+  background-image: url(images/toolbar_separator_h.png);
+}
+
+.jxBarLeft  li.jxToolItem  span.jxBarSeparator,
+.jxBarRight  li.jxToolItem  span.jxBarSeparator {
+  /* width/height should be defined */
+  width: 20px;
+  height: 8px;
+  background-image: url(images/toolbar_separator_v.png);
+}
+
+/* Vertically oriented toolbars need floats cleared */
+
+.jxBarLeft ul.jxToolbar,
+.jxBarLeft ul.jxTabBar,
+.jxBarLeft li.jxToolItem,
+.jxBarRight ul.jxToolbar,
+.jxBarRight ul.jxTabBar,
+.jxBarRight li.jxToolItem
+{
+  /* Base setup */
+  clear: both;
+}
+

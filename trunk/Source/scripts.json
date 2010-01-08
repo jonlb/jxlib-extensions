@@ -1,0 +1,33 @@
+{
+	"deps": {
+		"mootools-core": {
+			"deps":[],
+			"desc": "Mootools core library"
+		},
+		"mootools-more": {
+			"deps": ["mootools-core"],
+			"desc": "Mootools more library"
+		},
+		"jxlib": {
+			"deps": ["mootools-core","mootools-more"]
+		},
+		"date": {
+			"deps": [],
+			"desc": "Clientcide date library"
+		}
+	},
+	"common": {
+		"request": {
+			"deps": ["jxlib"],
+			"desc": "Class that is used to wrap the mootools AJAX request object to make it's use as transparent as possible."
+		},
+		"manager": {
+			"deps": ["jxlib"],
+			"desc": "This class is used to create managers to control stores, widgets, or other components"
+		},
+		"preloader": {
+			"deps": ["jxlib"],
+			"desc": "Class used to preload images. It loads them, stores them in a Hash, but doesn't add them to the DOM"
+		}
+	}
+}

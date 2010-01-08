@@ -1,0 +1,19 @@
+{
+    "Base": {
+        "common": [
+        	"dependencies"
+        ]
+    },
+    "Button": {
+    	"button": ["all"]
+    },
+    "Data": {
+        "remote": ["all"]
+    },
+    "Grid": {
+        "grid": ["basic","headers","formatters","prelighter","selector","sorter"]
+    },
+    "Form": {
+        "form": ["fields","fieldset","form"]
+    }
+}

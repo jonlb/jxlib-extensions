@@ -1,0 +1,77 @@
+{
+	"deps": {
+		"mootools-core": {
+			"deps":[],
+			"desc": "Mootools core library"
+		},
+		"mootools-more": {
+			"deps": ["mootools-core"],
+			"desc": "Mootools more library"
+		},
+		"jxlib": {
+			"deps": ["mootools-core","mootools-more"]
+		},
+		"date": {
+			"deps": [],
+			"desc": "Clientcide date library"
+		}
+	},
+	"common":{
+		"compare": {
+			"deps": ["jxlib","date"],
+			"desc": "Comparison methods used by the sort routines"
+		},
+		"request": {
+			"deps": ["jxlib"],
+			"desc": "Class that is used to wrap the mootools AJAX request object to make it's use as transparent as possible."
+		},
+		"manager": {
+			"deps": ["jxlib"],
+			"desc": "This class is used to create managers to control stores, widgets, or other components"
+		},
+		"preloader": {
+			"deps": ["jxlib"],
+			"desc": "Class used to preload images. It loads them, stores them in a Hash, but doesn't add them to the DOM"
+		}
+	},
+	"sorters":{
+		"sort": {
+			"deps": ["jxlib"],
+			"desc": "Base class for all of the sorting classes"	
+		},
+		"bubblesort": {
+			"deps": ["sort"],
+			"desc": "Implementation of a bubble sort algorithm"
+		},
+		"heapsort": {
+			"deps": ["sort"],
+			"desc": "Implementation of a heap sort algorithm"
+		},
+		"mergesort": {
+			"deps": ["sort"],
+			"desc": "Implementation of a merge sort algorithm"
+		},
+		"quicksort": {
+			"deps": ["sort"],
+			"desc": "Implementation of a quick sort algorithm"
+		}
+	},
+	"stores":{
+		"store":{
+			"deps": ["jxlib","manager"],
+			"desc": "Base class for stores as well as an implementation of a basic store"
+		},
+		"remote": {
+			"deps": ["store","request"],
+			"desc": "Extension of Jx.Store adding ability to load and save data remotely"
+		},
+		"sortable": {
+			"deps": ["sort","heapsort","bubblesort","mergesort","quicksort","compare"],
+			"desc": "Mixin class that enables sorting of a store"
+		},
+		"groupable": {
+			"deps": ["sortable"],
+			"desc": "Extension of mixin class Jx.Store.Sortable that enables grouping in the sort"
+		}
+	}
+}

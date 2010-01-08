@@ -1,0 +1,63 @@
+<style type="text/css">
+	
+	.test pre {
+		margin-top: 5px;
+		background-color: gray;
+		border: black solid 1px;
+		display: block;
+		padding: 10px;
+	}
+	
+	.test .results {
+		background-color: red;
+		border: maroon 1px solid;
+		margin: 20px 0px;
+	}
+	
+	.test input {
+		margin-bottom: 10px;
+	}	
+	
+	.loader-init {
+		display: none;
+	}
+	
+	.ajax-loader {
+		display: block;
+		width: 199px;
+		height: 64px;
+		background-image: url('UserTests/assets/loadingcontent.gif');
+	}
+	
+	.results {
+		visibility: hidden;
+	}
+</style>
+
+<h2>GET requests, with Data, with loading mask</h2>
+
+<div class="test">
+	<input type="submit" id="get-data-request-success-test" value="Run test #1" />
+	<div id="loader1" class="loader-init"></div>
+	<div class="results"></div>
+	
+</div>
+
+
+<div class="test">
+	<input type="submit" id="get-data-request-failure-test" value="Run test #2" />
+	<div id="loader2"></div>
+	<div class="results"></div>
+</div>
+
+<div class="test">
+	<input type="submit" id="get-data-request-error-test" value="Run test #3" />
+	<div id='loader3'></div>
+	<div class="results"></div>
+</div>
+
+<div class="test">
+	<input type="submit" id="get-data-request-debug-test" value="Run test #4" />
+	<div id='loader4'></div>
+	<div class="results"></div>
+</div>
