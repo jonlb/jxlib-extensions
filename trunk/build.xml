@@ -72,10 +72,10 @@ J.Bomgardner    April 5, 2009   initial version copied from jx project
   <property name="app.name" value="jxlib-extensions"/>
   <property name="app.path" value="/${app.name}"/>
   <property name="app.version" value=".1-alpha"/>
-  <property name="build.home" value="${basedir}/../build-ext"/>
-  <property name="dist.home" value="${basedir}/../dist"/>
-  <property name="deploy.home" value="${basedir}/../www"/>
-  <property name="docs.home" value="${basedir}/../www/reference"/>
+  <property name="build.home" value="${basedir}/build"/>
+  <property name="dist.home" value="${basedir}/dist"/>
+  <property name="deploy.home" value="${basedir}/www"/>
+  <property name="docs.home" value="${basedir}/www/reference"/>
 
 <!-- ==================== External Dependencies =========================== -->
 
@@ -95,10 +95,10 @@ J.Bomgardner    April 5, 2009   initial version copied from jx project
   
   We use the versions from the JxLib project that has been added via svn:externals                  
  -->
-  <property name="YUIcompressor" value="${basedir}/deps/jxlib/utils/yuicompressor-2.3.6.jar"/>
-  <property name="NaturalDocs"   value="${basedir}/deps/jxlib/utils/NaturalDocs-1.4/NaturalDocs"/>
-  <property name="MooToolsCore"  value="${basedir}/deps/jxlib/utils/mootools-1.2.1-core.js" />
-  <property name="MooToolsMore"  value="${basedir}/deps/jxlib/utils/mootools-1.2-more.js" />
+  <property name="YUIcompressor" value="${basedir}/utils/yuicompressor-2.3.6.jar"/>
+  <property name="NaturalDocs"   value="${basedir}/utils/NaturalDocs-1.4/NaturalDocs"/>
+  <property name="MooToolsCore"  value="${basedir}/utils/mootools-1.2.1-core.js" />
+  <property name="MooToolsMore"  value="${basedir}/utils/mootools-1.2-more.js" />
 
 <!-- ==================== Prepare Target ================================== -->
 
@@ -120,15 +120,16 @@ J.Bomgardner    April 5, 2009   initial version copied from jx project
     <!-- Create build directories as needed -->
     <mkdir dir="${build.home}" />
   	
-  	<!-- build jxlib -->
-  	<ant antfile="build.xml" target="build" dir="deps/jxlib/" inheritall="false" />
+  	<copy todir="${build.home}">
+      <fileset dir="${basedir}" includes="Source/** css/** deps/**"/>
+    </copy>
   	
   	<!-- Create base library using Combine.php -->
   	<mkdir dir="${build.home}/lib" />
   	<echo message="Creating jxlib-extensions library temp file"/>
-	<exec executable="${basedir}/utils/combine.php">
-		<arg line="-filelist ${basedir}/Source/scripts.json -type json -target ${build.home}/lib/jxlib-extensions.temp.js -basedir ${basedir}/Source" />
-	</exec>
+  	<exec executable="php">
+        <arg line="${basedir}/utils/combine.php -filelist ${build.home}/Source/scripts.json -jsonFile ${build.home}/lib/jxlib-ext.json -target ${build.home}/lib/jxlib-extensions.temp.js -basedir ${build.home}/Source" />
+    </exec>
     
   	<echo message="Creating jxlib-extensions uncompressed"/>
     <concat destfile="${build.home}/lib/jxlib-extensions.uncompressed.js">
@@ -144,14 +145,14 @@ J.Bomgardner    April 5, 2009   initial version copied from jx project
 	
 	<!-- Create CSS Files -->
 	<echo message="Creating jxlib-extensions css library file"/>
-	<exec executable="${basedir}/utils/combine.php">
-		<arg line="-filelist ${basedir}/css/cssfiles.php -target ${build.home}/lib/jxlib-extensions.uncompressed.css -basedir ${basedir}/css" />
-	</exec>
+  	<concat destfile="${build.home}/lib/css/jxlib-extensions.uncompressed.css">
+        <fileset dir="${build.home}/css" includes="**.css"/>
+    </concat>
 	
 	<echo message="Compress css file"/>
    	<java jar="${YUIcompressor}" fork="true"
-          output="${build.home}/lib/jxlib-extensions.css">
-        <arg value="${build.home}/lib/jxlib-extensions.uncompressed.css"/>
+          output="${build.home}/lib/css/jxlib-extensions.css">
+        <arg value="${build.home}/lib/css/jxlib-extensions.uncompressed.css"/>
     </java>
 	
 	<!-- add licensing file -->
@@ -167,6 +168,9 @@ J.Bomgardner    April 5, 2009   initial version copied from jx project
    	<delete file="${build.home}/lib/jxlib-extensions.compressed.js"/>
     <delete file="${build.home}/lib/jxlib-extensions.temp.js"/>
    
+  	<copy todir="${build.home}/lib/css">
+      <fileset dir="${build.home}/css" includes="images/**"/>
+    </copy>
   </target>
 
   <target name="test-setup" description="Sets up files needed to successfully run tests" depends="prepare">
