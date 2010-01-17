@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="trunk/Source/common"/>
+	<classpathentry kind="src" path="trunk/Source/deps"/>
+	<classpathentry excluding="UserTests/common/|assets/|assets/moobugger/" kind="src" path="trunk/tests/interactive"/>
+	<classpathentry excluding="moobugger/" kind="src" path="trunk/tests/interactive/assets"/>
+	<classpathentry kind="src" path="trunk/tests/interactive/assets/moobugger"/>
+	<classpathentry kind="src" path="trunk/tests/interactive/UserTests/common"/>
+	<classpathentry kind="src" path="trunk/tests/specs"/>
+	<classpathentry kind="con" path="org.eclipse.wst.jsdt.launching.JRE_CONTAINER"/>
+</classpath>

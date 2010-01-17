@@ -1,0 +1,216 @@
+Format: 1.4
+
+
+# You can add a title and sub-title to your menu like this:
+# Title: [project name]
+# SubTitle: [subtitle]
+
+# You can add a footer to your documentation like this:
+# Footer: [text]
+# If you want to add a copyright notice, this would be the place to do it.
+
+# You can add a timestamp to your documentation like one of these:
+# Timestamp: Generated on month day, year
+# Timestamp: Updated mm/dd/yyyy
+# Timestamp: Last updated mon day
+#
+#   m     - One or two digit month.  January is "1"
+#   mm    - Always two digit month.  January is "01"
+#   mon   - Short month word.  January is "Jan"
+#   month - Long month word.  January is "January"
+#   d     - One or two digit day.  1 is "1"
+#   dd    - Always two digit day.  1 is "01"
+#   day   - Day with letter extension.  1 is "1st"
+#   yy    - Two digit year.  2006 is "06"
+#   yyyy  - Four digit year.  2006 is "2006"
+#   year  - Four digit year.  2006 is "2006"
+
+
+# --------------------------------------------------------------------------
+# 
+# Cut and paste the lines below to change the order in which your files
+# appear on the menu.  Don't worry about adding or removing files, Natural
+# Docs will take care of that.
+# 
+# You can further organize the menu by grouping the entries.  Add a
+# "Group: [name] {" line to start a group, and add a "}" to end it.
+# 
+# You can add text and web links to the menu by adding "Text: [text]" and
+# "Link: [name] ([URL])" lines, respectively.
+# 
+# The formatting and comments are auto-generated, so don't worry about
+# neatness when editing the file.  Natural Docs will clean it up the next
+# time it is run.  When working with groups, just deal with the braces and
+# forget about the indentation and comments.
+# 
+# --------------------------------------------------------------------------
+
+
+Group: Jx  {
+
+   Group: Button  {
+
+      File: Button.Tab  (Button/tab.js)
+      File: Button.Flyout  (Button/flyout.js)
+      File: Button.Color  (Button/color.js)
+      File: Button.Multi  (Button/multi.js)
+      File: Button.Combo  (Button/combo.js)
+      File: ButtonSet  (Button/set.js)
+      File: Button  (Button/button.js)
+      }  # Group: Button
+
+   Group: Base  {
+
+      File: Common  (no auto-title, Base/common.js)
+      File: List  (Base/list.js)
+      File: Object  (Base/object.js)
+      File: selection.js  (Base/selection.js)
+      File: Styles  (Base/styles.js)
+      File: Widget  (Base/widget.js)
+      }  # Group: Base
+
+   Group: Grid  {
+
+      File: Column  (Grid/column.js)
+      File: Columns  (Grid/columns.js)
+      File: Grid  (Grid/grid.js)
+      File: Row  (Grid/row.js)
+      }  # Group: Grid
+
+   Group: Extras  {
+
+      File: ColorPalette  (Extras/colorpalette.js)
+      File: Notice  (Extras/notice.js)
+      File: notifier.js  (Extras/notifier.js)
+      File: Progressbar  (Extras/progressbar.js)
+      File: Scrollbar  (Extras/scrollbar.js)
+      File: Slide  (Extras/slide.js)
+      File: Slider  (Extras/slider.js)
+      File: Tooltip  (Extras/tooltip.js)
+      }  # Group: Extras
+
+   File: TabBox  (Tab/tabbox.js)
+   File: TabSet  (Tab/tabset.js)
+
+   Group: Layout  {
+
+      File: Layout  (Layout/layout.js)
+      File: Splitter  (Layout/splitter.js)
+      File: Splitter.Snap  (Layout/snap.js)
+      }  # Group: Layout
+
+   Group: Menu  {
+
+      File: Menu  (Menu/menu.js)
+      File: Menu.Context  (Menu/context.js)
+      File: Menu.Item  (Menu/menu.item.js)
+      File: Menu.Separator  (Menu/menu.separator.js)
+      File: Menu.SubMenu  (Menu/submenu.js)
+      }  # Group: Menu
+
+   Group: Panel  {
+
+      File: Dialog  (Panel/dialog.js)
+      File: Dialog.Confirm  (Panel/confirm.js)
+      File: Dialog.Message  (Panel/message.js)
+      File: ListItem  (Panel/listitem.js)
+      File: ListView  (Panel/listview.js)
+      File: Panel  (Panel/panel.js)
+      File: Panel.DataView  (Panel/dataview.js)
+      File: Panel.DataView.Group  (Panel/group.js)
+      File: Panel.FileUpload  (Panel/upload.js)
+      File: PanelSet  (Panel/panelset.js)
+      }  # Group: Panel
+
+   Group: Toolbar  {
+
+      File: Toolbar  (Toolbar/toolbar.js)
+      File: Toolbar.Container  (Toolbar/container.js)
+      File: Toolbar.Item  (Toolbar/toolbar.item.js)
+      File: Toolbar.Separator  (Toolbar/toolbar.separator.js)
+      }  # Group: Toolbar
+
+   Group: Tree  {
+
+      File: Tree  (Tree/tree.js)
+      File: TreeFolder  (Tree/treefolder.js)
+      File: TreeItem  (Tree/treeitem.js)
+      }  # Group: Tree
+
+   }  # Group: Jx
+
+Group: Formatter  {
+
+   File: Formatter  (Formatter/formatter.js)
+   File: Formatter.Boolean  (Formatter/boolean.js)
+   File: Formatter.Currency  (Formatter/currency.js)
+   File: Formatter.Date  (Formatter/date.js)
+   File: Formatter.Number  (Formatter/number.js)
+   File: Formatter.Phone  (Formatter/phone.js)
+   }  # Group: Formatter
+
+Group: Data  {
+
+   File: Compare  (Data/compare.js)
+   File: record  (Data/record.js)
+   File: Sort Base class for all of the sorting algorithm classes.  (Data/sort.js)
+   File: Sort.Heapsort  (Data/heapsort.js)
+   File: Sort.Mergesort  (Data/mergesort.js)
+   File: Sort.Nativesort  (Data/nativesort.js)
+   File: Sort.Quicksort  (Data/quicksort.js)
+   File: Store  (Data/store.js)
+   File: Store.Parser  (Data/parser.js)
+   File: Store.Parser.JSON  (Data/parser.json.js)
+   File: Store.Protocol  (Data/protocol.js)
+   File: Store.Protocol.Ajax  (Data/protocol.ajax.js)
+   File: Store.Protocol.Local  (Data/protocol.local.js)
+   File: Store.Response  (Data/response.js)
+   File: Store.Strategy  (Data/strategy.js)
+   File: Store.Strategy.Full  (Data/strategy.full.js)
+   File: Store.Strategy.Paginate  (Data/strategy.paginate.js)
+   File: Store.Strategy.Save  (Data/strategy.save.js)
+   File: Store.Strategy.Sort  (Data/strategy.sort.js)
+   File: strategy.progressive.js  (Data/strategy.progressive.js)
+   }  # Group: Data
+
+Group: Form  {
+
+   File: Field  (Form/field.js)
+   File: Field.Button  (Form/jxbutton.js)
+   File: Field.Check  (Form/checkbox.js)
+   File: Field.File  (Form/file.js)
+   File: Field.Hidden  (Form/hidden.js)
+   File: Field.Password  (Form/password.js)
+   File: Field.Radio  (Form/radio.js)
+   File: Field.Select  (Form/select.js)
+   File: Field.Text  (Form/text.js)
+   File: Field.Textarea  (Form/textarea.js)
+   File: Fieldset  (Form/fieldset.js)
+   File: Form  (Form/form.js)
+   }  # Group: Form
+
+File: Grid.Plugin  (Plugins/plugin.js)
+File: Plugin.DataView  (Plugins/plugin.dataview.js)
+File: Plugin.DataView.GroupFolder  (Plugins/dataview.groupfolder.js)
+File: Plugin.Field  (Plugins/plugin.field.js)
+File: Plugin.Field.Validator  (Plugins/field.validator.js)
+File: Plugin.Form  (Plugins/plugin.form.js)
+File: Plugin.Form.Validator  (Plugins/form.validator.js)
+File: Plugin.Grid  (Plugins/plugin.grid.js)
+File: Plugin.Prelighter  (Plugins/grid.prelighter.js)
+File: Plugin.Resize  (Plugins/grid.resize.js)
+File: Plugin.Selector  (Plugins/grid.selector.js)
+File: Plugin.Sorter  (Plugins/grid.sorter.js)
+
+Group: Index  {
+
+   Index: Everything
+   Class Index: Classes
+   Constructor Index: Constructor
+   Property Index: Properties
+   TODO Index: TODO
+   Event Index: Events
+   File Index: Files
+   Function Index: Functions
+   }  # Group: Index
+

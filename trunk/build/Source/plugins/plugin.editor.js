@@ -1,0 +1,2 @@
+
+Jx.Plugin.Editor = {};

@@ -1,0 +1,120 @@
+{
+	"common": {
+		"request": {
+			"deps": ["jxlib"],
+			"desc": "Class that is used to wrap the mootools AJAX request object to make it's use as transparent as possible."
+		},
+		"manager": {
+			"deps": ["jxlib"],
+			"desc": "This class is used to create managers to control stores, widgets, or other components"
+		},
+		"preloader": {
+			"deps": ["jxlib"],
+			"desc": "Class used to preload images. It loads them, stores them in a Hash, but doesn't add them to the DOM"
+		}
+	},
+	"widgets": {
+	   "editor": {
+	       "deps": ["jxlib"],
+	       "desc": ""
+	   },
+	   "editor.selection": {
+	       "deps": ["jxlib"],
+	       "desc": ""
+	   }
+    },
+    "plugins": {
+        "plugin.editor": {
+            "deps": ["jxlib"],
+            "desc": ""
+        },
+        "editor.button": {
+            "deps": ["plugin.editor"],
+            "desc": ""
+        },
+        "editor.bold": {
+            "deps": ["editor.button"],
+            "desc": ""
+        },
+        "editor.italic": {
+            "deps": ["editor.button"],
+            "desc": ""
+        },
+        "editor.underline": {
+            "deps": ["editor.button"],
+            "desc": ""
+        },
+        "editor.separator": {
+            "deps": ["plugin.editor"],
+            "desc": ""
+        },
+        "editor.buttonset": {
+            "deps": ["plugin.editor"],
+            "desc": ""
+        },
+        "editor.alignment": {
+            "deps": ["editor.buttonset"],
+            "desc": ""
+        },
+        "editor.image": {
+            "deps": ["editor.button"],
+            "desc": ""
+        },
+        "editor.indent": {
+            "deps": ["editor.button"],
+            "desc": ""
+        },
+        "editor.link": {
+            "deps": ["editor.button"],
+            "desc": ""
+        },
+        "editor.orderedlist": {
+            "deps": ["editor.button"],
+            "desc": ""
+        },
+        "editor.outdent": {
+            "deps": ["editor.button"],
+            "desc": ""
+        },
+        "editor.redo": {
+            "deps": ["editor.button"],
+            "desc": ""
+        },
+        "editor.orderedlist": {
+            "deps": ["editor.button"],
+            "desc": ""
+        },
+        "editor.outdent": {
+            "deps": ["editor.button"],
+            "desc": ""
+        },
+        "editor.redo": {
+            "deps": ["editor.button"],
+            "desc": ""
+        },
+        "editor.strikethrough": {
+            "deps": ["editor.button"],
+            "desc": ""
+        },
+        "editor.toggle": {
+            "deps": ["editor.button"],
+            "desc": ""
+        },
+        "editor.undo": {
+            "deps": ["editor.button"],
+            "desc": ""
+        },
+        "editor.unlink": {
+            "deps": ["editor.button"],
+            "desc": ""
+        },
+        "editor.unorderedlist": {
+            "deps": ["editor.button"],
+            "desc": ""
+        },
+        "editor.customstyles": {
+            "deps": ["plugin.editor"],
+            "desc": ""
+        }
+    }
+}
