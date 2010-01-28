@@ -43,7 +43,13 @@ Jx.Plugin.Editor.CustomStyles = new Class({
         if (Browser.Engine.trident) {
             rules = sheet.rules;
         } else {
-            rules = sheet.cssRules;
+            try {
+                rules = sheet.cssRules;
+            } catch (err) {
+                console.log('couldn not get styles... waiting till they are available');
+                this.parseStyles.delay(500,this,sheet);
+                return;
+            }
         }
         
         $A(rules).each(function(rule){
@@ -61,12 +67,7 @@ Jx.Plugin.Editor.CustomStyles = new Class({
         
         //now create the combo button
         this.settingState = true;
-        /**
-        this.button = new Jx.Button.Combo({
-            items: items,
-            onChange: this.command.bind(this)
-        });
-        **/
+        
         //Try with an actual Select
         this.button = new Jx.Field.Select({
             comboOpts: items,

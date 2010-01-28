@@ -767,7 +767,7 @@ Jx.Styles = new(new Class({
     disableStyleSheet: function (name) {
         this.getDynamicStyleSheet(name).disabled = true;
     }
-}))();// $Id: object.js 656 2009-12-01 18:41:44Z jonlb@comcast.net $
+}))();// $Id: object.js 681 2010-01-15 05:45:28Z jonlb@comcast.net $
 /**
  * Class: Jx.Object
  * Base class for all other object in the JxLib framework. This class
@@ -1859,7 +1859,7 @@ Jx.Selection = new Class({
         return this.selection.contains(item);
     }
 
-});// $Id: list.js 666 2009-12-11 15:25:07Z zak4ms $
+});// $Id: list.js 681 2010-01-15 05:45:28Z jonlb@comcast.net $
 /**
  * Class: Jx.List
  * 
@@ -7828,7 +7828,7 @@ Jx.Menu.Item = new Class({
     }
 });
 
-// $Id: combo.js 647 2009-11-26 16:23:24Z pagameba $
+// $Id: combo.js 681 2010-01-15 05:45:28Z jonlb@comcast.net $
 /**
  * Class: Jx.Button.Combo
  *
@@ -10661,7 +10661,7 @@ Jx.Splitter = new Class({
              }
          }
     }
-});// $Id: panelset.js 626 2009-11-20 13:22:22Z pagameba $
+});// $Id: panelset.js 681 2010-01-15 05:45:28Z jonlb@comcast.net $
 /**
  * Class: Jx.PanelSet
  *
@@ -11227,7 +11227,7 @@ Jx.Tooltip = new Class({
         this.destroy();
     }
 });
-// $Id: field.js 649 2009-11-30 22:19:48Z pagameba $
+// $Id: field.js 681 2010-01-15 05:45:28Z jonlb@comcast.net $
 /**
  * Class: Jx.Field
  *
@@ -12160,7 +12160,7 @@ Jx.Field.Hidden = new Class({
 
 
 
-// $Id: form.js 649 2009-11-30 22:19:48Z pagameba $
+// $Id: form.js 681 2010-01-15 05:45:28Z jonlb@comcast.net $
 /**
  * Class: Jx.Form
  *
@@ -12212,7 +12212,12 @@ Jx.Form = new Class({
          * Option: name
          * the name property for the form
          */
-        name: ''
+        name: '',
+        /**
+         * Option: fileUpload
+         * Determines if this form needs to be setup for file uploads.
+         */
+        fileUpload: false
     },
     
     /**
@@ -12347,7 +12352,10 @@ Jx.Form = new Class({
             if (field instanceof Jx.Field && !$defined(field.form)) {
                 field.form = this;
                 this.addField(field);
+            } else if (field instanceof Jx.Fieldset && !$defined(field.form)) {
+                field.form = this;
             }
+            
             this.domObj.grab(field);
         }
         return this;
@@ -12372,6 +12380,13 @@ Jx.Form = new Class({
             }
         },this);
         return fields;
+    },
+    
+    getField: function (id) {
+        if (this.fields.has(id)) {
+            return this.fields.get(id);
+        } 
+        return null;
     }
 });
 /**
@@ -16081,7 +16096,7 @@ Jx.Plugin.Form.Validator = new Class({
         //setup the fields
         $H(this.options.fields).each(function (val, key) {
             var opts = $merge(this.options.fieldDefaults, val);
-            var field = document.id(key).retrieve('field');
+            var field = this.form.getField(key);
             var p = new Jx.Plugin.Field.Validator(opts);
             this.plugins.set(key, p);
             p.attach(field);
@@ -18814,7 +18829,7 @@ Jx.Fieldset = new Class({
     }
     
 });
-// $Id: checkbox.js 649 2009-11-30 22:19:48Z pagameba $
+// $Id: checkbox.js 681 2010-01-15 05:45:28Z jonlb@comcast.net $
 /**
  * Class: Jx.Field.Check
  *
@@ -18933,7 +18948,7 @@ Jx.Field.Checkbox = new Class({
     }
 
 });
-// $Id: radio.js 649 2009-11-30 22:19:48Z pagameba $
+// $Id: radio.js 681 2010-01-15 05:45:28Z jonlb@comcast.net $
 /**
  * Class: Jx.Field.Radio
  *
@@ -19054,7 +19069,7 @@ Jx.Field.Radio = new Class({
 
 
 
-// $Id: select.js 649 2009-11-30 22:19:48Z pagameba $
+// $Id: select.js 681 2010-01-15 05:45:28Z jonlb@comcast.net $
 /**
  * Class: Jx.Field.Select
  *

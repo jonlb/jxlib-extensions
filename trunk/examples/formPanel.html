@@ -1,0 +1,118 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Jx.Panel.Form Example</title>
+    <script type="text/javascript" src="../deps/mootools-core.js"></script>
+    <script type="text/javascript" src="../deps/mootools-more.js"></script>
+    <script type="text/javascript" src="../deps/jxlib.standalone.uncompressed.js"></script>
+    <link href="../deps/themes/crispin/jxtheme.uncompressed.css" type="text/css" rel="stylesheet" media="screen, projection" />
+    
+    <!-- Put the scripts we're testing here -->
+    <link href="../build/lib/css/jxlib-extensions.uncompressed.css" type="text/css" rel="stylesheet" media="screen, projection" />
+     
+    <script type="text/javascript" src="../build/lib/jxlib-extensions.uncompressed.js"></script>
+    
+    
+    <script type="text/javascript">
+        var editor;
+        window.addEvent('domready', function () {
+
+            new Jx.Panel.Form({
+
+                parent: 'panel-container',
+                label: 'Panel Form Example',
+                id: 'test',
+
+                fields: [
+                    new Element('p', {
+                        html: 'This is a paragraph that was added to the form.'
+                    }),{
+                        type: 'text',
+                        options: {
+                            label: 'First example textbox',
+                            name: 'textbox-1',
+                            id: 'textbox-1'
+                        }
+                    },{
+                        type: 'fieldset',
+                        options: {
+                            legend: 'Fieldset #1',
+                        },
+                        children: [
+                            {
+                                type: 'text',
+                                options: {
+                                    label: 'first child in frameset',
+                                    id: 'frame-text-1',
+                                    name: 'frame-text-1',
+                                    required: true
+                                }
+                            },{
+                                type: 'checkbox',
+                                options: {
+                                    label: 'a checkbox',
+                                    id: 'checkbox-1',
+                                    name: 'checkbox-1'
+                                }
+                            }
+                        ]
+                    },
+                    new Element('div', {
+                        id: 'test-form-editor-container',
+                        styles: {
+                            width: '80%',
+                            height: 300,
+                            clear: 'both',
+                            position: 'relative'
+                        }
+                    })
+                ],
+
+                validators: {
+                    fields: {
+                        'textbox-1': {
+                            validators: ['minLength:5', 'maxLength:10']
+                        },
+                        'frame-text-1': {
+                            validators: []
+                        }
+                    }   
+                },
+
+                notifierType: 'inline',
+
+                formOptions: {
+                    id: 'test-form-1',
+                    name: 'test-form-1'
+                }
+                
+            });
+            
+            new Jx.Editor({
+                parent: 'test-form-editor-container',
+                editorCssFile: 'css/editor.css',
+                content: '<p>Starting content.</p>',
+                buttons: [
+                    ['bold','italic','underline','strikethrough','separator','alignment',
+                          'separator','orderedlist','unorderedlist','indent','outdent'],
+                    ['undo','redo','separator','customStyles','block',
+                          'separator', 'link','unlink', 'image','separator', 'toggle']
+                ]
+            })
+        });
+    </script>
+    
+    <style>
+        #panel-container {
+            width: 80%;
+            height: 500px;
+        }
+    </style>
+</head>
+<body>
+    <div id="panel-container">
+    
+    </div>
+</body>
+</html>

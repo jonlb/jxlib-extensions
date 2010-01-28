@@ -14,10 +14,15 @@ Jx.Editor = new Class({
         editorCssFile: null,
         html: '<!DOCTYPE html><html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head><body></body></html>',
         content: null,
-        plugins: [],
+        /**
+         * Option: buttons
+         * an array of arrays. Each separate array represents the buttons for a single toolbar.
+         */
+        buttons: null,
         cleanup: true,
         xhtml : true,
-        semantics : true
+        semantics : true,
+        textareaName: 'editor'
         
     },
     
@@ -42,16 +47,26 @@ Jx.Editor = new Class({
     
     editorDisabled: false,
     
+    toolbars: [],
+    
     render: function () {
         this.parent();
         
-        new Jx.Layout(this.domObj);
+        //add name to textarea
+        this.textarea.set('name', this.options.textareaName);
         
         //create the toolbar
-        this.toolbar = new Jx.Toolbar();
-        this.toolbar.addTo(this.container);
+        var i = $splat(this.options.buttons).length;
+        for (var j = 0; j < i; j++) {
+            var c = new Jx.Toolbar.Container().addTo(this.container);
+            this.toolbars.push(new Jx.Toolbar());
+            c.add(this.toolbars[j]);
+        }
+        
+        
         if (this.options.parent) {
             this.addTo(this.options.parent);
+            new Jx.Layout(this.domObj);
         }
         this.domObj.resize();
         
@@ -86,10 +101,13 @@ Jx.Editor = new Class({
         
         
         if ($defined(this.options.editorCssFile)) {
-            var css = new Asset.css(this.options.editorCssFile, {
-                title: 'jxEditorStylesheet'
+            this.css = new Asset.css(this.options.editorCssFile, {
+                title: 'jxEditorStylesheet',
+                onload: function () {
+                    
+                }.bind(this)
             });
-            css.inject(this.doc.head);
+            this.css.inject(this.doc.head);
         }
         
         if ($defined(this.options.content)) {
@@ -142,6 +160,15 @@ Jx.Editor = new Class({
         
         this.domObj.store('Jx.Editor',this);
         this.resize();
+        
+        this.addEvent('postPluginInit', function(){
+            //now loop through button arrays and init the plugins
+            this.options.buttons.each(function(bar, index){
+                this.options.plugins = bar;
+                this.toolbar = this.toolbars[index];
+                this.initPlugins();
+            },this);
+        }.bind(this));
     },
     
     setContent: function (content) {

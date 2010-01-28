@@ -23,10 +23,11 @@
                 parent: 'editor-container',
                 editorCssFile: 'css/editor.css',
                 content: '<p>Starting content.</p>',
-                plugins: ['bold','italic','underline','strikethrough','separator','alignment',
-                          'separator','undo','redo','separator','orderedlist','unorderedlist',
-                          'indent','outdent','separator','toggle', 'separator', 'customStyles',
-                          'separator', 'link','unlink','separator','image'
+                buttons: [
+                    ['bold','italic','underline','strikethrough','separator','alignment',
+                          'separator','orderedlist','unorderedlist','indent','outdent'],
+                    ['undo','redo','separator','customStyles','block',
+                          'separator', 'link','unlink', 'image','separator', 'toggle']
                 ]
             });
             
