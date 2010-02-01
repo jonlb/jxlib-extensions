@@ -1842,7 +1842,347 @@ Jx.Dialog.Wizard = new Class({
 		}
 	}
 });
-
+/**
+ * Jx.Adapter namespace
+ */
+Jx.Adapter = new Class({
+    
+    Family: 'Jx.Adapter',
+    
+    Extends: Jx.Object,
+    
+    options: {
+        template: '',
+        useTemplate: true
+    },
+    
+    parameters: ['store','widget','options'],
+    
+    init: function () {
+        this.parent();
+        this.widget = this.options.widget;
+        this.store = this.options.store;
+        
+        if (this.options.useTemplate) {
+            this.columnsNeeded = this.parseTemplate();
+        }
+    },
+    
+    /**
+     * Method: parseTemplate
+     * parses the provided template to determine which store columns are
+     * required to complete it.
+     *
+     * Parameters:
+     * template - the template to parse
+     */
+    parseTemplate: function () {
+        //we parse the template based on the columns in the data store looking
+        //for the pattern {column-name}. If it's in there we add it to the
+        //array of ones to look for
+        var columns = this.store.getColumns();
+        var arr = [];
+        columns.each(function (col) {
+            var s = '{' + col.name + '}';
+            if (this.options.template.contains(s)) {
+                arr.push(col.name);
+            }
+        }, this);
+        return arr;
+    }.protect(),
+    
+    /**
+     * Method: fillTemplate
+     * Actually does the work of getting the data from the store
+     * and creating a single item based on the provided template
+     * 
+     * Parameters: 
+     * index - the index of the data in the store to use in populating the
+     *          template.
+     */
+    fillTemplate: function (index) {
+        //create the item
+        var itemObj = {};
+        this.columnsNeeded.each(function (col) {
+            itemObj[col] = this.store.get(col, index);
+        }, this);
+        return this.options.template.substitute(itemObj);
+    }.protect(),
+    
+    /**
+     * APIMethod: fill
+     * Takes data from the store and fills in the widget object. This
+     * should be implemented by the adapter subclasses.
+     */
+    fill: $empty
+    
+});/**
+ * Class: Jx.Adapter.Tree
+ * This base class is used to change a store (a flat list of records) into the
+ * data structure needed for a Jx.Tree. It will have 2 subclasses: <Jx.Adapter.Tree.MPTT>
+ * and <Jx.Adapter.Tree.Parent>
+ * 
+ *  
+ */
+Jx.Adapter.Tree = new Class({
+    
+    Family: 'Jx.Adapter.Tree',
+    Extends: Jx.Adapter,
+    
+    Binds: ['fill','checkFolder'],
+    
+    options: {
+        /**
+         * Option: useAjax
+         * Determines if this adapter should use ajax to request data on the
+         * fly. 
+         */
+        useAjax: false,
+        startingNodeKey: 0,
+        folderOptions: {
+            image: null,
+            imageClass: null
+        },
+        itemOptions: {
+            image: null,
+            imageClass: null
+        }
+    },
+    
+    folders: new Hash(),
+    
+    currentRecord: 0,
+    
+    init: function () {
+        this.parent();
+        
+        this.tree = this.widget;
+        
+        this.tree.addEvent('disclose', this.checkFolder);
+        
+        if (this.options.useAjax) {
+            this.strategy = this.store.getStrategy('progressive');
+        
+            if (!$defined(this.strategy)) {
+                this.strategy = new Jx.Store.Strategy.Progressive({
+                    dropRecords: false,
+                    getPaginationParams: function () { return {}; }
+                });
+                this.store.addStrategy(this.strategy);
+            } else {
+                this.strategy.options.dropRecords = false;
+                this.strategy.options.getPaginationParams = function () { return {}; };
+            }
+            
+        }
+        
+        this.store.addEvent('storeDataLoaded', this.fill);
+        
+        //initial store load
+        this.store.load({
+            node: this.options.startingNodeKey
+        });
+    },
+    
+    /**
+     * APIMethod: fill
+     * This function will start at this.currentRecord and add the remaining
+     * items to the tree. 
+     */
+    fill: function () {
+        var l = this.store.count() - 1;
+        for (var i = this.currentRecord; i <= l; i++) {
+            var template = this.fillTemplate(i);
+            var item;
+            if (this.hasChildren(i)) {
+                //add as folder
+                var item = new Jx.TreeFolder($merge(this.options.folderOptions, {
+                    label: template
+                }));
+                
+                this.folders.set(i,item);
+            } else {
+                //add as item
+                var item = new Jx.TreeItem($merge(this.options.itemOptions, {
+                    label: template
+                }));
+            }
+            $(item).store('index', i);
+            //check for a parent
+            if (this.hasParent(i)) {
+                //add as child of parent
+                var p = this.getParentIndex(i);
+                var folder = this.folders.get(p);
+                folder.add(item);
+            } else {
+                //otherwise add to the tree itself
+                this.tree.add(item);
+            }
+        }
+        this.currentRecord = l;
+    },
+    
+    checkFolder: function (folder) {
+        var items = folder.items();
+        if (!$defined(items) || items.length === 0) {
+            //get items via the store
+            this.store.load({
+                node: $(folder).retrieve('index')
+            });
+        }
+    },
+    
+    hasChildren: $empty,
+    
+    hasParent: $empty,
+    
+    getParentIndex: $empty
+    
+    
+});/**
+ * Class: Jx.Adapter.Tree.Parent
+ * This class adapts a table adhering to the classic Parent-style "tree table".
+ * 
+ * Basically, the store needs to have a column that will indicate each the 
+ * parent of each row. The root(s) of the tree should be indicated by a "-1" 
+ * in this column. The name of the "parent" column is configurable in the 
+ * options.
+ * 
+ * if useAjax option is set to true then this adapter will send an Ajax request
+ * to the server, through the store's strategy (should be Jx.Store.Strategy.Progressive)
+ * to request additional nodes. Also, a column indicating whether this is a folder needs 
+ * to be set as there is no way to tell if a node has children without it.
+ */
+Jx.Adapter.Tree.Mptt = new Class({
+    
+    Family: 'Jx.Adapter.Tree.Parent',
+    Extends: Jx.Adapter.Tree,
+    
+    options: {
+        left: 'left',
+        right: 'right'
+    },
+        
+    /**
+     * APIMethod: hasChildren
+     * 
+     * Parameters: 
+     * index - {integer} the array index of the row in the store (not the 
+     *          primary key).
+     */
+    hasChildren: function (index) {
+        var l = this.store.get(this.options.left, index).toInt();
+        var r = this.store.get(this.options.right, index).toInt();
+        return (l + 1 !== r);
+    },
+    
+    /**
+     * APIMethod: hasParent
+     * 
+     * Parameters: 
+     * index - {integer} the array index of the row in the store (not the 
+     *          primary key).
+     */
+    hasParent: function (index) {
+        var i = this.getParentIndex(index);
+        if ($defined(i)) {
+            return true;
+        }
+        return false;
+    },
+    
+    /**
+     * APIMethod: getParentIndex
+     * 
+     * Parameters: 
+     * index - {integer} the array index of the row in the store (not the 
+     *          primary key).
+     */
+    getParentIndex: function (index) {
+        var l = this.store.get(this.options.left, index).toInt();
+        var r = this.store.get(this.options.right, index).toInt();
+        for (var i = index-1; i >= 0; i--) {
+            var pl = this.store.get(this.options.left, i).toInt();
+            var pr = this.store.get(this.options.right, i).toInt();
+            if (pl < l && pr > r) {
+                return i;
+            }
+        }
+        return null;
+    }
+});/**
+ * Class: Jx.Adapter.Tree.Parent
+ * This class adapts a table adhering to the classic Parent-style "tree table".
+ * 
+ * Basically, the store needs to have a column that will indicate each the 
+ * parent of each row. The root(s) of the tree should be indicated by a "-1" 
+ * in this column. The name of the "parent" column is configurable in the 
+ * options.
+ * 
+ * if useAjax option is set to true then this adapter will send an Ajax request
+ * to the server, through the store's strategy (should be Jx.Store.Strategy.Progressive)
+ * to request additional nodes. Also, a column indicating whether this is a folder needs 
+ * to be set as there is no way to tell if a node has children without it.
+ */
+Jx.Adapter.Tree.Parent = new Class({
+    
+    Family: 'Jx.Adapter.Tree.Parent',
+    Extends: Jx.Adapter.Tree,
+    
+    options: {
+        parentColumn: 'parent',
+        folderColumn: 'folder'
+    },
+        
+    /**
+     * APIMethod: hasChildren
+     * 
+     * Parameters: 
+     * index - {integer} the array index of the row in the store (not the 
+     *          primary key).
+     */
+    hasChildren: function (index) {
+        if (this.options.useAjax) {
+            return this.store.get(this.options.folderColumn, index);
+        } else {
+            //check to see if there are any rows with the primary key of the passed index
+            var id = this.store.get('primaryKey', index);
+            for (var i = 0; i < this.store.count()-1;i++) {
+                if (this.store.get(this.options.parentColumn, i) === id) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    },
+    
+    /**
+     * APIMethod: hasParent
+     * 
+     * Parameters: 
+     * index - {integer} the array index of the row in the store (not the 
+     *          primary key).
+     */
+    hasParent: function (index) {
+        if (this.store.get(this.options.parentColumn, index).toInt() !== -1) {
+            return true;
+        } 
+        return false;
+    },
+    
+    /**
+     * APIMethod: getParentIndex
+     * 
+     * Parameters: 
+     * index - {integer} the array index of the row in the store (not the 
+     *          primary key).
+     */
+    getParentIndex: function (index) {
+        //get the parent based on the index
+        var pk = this.store.get(this.options.parentColumn, index);
+        return this.store.findByColumn('primaryKey', pk);
+    }
+});
 Jx.Plugin.Editor = {};
 
 Jx.Plugin.Editor.Button = new Class({

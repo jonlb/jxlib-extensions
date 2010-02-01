@@ -9,7 +9,9 @@
 Jx.Adapter.Tree = new Class({
     
     Family: 'Jx.Adapter.Tree',
-    Extends: Jx.Object,
+    Extends: Jx.Adapter,
+    
+    Binds: ['fill','checkFolder'],
     
     options: {
         /**
@@ -17,19 +19,106 @@ Jx.Adapter.Tree = new Class({
          * Determines if this adapter should use ajax to request data on the
          * fly. 
          */
-        useAjax: false
+        useAjax: false,
+        startingNodeKey: 0,
+        folderOptions: {
+            image: null,
+            imageClass: null
+        },
+        itemOptions: {
+            image: null,
+            imageClass: null
+        }
     },
     
-    parameters: ['tree', 'store', 'options'],
+    folders: new Hash(),
+    
+    currentRecord: 0,
     
     init: function () {
         this.parent();
         
+        this.tree = this.widget;
+        
+        this.tree.addEvent('disclose', this.checkFolder);
+        
+        if (this.options.useAjax) {
+            this.strategy = this.store.getStrategy('progressive');
+        
+            if (!$defined(this.strategy)) {
+                this.strategy = new Jx.Store.Strategy.Progressive({
+                    dropRecords: false,
+                    getPaginationParams: function () { return {}; }
+                });
+                this.store.addStrategy(this.strategy);
+            } else {
+                this.strategy.options.dropRecords = false;
+                this.strategy.options.getPaginationParams = function () { return {}; };
+            }
+            
+        }
+        
+        this.store.addEvent('storeDataLoaded', this.fill);
+        
+        //initial store load
+        this.store.load({
+            node: this.options.startingNodeKey
+        });
     },
     
     /**
      * APIMethod: fill
-     * Takes data from the store and fills in the Jx.Tree object.
+     * This function will start at this.currentRecord and add the remaining
+     * items to the tree. 
      */
-    fill: $empty
+    fill: function () {
+        var l = this.store.count() - 1;
+        for (var i = this.currentRecord; i <= l; i++) {
+            var template = this.fillTemplate(i);
+            var item;
+            if (this.hasChildren(i)) {
+                //add as folder
+                var item = new Jx.TreeFolder($merge(this.options.folderOptions, {
+                    label: template
+                }));
+                
+                this.folders.set(i,item);
+            } else {
+                //add as item
+                var item = new Jx.TreeItem($merge(this.options.itemOptions, {
+                    label: template
+                }));
+            }
+            $(item).store('index', i);
+            //check for a parent
+            if (this.hasParent(i)) {
+                //add as child of parent
+                var p = this.getParentIndex(i);
+                var folder = this.folders.get(p);
+                folder.add(item);
+            } else {
+                //otherwise add to the tree itself
+                this.tree.add(item);
+            }
+        }
+        this.currentRecord = l;
+    },
+    
+    checkFolder: function (folder) {
+        var items = folder.items();
+        if (!$defined(items) || items.length === 0) {
+            //get items via the store
+            this.store.load({
+                node: $(folder).retrieve('index')
+            });
+        }
+    },
+    
+    hasChildren: $empty,
+    
+    hasParent: $empty,
+    
+    getParentIndex: $empty
+    
+    
 });

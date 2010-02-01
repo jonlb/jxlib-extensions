@@ -17,58 +17,11 @@ Jx.Adapter.Tree.Parent = new Class({
     Family: 'Jx.Adapter.Tree.Parent',
     Extends: Jx.Adapter.Tree,
     
-    Binds: ['fill'],
-    
     options: {
         parentColumn: 'parent',
-        folderColumn: 'folder',
-        labelTemplate: null,
-        startingNodeKey: 0
+        folderColumn: 'folder'
     },
-    
-    currentRecord: 0,
-    
-    init: function () {
-        this.parent();
         
-        this.store = this.options.store;
-        this.tree = this.options.tree;
-        
-        if (this.options.useAjax) {
-            this.strategy = this.store.getStrategy('progressive');
-        
-            if (!$defined(this.strategy)) {
-                this.strategy = new Jx.Store.Strategy.Progressive({
-                    dropRecords: false,
-                    getPaginationParams: function () { return {}; }
-                });
-                this.store.addStrategy(this.strategy);
-            } else {
-                this.strategy.options.dropRecords = false;
-                this.strategy.options.getPaginationParams = function () { return {}; };
-            }
-            
-        }
-        
-        this.store.addEvent('storeDataLoaded', this.fill);
-        
-        //initial store load
-        this.store.load({
-            mode: 'initial',
-            start: this.options.startingNodeKey
-        });
-        
-    },
-    
-    /**
-     * Method: fill
-     * This function will start at this.currentRecord and add the remaining
-     * items to the tree. 
-     */
-    fill: function () {
-        
-    },
-    
     /**
      * APIMethod: hasChildren
      * 
@@ -106,32 +59,15 @@ Jx.Adapter.Tree.Parent = new Class({
     },
     
     /**
-     * APIMethod: getChildren
+     * APIMethod: getParentIndex
      * 
      * Parameters: 
      * index - {integer} the array index of the row in the store (not the 
      *          primary key).
      */
-    getChildren: function (index) {
-        if (this.options.useAjax) {
-            //ajax call here
-        } else {
-            //go through and grab all of the children of this index
-            
-        }
-            
-    },
-    
-    /**
-     * APIMethod: getParent
-     * 
-     * Parameters: 
-     * index - {integer} the array index of the row in the store (not the 
-     *          primary key).
-     */
-    getParent: function (index) {
+    getParentIndex: function (index) {
         //get the parent based on the index
-        var parent = this.store.get(this.options.parentColumn, index);
-        return this.store.getRecord(parent.toInt());
+        var pk = this.store.get(this.options.parentColumn, index);
+        return this.store.findByColumn('primaryKey', pk);
     }
 });
