@@ -1,4 +1,111 @@
-.jxEditorTextarea {
+/* this makes the title bar stay inside the container's margins */
+.jxChromePanel {
+	overflow: hidden;
+}
+
+/* this sets the chrome image, adjust the path as necessary */
+.jxChromePanel .jxChrome {
+	background-image: url(../../../deps/themes/crispin/images/dialog_chrome.png);
+}
+
+/* these are the dimensions of the chrome around the content area of
+the panel, taken from dialog css */
+.jxChromePanel .jxPanelContentContainer {
+	margin: 0px 11px 13px 12px;
+}
+
+/* these are the dimensions of the chrome around the title area of the
+panel, taken from dialog css */
+
+.jxChromePanel .jxPanelTitle {
+	background-image: none;
+	margin: 6px 6px 0px 7px;
+}
+
+/* need some space at the bottom of the title when the panel is
+minimized */
+.jxChromePanel .jxPanelMin .jxPanelTitle {
+	margin-bottom: 13px;
+}
+
+
+/* need to adjust the position of absolutely positioned things  a bit */
+.jxChromePanel .jxPanelControls {
+	right: 5px;
+}
+
+.jxChromePanel .jxPanelIcon {
+	left: 5px;
+}
+
+/* Styles for embedding a regular panel in a ChromePanel */
+
+.jxChromePanel .jxPanel .jxPanelTitle {
+	background-image: url(../../../deps/themes/crispin/images/panelbar.png);
+	margin: 0;
+}
+
+.jxChromePanel .jxPanel .jxPanelMin .jxPanelTitle {
+	margin-bottom: 0;
+}
+
+.jxChromePanel .jxPanel .jxPanel .jxPanelControls {
+	right: 2px;
+}
+
+.jxChromePanel .jxPanel .jxPanelIcon {
+	left: 2px;
+}
+
+.jxLayoutColumns {
+	position: relative;
+	width: 100%;	
+	min-height: 100%;
+}
+
+.jxLayoutColumn {
+	float: left;
+	position: relative;
+	margin-right: 10px;
+	min-height: 100%;
+}
+
+.jxLayoutColumn div.jxPanel {
+    margin-bottom: 10px;
+}
+
+.jxLayoutColumnMarker {
+	background-color: blue;
+	border: 1px yellow dashed;
+}
+
+.jxLayoutColumnLast {
+	margin-right: 0;
+}
+
+.jxLayoutDraggable .jxPanelLabel {
+	cursor: pointer;
+}
+
+.jxLayoutColumns:after, .jxLayoutColumn:after { 
+	content: "."; 
+	display: block; 
+	height: 0; 
+	font-size:0; 
+	clear: both; 
+	visibility:hidden; 
+}
+
+.jxLayoutColumns:after, .jxLayoutColumn:after { display: inline-block; }
+
+/* Hides from IE Mac \*/ 
+* html .floatcontainer {
+	height: 1%;
+}
+.jxLayoutColumns:after, .jxLayoutColumn:after { 
+	display:block;
+}
+/* End Hack */ .jxEditorTextarea {
     display: none;
 }
 
@@ -85,4 +192,32 @@
 
 .jxEditorButtonUnorderedList {
    background-image: url(images/text_list_bullets.png);
+}.jxPanelContent .jxForm {
+    margin: 10px;
+}
+
+.jxPanelContent .jxForm .jxNoticeListContainer {
+    margin-bottom: 10px;
+}
+.jxWizard .jxTabSetContainer .tabContent {
+    padding: 10px;
+}
+
+.jxWizardPrev {
+    background-image: url('images/arrow_left.png');
+}
+
+
+.jxWizardNext {
+    background-image: url('images/arrow_right.png');
+}
+
+
+.jxWizardCancel {
+    background-image: url('images/cancel.png');
+}
+
+
+.jxWizardFinish {
+    background-image: url('images/tick.png');
 }

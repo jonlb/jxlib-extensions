@@ -767,7 +767,7 @@ Jx.Styles = new(new Class({
     disableStyleSheet: function (name) {
         this.getDynamicStyleSheet(name).disabled = true;
     }
-}))();// $Id: object.js 656 2009-12-01 18:41:44Z jonlb@comcast.net $
+}))();// $Id: object.js 681 2010-01-15 05:45:28Z jonlb@comcast.net $
 /**
  * Class: Jx.Object
  * Base class for all other object in the JxLib framework. This class
@@ -1079,7 +1079,7 @@ Jx.Object = new Class({
     }
 
 });
-// $Id: widget.js 678 2010-01-07 14:05:26Z pagameba $
+// $Id: widget.js 685 2010-01-29 20:17:31Z zak4ms $
 /**
  * Class: Jx.Widget
  * Base class for all widgets (visual classes) in the JxLib Framework. This
@@ -1639,8 +1639,12 @@ Jx.Widget = new Class({
     addTo: function(reference, where) {
         var el = document.id(this.addable) || document.id(this.domObj);
         if (el) {
-            ref = document.id(reference);
-            el.inject(ref,where);
+            if (reference instanceof Jx.Widget && $defined(reference.add)) {
+                reference.add(el);
+            } else {
+                ref = document.id(reference);
+                el.inject(ref,where);
+            }
             this.fireEvent('addTo',this);
         }
         return this;
@@ -1859,7 +1863,7 @@ Jx.Selection = new Class({
         return this.selection.contains(item);
     }
 
-});// $Id: list.js 666 2009-12-11 15:25:07Z zak4ms $
+});// $Id: list.js 681 2010-01-15 05:45:28Z jonlb@comcast.net $
 /**
  * Class: Jx.List
  * 
@@ -2268,7 +2272,7 @@ Jx.List = new Class({
         }
     }
 
-});// $Id: record.js 660 2009-12-05 21:21:20Z jonlb@comcast.net $
+});// $Id: record.js 686 2010-02-01 05:45:28Z jonlb@comcast.net $
 /**
  * Class: Jx.record
  * 
@@ -2412,7 +2416,11 @@ Jx.Record = new Class({
      * True | False depending on the outcome of the comparison.
      */
     equals: function (column, value) {
-        var column = this.resolveCol(column);
+        if (column === 'primaryKey') {
+            column = this.resolveCol(this.options.primaryKey);
+        } else {
+            column = this.resolveCol(column);
+        }
         if (!this.data.has(column.name)) {
             return null;
         } else {
@@ -2473,7 +2481,7 @@ Jx.Record = new Class({
 
 Jx.Record.UPDATE = 1;
 Jx.Record.DELETE = 2;
-Jx.Record.INSERT = 3;// $Id: store.js 669 2009-12-18 06:02:59Z jonlb@comcast.net $
+Jx.Record.INSERT = 3;// $Id: store.js 686 2010-02-01 05:45:28Z jonlb@comcast.net $
 /**
  * Class: Jx.Store 
  * 
@@ -2993,6 +3001,9 @@ Jx.Store = new Class({
                 return this.data[index];
             }
         } else {
+            //Not sure what the point of this part is. It compares the 
+            //record to the index directly as if we passed in the record which 
+            //means we already have the record... huh???
             var r;
             this.data.each(function(record){
                 if (record === index) {
@@ -4677,6 +4688,123 @@ Jx.Store.Strategy.Paginate = new Class({
     }
     
     
+});
+Jx.Store.Strategy.Progressive = new Class({
+    
+    Extends: Jx.Store.Strategy.Paginate,
+    
+    name: 'progressive',
+    
+    options: {
+        /**
+         * Option: maxRecords
+         * The maximum number of records we want in the store at any one time.
+         */
+        maxRecords: 1000,
+        /**
+         * Option: dropRecords
+         * Whether the strategy should drop records when the maxRecords limit 
+         * is reached. if this is false then maxRecords is ignored and data is
+         * always added to the bottom of the store. 
+         */
+        dropRecords: true
+    },
+    
+    startingPage: 0,
+    maxPages: null,
+    loadedPages: 0,
+    loadAt: 'bottom',
+    
+    init: function () {
+        this.parent();
+        if (this.options.dropPages) {
+            this.maxPages = Math.ceil(this.options.maxRecords/this.itemsPerPage);
+        }
+    },
+    
+    /**
+     * Method: loadStore
+     * Used to assist in the loading of data into the store. This is 
+     * called as a response to the protocol finishing.
+     * 
+     *  Parameters:
+     *  resp - the response object
+     */
+    loadStore: function (resp) {
+        this.store.protocol.removeEvent('dataLoaded', this.bound.loadStore);
+        if (resp.success()) {
+            if ($defined(resp.meta)) {
+                this.parseMetaData(resp.meta);
+            }
+            this.loadData(resp.data);
+        } else {
+            this.store.fireEvent('storeDataLoadFailed', this.store);
+        }
+    },
+    
+    /**
+     * Method: loadData
+     * This method does the actual work of loading data to the store. It is called
+     * when either the protocol finishes or setPage() has the data and it's not
+     * expired.
+     * 
+     * Parameters:
+     * data - the data to load into the store.
+     */
+    loadData: function (data) {
+        this.store.loaded = false;
+        this.store.addRecords(data, this.loadAt);
+        this.store.loaded = true;
+        this.loadedPages++;
+        this.store.fireEvent('storeDataLoaded',this.store);
+    },
+    
+    /**
+     * APIMethod: nextPage
+     * Allows a caller (i.e. a paging toolbar) to load more data to the end of 
+     * the store
+     * 
+     * Parameters:
+     * end - which end to load to. Either 'top' or 'bottom'.
+     */
+    nextPage: function (params) {
+        if (!$defined(params)) {
+            params = {};
+        }
+        if (this.options.dropPages && this.totalPages > this.startingPage + this.loadedPages) {
+            this.loadAt = 'bottom';
+            if (this.loadedPages >= this.maxPages) {
+                //drop records before getting more
+                this.startingPage++;
+                this.store.removeRecords(0,this.itemsPerPage - 1);
+                this.loadedPages--;
+            }
+        }
+        this.page = this.startingPage + this.loadedPages + 1;
+        this.load($merge(this.params, params));
+    },
+    
+    previousPage: function (params) {
+        //if we're not dropping pages there's nothing todo
+        if (!this.options.dropPages) {
+            return;
+        }
+        
+        if (!$defined(params)) {
+            params = {};
+        }
+        if (this.startingPage > 0) {
+            this.loadAt = 'top';
+            if (this.loadedPages >= this.maxPages) {
+                //drop off end before loading previous pages
+                this.startingPage--;
+                this.store.removeRecords(this.options.maxRecords - this.itemsPerPage, this.options.maxRecords);
+                this.loadedPages--;
+            }
+            this.page = this.startingPage;
+            this.load($merge(this.params, params));
+        }
+    }
 });// $Id: strategy.save.js 670 2009-12-18 06:04:44Z jonlb@comcast.net $
 /**
  * Class: Jx.Store.Strategy.Save 
@@ -7828,7 +7956,7 @@ Jx.Menu.Item = new Class({
     }
 });
 
-// $Id: combo.js 647 2009-11-26 16:23:24Z pagameba $
+// $Id: combo.js 681 2010-01-15 05:45:28Z jonlb@comcast.net $
 /**
  * Class: Jx.Button.Combo
  *
@@ -8028,7 +8156,7 @@ Jx.Button.Combo = new Class({
     remove: function(idx) {
         //TODO: implement remove?
     }
-});// $Id: toolbar.js 676 2009-12-29 06:49:56Z jonlb@comcast.net $
+});// $Id: toolbar.js 687 2010-02-02 16:57:21Z pagameba $
 /**
  * Class: Jx.Toolbar
  *
@@ -8302,10 +8430,10 @@ Jx.Toolbar = new Class({
                 var children = this.domObj.getChildren();
                 children.each(function(button){
                     var size = button.getMarginBoxSize();
-                    s += size.width;
+                    s += size.width +0.5;
                 },this);
                 if (s !== 0) {
-                    this.domObj.setStyle('width', s);
+                    this.domObj.setStyle('width', Math.round(s));
                 } else {
                     this.domObj.setStyle('width','auto');
                 }
@@ -10661,7 +10789,7 @@ Jx.Splitter = new Class({
              }
          }
     }
-});// $Id: panelset.js 626 2009-11-20 13:22:22Z pagameba $
+});// $Id: panelset.js 681 2010-01-15 05:45:28Z jonlb@comcast.net $
 /**
  * Class: Jx.PanelSet
  *
@@ -11227,7 +11355,7 @@ Jx.Tooltip = new Class({
         this.destroy();
     }
 });
-// $Id: field.js 649 2009-11-30 22:19:48Z pagameba $
+// $Id: field.js 681 2010-01-15 05:45:28Z jonlb@comcast.net $
 /**
  * Class: Jx.Field
  *
@@ -11689,7 +11817,7 @@ Jx.Dialog.Prompt = new Class({
 
 
 });
-// $Id: dataview.js 649 2009-11-30 22:19:48Z pagameba $
+// $Id: dataview.js 686 2010-02-01 05:45:28Z jonlb@comcast.net $
 /**
  * Class: Jx.Panel.DataView
  *
@@ -11825,7 +11953,7 @@ Jx.Panel.DataView = new Class({
      * and creating a single item based on the provided template
      */
     createItem: function () {
-      //create the item
+        //create the item
         var itemObj = {};
         this.itemCols.each(function (col) {
             itemObj[col] = this.options.data.get(col);
@@ -12160,7 +12288,7 @@ Jx.Field.Hidden = new Class({
 
 
 
-// $Id: form.js 649 2009-11-30 22:19:48Z pagameba $
+// $Id: form.js 686 2010-02-01 05:45:28Z jonlb@comcast.net $
 /**
  * Class: Jx.Form
  *
@@ -12212,7 +12340,12 @@ Jx.Form = new Class({
          * Option: name
          * the name property for the form
          */
-        name: ''
+        name: '',
+        /**
+         * Option: fileUpload
+         * Determines if this form needs to be setup for file uploads.
+         */
+        fileUpload: false
     },
     
     /**
@@ -12347,7 +12480,10 @@ Jx.Form = new Class({
             if (field instanceof Jx.Field && !$defined(field.form)) {
                 field.form = this;
                 this.addField(field);
+            } else if (field instanceof Jx.Fieldset && !$defined(field.form)) {
+                field.form = this;
             }
+            
             this.domObj.grab(field);
         }
         return this;
@@ -12372,6 +12508,13 @@ Jx.Form = new Class({
             }
         },this);
         return fields;
+    },
+    
+    getField: function (id) {
+        if (this.fields.has(id)) {
+            return this.fields.get(id);
+        } 
+        return null;
     }
 });
 /**
@@ -15990,7 +16133,7 @@ Jx.Plugin.Field.Validator = new Class({
  *
  * This file is licensed under an MIT style license
  */
-Jx.Plugin.Form = {};// $Id: form.validator.js 668 2009-12-17 06:14:32Z jonlb@comcast.net $
+Jx.Plugin.Form = {};// $Id: form.validator.js 686 2010-02-01 05:45:28Z jonlb@comcast.net $
 /**
  * Class: Jx.Plugin.Form.Validator
  *
@@ -16081,7 +16224,7 @@ Jx.Plugin.Form.Validator = new Class({
         //setup the fields
         $H(this.options.fields).each(function (val, key) {
             var opts = $merge(this.options.fieldDefaults, val);
-            var field = document.id(key).retrieve('field');
+            var field = this.form.getField(key);
             var p = new Jx.Plugin.Field.Validator(opts);
             this.plugins.set(key, p);
             p.attach(field);
@@ -18814,7 +18957,7 @@ Jx.Fieldset = new Class({
     }
     
 });
-// $Id: checkbox.js 649 2009-11-30 22:19:48Z pagameba $
+// $Id: checkbox.js 681 2010-01-15 05:45:28Z jonlb@comcast.net $
 /**
  * Class: Jx.Field.Check
  *
@@ -18933,7 +19076,7 @@ Jx.Field.Checkbox = new Class({
     }
 
 });
-// $Id: radio.js 649 2009-11-30 22:19:48Z pagameba $
+// $Id: radio.js 681 2010-01-15 05:45:28Z jonlb@comcast.net $
 /**
  * Class: Jx.Field.Radio
  *
@@ -19054,7 +19197,7 @@ Jx.Field.Radio = new Class({
 
 
 
-// $Id: select.js 649 2009-11-30 22:19:48Z pagameba $
+// $Id: select.js 681 2010-01-15 05:45:28Z jonlb@comcast.net $
 /**
  * Class: Jx.Field.Select
  *

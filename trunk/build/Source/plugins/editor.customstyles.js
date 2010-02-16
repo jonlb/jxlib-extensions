@@ -61,12 +61,7 @@ Jx.Plugin.Editor.CustomStyles = new Class({
         
         //now create the combo button
         this.settingState = true;
-        /**
-        this.button = new Jx.Button.Combo({
-            items: items,
-            onChange: this.command.bind(this)
-        });
-        **/
+        
         //Try with an actual Select
         this.button = new Jx.Field.Select({
             comboOpts: items,

@@ -21,6 +21,42 @@
 	   "editor.selection": {
 	       "deps": ["jxlib"],
 	       "desc": ""
+	   },
+	   "panel.form": {
+	       "deps": ["jxlib"],
+	       "desc": ""
+	   },
+	   "wizard": {
+	       "deps": ["jxlib"],
+	       "desc": ""
+	   },
+	   "chromePanel": {
+	       "deps": ["jxlib"],
+	       "desc": ""
+	   }
+    },
+    "layouts": {
+    	"columns": {
+    		"deps": ["jxlib"],
+    		"desc": ""
+    	}
+    },
+    "adapters": {
+	   "adapter": {
+	       "deps": ["jxlib"],
+	       "desc": ""
+	   },
+	   "tree": {
+	       "deps": ["adapter"],
+	       "desc": ""
+	   },
+	   "tree.mptt": {
+	       "deps": ["tree"],
+	       "desc": ""
+	   },
+	   "tree.parent": {
+	       "deps": ["tree"],
+	       "desc": ""
 	   }
     },
     "plugins": {
@@ -114,6 +150,10 @@
         },
         "editor.customstyles": {
             "deps": ["plugin.editor"],
+            "desc": ""
+        },
+        "editor.block": {
+            "deps": ["editor.button"],
             "desc": ""
         }
     }

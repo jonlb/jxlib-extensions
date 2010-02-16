@@ -689,7 +689,11 @@ Jx.Editor = new Class({
         editorCssFile: null,
         html: '<!DOCTYPE html><html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head><body></body></html>',
         content: null,
-        plugins: [],
+        /**
+         * Option: buttons
+         * an array of arrays. Each separate array represents the buttons for a single toolbar.
+         */
+        buttons: null,
         cleanup: true,
         xhtml : true,
         semantics : true
@@ -717,14 +721,22 @@ Jx.Editor = new Class({
     
     editorDisabled: false,
     
+    toolbars: [],
+    
     render: function () {
         this.parent();
         
         new Jx.Layout(this.domObj);
         
         //create the toolbar
-        this.toolbar = new Jx.Toolbar();
-        this.toolbar.addTo(this.container);
+        var i = $splat(this.options.buttons).length;
+        for (var j = 0; j < i; j++) {
+            var c = new Jx.Toolbar.Container().addTo(this.container);
+            this.toolbars.push(new Jx.Toolbar());
+            c.add(this.toolbars[j]);
+        }
+        
+        
         if (this.options.parent) {
             this.addTo(this.options.parent);
         }
@@ -747,7 +759,7 @@ Jx.Editor = new Class({
         this.doc = this.win.document;
         
         this.doc.open();
-        //this.doc.write(this.options.html);
+        this.doc.write(this.options.html);
         this.doc.close();
         
         if (!this.win.$family) {
@@ -763,7 +775,7 @@ Jx.Editor = new Class({
         if ($defined(this.options.editorCssFile)) {
             var css = new Asset.css(this.options.editorCssFile, {
                 title: 'jxEditorStylesheet'
-            })//;
+            });
             css.inject(this.doc.head);
         }
         
@@ -817,6 +829,15 @@ Jx.Editor = new Class({
         
         this.domObj.store('Jx.Editor',this);
         this.resize();
+        
+        this.addEvent('postPluginInit', function(){
+            //now loop through button arrays and init the plugins
+            this.options.buttons.each(function(bar, index){
+                this.options.plugins = bar;
+                this.toolbar = this.toolbars[index];
+                this.initPlugins();
+            },this);
+        }.bind(this));
     },
     
     setContent: function (content) {
@@ -1334,6 +1355,1209 @@ Jx.Editor.Selection = new Class({
         } else {
             this.win.document.execCommand('insertHTML', false, content);
         }
+    }
+});
+Jx.Panel.Form = new Class({
+    
+    Family: 'Jx.Panel.Form',
+    Extends: Jx.Panel,
+    
+    notices: $H(),
+    
+    options: {
+        /**
+         * Option: fields
+         * an array of option objects that describe the various fields in the 
+         * form. Each should have a type and fieldset objects can have children.
+         * Formatted like so:
+         * 
+         * (code)
+         * [{
+         *     type: 'text',
+         *     options: { ..options here.. }
+         *  },{
+         *      type: 'fieldset',
+         *      options: { ..options for the fieldset.. },
+         *      children: [ {},{},{} ]  //array of additional fields
+         * }]
+         * (end) 
+         * 
+         */
+        fields: null,
+        /**
+         * Option: validators
+         * This should be the config used in Jx.Plugin.Form.Validator
+         */
+        validators: null,
+        /**
+         * Option: notifierType
+         * The type of notifier to use. Either 'float' or 'inline'.
+         * Default is 'inline' which places the notifier at the top of the form.
+         */
+        notifierType: 'inline',
+        /**
+         * Option: formOptions
+         * The options for the internal instance of Jx.Form
+         */
+        formOptions: null
+    },
+    
+    init: function () {
+        this.parent();
+    },
+    
+    render: function () {
+        this.form = new Jx.Form(this.options.formOptions);
+       
+        //create the notifier here so it will be at the top of the form
+        if (this.options.notifierType === 'inline') {
+            this.notifier = new Jx.Notifier({parent: $(this.form)});
+        } else {
+            this.notifier = new Jx.Notifier.Float({parent: document.body});
+        }
+        
+        //add fields
+        this.addFields(this.form, this.options.fields);
+        this.options.content = $(this.form);
+        
+        this.parent();
+        
+        //create validator
+        this.validator = new Jx.Plugin.Form.Validator(this.options.validators);
+        this.validator.attach(this.form);
+        
+        //connect validation events
+        this.validator.addEvent({
+            'fieldValidationFailed': this.fieldFailed.bind(this),
+            'fieldValidationPassed': this.fieldPassed.bind(this),
+            'formValidationPassed': this.formPassed.bind(this),
+            'formValidationFailed': this.formFailed.bind(this)
+        });
+        
+    },
+    
+    addFields: function (container, options) {
+        options.each(function(opt){
+            if (opt.type.toLowerCase() === 'fieldset') {
+                var field = new Jx.Fieldset(opt.options);
+                container.add(field);
+                if ($defined(opt.children)) {
+                    this.addFields(field, opt.children);
+                }
+            } else {
+                var field = new Jx.Field[opt.type.capitalize()](opt.options);
+                container.add(field);
+            }
+        },this);
+    },
+    
+    fieldPassed: function (field, validator) {
+        if (this.notices.has(field.id)) {
+            this.notices.get(field.id).close();
+        }
+    },
+    fieldFailed: function (field, validator) {
+        var errs = validator.getErrors();
+        var text = field.name + " has the following errors: " + errs.join(",") + ".";
+        var notice = new Jx.Notice.Error({
+            content: text,
+            onClose: function(){
+                this.notices.erase(field.id);
+            }.bind(this)
+        });
+        this.notifier.add(notice);
+        this.notices.set(field.id, notice);
+    },
+    formPassed: function (form, formValidator) {
+        
+    },
+    formFailed: function (form, formValidator) {
+        
+    }
+});/**
+ * Class: Jx.Wizard
+ * This is a simple wizard class that allows input through a variety of steps. It is based
+ * on Jx.Dialog and utilizes <Jx.Form>.
+ */
+Jx.Dialog.Wizard = new Class({
+	/**
+	 * Extends: Jx.Dialog
+	 */
+	Extends: Jx.Dialog,
+	
+	options: {
+		//dialog defaults
+		resize: false,
+		collapse: false,
+		maximize: false,
+		minimize: false,
+		
+		validateOn: 'steps',	//steps or finish
+		allowFinish: 'last',	//whether to allow the finish button to activate
+								//only on th elast step or on all steps
+		showSteps: true,			//whether to show the steps in a pane on the left
+		hideSteps: false,
+		steps:[],				//an array of the wizard steps executed in order
+
+		//events
+		onFinish: $empty,		//called when wizard finishes
+		onCancel: $empty
+	},
+	
+	stepDefaults: {
+		title: null,		//the title of this step
+		content: null		//the content of the step. Can be an element which we just show as is,
+							//an object which would be a form config, or another Class with a 
+							//domObj property that we can use to add as well.
+	},
+	/**
+	 * Property: steps
+	 * An array where the class keeps all of the steps of
+	 * the wizard.
+	 */
+	steps:[],
+	/**
+	 * Property: stepIndex
+	 * Maintains a pointer into the steps array so we know where
+	 * in the wizard we are.
+	 */
+	stepIndex: 0,
+	
+	/**
+	 * Constructor: Jx.Wizard
+	 * This method creates the wizard dialog from the passed in options
+	 * 
+	 * Parameters:
+	 * options - the options to use in constructing the wizard
+	 * 
+	 * Options:
+	 * In addition to the options for Jx.Dialog...
+	 * 
+	 * validateOn - set to "steps" to validate each step of the wizard, or "finish"
+	 * 				to validate only on finish.
+	 * allowFinish - set to "all" to enable the finish button on all steps, or "last"
+	 * 				 to enable it only on the last step.
+	 * showSteps - true to show steps in a tree on the left of the dialog, false to not show them.
+	 * hideSteps - true will hide the steps.
+	 * steps - an Array of objects holding info for each step. The objects are setup as follows
+	 * 		o title - The title of the step. Used in constructing the tree view
+	 * 		o content - The Element, form, or other class that should be displayed 
+	 * 					as the panel of the wizard.
+	 */
+	render: function(){
+		
+		//create the content for the wizard
+		
+		toolbar = new Jx.Toolbar({'position': 'bottom'});
+		//add buttons (prev,finish,next)
+		this.prev = new Jx.Button({
+	            label: 'Previous', 
+				image: Jx.aPixel.src,
+				imageClass: 'jxWizardPrev',
+	            onClick: this.previousStep.bind(this)
+		});
+		this.next = new Jx.Button({
+	            label: 'Next', 
+				image: Jx.aPixel.src,
+				imageClass: 'jxWizardNext',
+	            onClick: this.nextStep.bind(this)
+		});
+		this.cancel = new Jx.Button({
+	            label: 'Cancel', 
+				image: Jx.aPixel.src,
+				imageClass: 'jxWizardCancel',
+	            onClick: this.close.bind(this)
+		});
+	    this.finish = new Jx.Button({
+	            label: 'Finish',
+				image: Jx.aPixel.src,
+				imageClass: 'jxWizardFinish', 
+	            onClick: this.finishWizard.bind(this)
+	     });
+		toolbar.add(this.prev,this.next,this.cancel,this.finish);
+		this.addEvent('close',this.onCancel.bind(this));
+		
+		
+		this.options.toolbars = [toolbar];
+		
+		if (!$defined(this.options.parent)){
+			this.options.parent = document.body;
+		}
+		
+		this.parent(this.options);
+		
+		//do we create the side bar?
+		if (this.options.showSteps) {
+			//create splitter
+			this.split = new Jx.Splitter(this.content,{
+				splitInto: 2,
+				layout: 'horizontal',
+				barOptions: [
+					{snap: 'before'}
+				],
+				containerOptions: [{width:150}]
+			});
+			//create tree
+			var list = new Jx.ListView({parent: this.split.elements[0]});
+			var numSteps = this.options.steps.length;
+			list.list.addEvent('select', this.gotoStep.bind(this));
+			
+			list.list.empty();
+            var templ = "<li class='jxListItemContainer jxWizardStep'><a class='jxListItem' href='javascript:void(0);'><img src='"+Jx.aPixel.src+"' class='itemImg jxWizardStepImage'><span class='itemLabel'>{name}</span></a></li>";
+            
+			this.options.steps.each(function(item, index){
+			    var o = {};
+                o.name = 'Step '+(index+1)+' of '+numSteps+' : '+item.title;
+                var theTemplate = new String(templ).substitute(o);
+                var litem = new Jx.ListItem({template:theTemplate, enabled: true});
+                list.add(litem);
+			},this);
+			this.tabSet = new Jx.TabSet(this.split.elements[1]);
+		} else {
+			this.tabSet = new Jx.TabSet(this.content);
+		} 
+		
+		//create the tabs (pages/steps) of the wizard
+		this.options.steps.each(function(item){
+			var opts = $merge(this.stepDefaults,item);
+			var t = $type(item.content);
+			var tab;
+			if ($defined(t)) {
+				switch (t) {
+					case "element":
+						tab = new Jx.Button.Tab({
+							content: item.content
+						});
+						break;
+					case "object":
+						if ($defined(item.content.domObj)) {
+							tab = new Jx.Button.Tab({
+								content: item.content.domObj
+							});
+						} else {
+							//then we have a form config
+							item.content.buttons = null;
+							f = new sgd.ui.form(item.content);
+							item.form = f;
+							tab = new Jx.Button.Tab({
+								content: f.domObj
+							});
+						}
+						break;
+				}
+				item.tab = tab;
+				this.steps.include(item);
+				this.tabSet.add(tab);
+			}
+		},this);
+		
+		$(this.content).addClass('s-wizard');
+		if (this.options.hideSteps){
+			this.split.bars[0].fireEvent('dblclick');
+		}
+		this.tabSet.setActiveTab(this.steps[0].tab);
+		this._enableButtons();
+	},
+	/**
+	 * Method: previousStep
+	 * Moves the wizard to the previous step.
+	 */
+	previousStep: function(){
+		this._changeSteps(this.stepIndex - 1);
+	},
+	/**
+	 * Method: nextStep
+	 * Moves the wizard to the next step.
+	 */
+	nextStep: function(){
+		if (this._isFormValid()) {
+			this._changeSteps(this.stepIndex + 1);
+		} else {
+			this.steps[this.stepIndex].form.showErrors();
+		}
+	},
+	/**
+	 * Method: onCancel
+	 * Cancels the wizard and fires the cancel event.
+	 */
+	onCancel: function(){
+		this.fireEvent('cancel');
+	},
+	/**
+	 * Method: finishWizard
+	 * Verifies that all of the forms are valid, gathers
+	 * the data, and fires the finish event. If any of the forms
+	 * fail validation it will how the errors and move to that page.
+	 */
+	finishWizard: function(){
+		//check all forms
+		var valid = true;
+		var data = new Hash();
+		var firstErrorStep = -1;
+		this.steps.each(function(item, index){
+			if ($defined(item.form)){
+				if (item.form.isValid()){
+					data.extend(item.form.getValues());
+				} else {
+					valid = false;
+					item.form.showErrors();
+					if (firstErrorStep === -1){
+						firstErrorStep = index;
+					}
+				}
+			}
+		},this);
+		
+		if (valid){
+			this.close();
+			this.fireEvent('finish',data);
+		} else {
+			this._changeSteps(firstErrorStep);
+		}
+	},
+	/**
+	 * Method: gotoStep
+	 * Moves to the step clicked in the left tree if it's shown.
+	 * 
+	 * Parameters:
+	 * step - the step to move to
+	 */
+	gotoStep: function(step){
+		if (this._isFormValid()) {
+			this._changeSteps(step);
+		} else {
+			this.steps[this.stepIndex].form.showErrors();
+		}
+	},
+	/**
+	 * Method: _changeSteps
+	 * Does the work of actually changing the step
+	 * 
+	 * Parameters:
+	 * step - the step to move to
+	 */
+	_changeSteps: function(step){
+		this._setTreeItemClass(this.stepIndex,false);
+		this.stepIndex = step;
+		this.steps[this.stepIndex].tab.setActive(true);
+		this._enableButtons();
+		this._setTreeItemClass(this.stepIndex,true);
+	},
+	/**
+	 * Method: _isFormValid
+	 * Determines if a step needs to be validated and, if so,
+	 * actually invokes the form's isValid() method.
+	 */
+	_isFormValid: function(){
+		//check if we must validate forms
+		if (this.options.validateOn === 'steps') {
+			if ($defined(this.steps[this.stepIndex].form)) {
+				return this.steps[this.stepIndex].form.isValid();
+			}
+		}
+		return true;
+	},
+	/**
+	 * Method: _enableButtons
+	 * Determines what buttons should be active on a particular step
+	 * and ensures that they are active.
+	 */
+	_enableButtons: function(){
+		if (this.stepIndex === 0 && (this.steps.length > 1)) {
+			this.prev.setEnabled(false);
+			this.next.setEnabled(true);
+		} else if (this.steps.length == 1) {
+			this.prev.setEnabled(false);
+			this.next.setEnabled(false);
+		} else if (this.stepIndex === (this.steps.length - 1)) {
+			this.prev.setEnabled(true);
+			this.next.setEnabled(false);
+		} else {
+			this.prev.setEnabled(true);
+			this.next.setEnabled(true);
+		}
+		if (this.options.allowFinish === 'all' || (this.options.allowFinish === 'last' && (this.stepIndex === (this.steps.length - 1)))) {
+			this.finish.setEnabled(true);
+		} else {
+			this.finish.setEnabled(false);
+		}
+	},
+	/**
+	 * Method: _setTreeItemClass
+	 * Either sets or removes the s-wizard-active-step class on
+	 * the tree item that is/isn't active
+	 * 
+	 * Parameters:
+	 * index - the step to work on
+	 * toSet - true to set the class, false to remove the class
+	 */
+	_setTreeItemClass: function(index, toSet){
+		var item = $('Step-'+index);
+		if ($defined(item)) {
+			if (toSet) {
+				item.addClass('s-wizard-active-step');
+			}
+			else {
+				item.removeClass('s-wizard-active-step');
+			}
+		}
+	}
+});
+Jx.ChromePanel = new Class({
+    Family: 'Jx.ChromePanel',  
+	Extends: Jx.Panel,
+	
+	options: {
+		resize: true
+	},
+	
+	init: function(options) {
+        this.addEvents({
+			/* redraw the chrome when the panel is expanded */
+	        expand: function() {
+	            this.showChrome(this.domObj);
+	            this.options.closed = false;
+	            if (this.resizeHandle) {
+	            	this.resizeHandle.setStyle('display','block');
+	            }
+	        },
+	        /* redraw the chrome when the panel is collapsed */
+	        collapse: function() {
+	        	
+	        	var m = this.domObj.measure(function(){
+	                return this.getSizes(['margin'],['top','bottom']).margin;
+	            });
+	            var size = this.title.getMarginBoxSize();
+	            this.domObj.resize({height: m.top + size.height + (m.bottom * 2)});
+	            
+	            this.options.closed = true;
+	            
+	            this.showChrome(this.domObj);
+	            if (this.resizeHandle) {
+	            	this.resizeHandle.setStyle('display','none');
+	            }
+	        },
+	        /* draw the chrome when the panel is first rendered */
+            addTo: function() {
+                this.showChrome(this.domObj);
+            }
+        });
+        this.parent();
+        
+    },
+    
+    render: function () {
+    	this.parent();
+    	this.domObj.addClass('jxChromePanel');
+    	
+    	this.showChrome(this.domObj);
+        
+        /* the dialog is resizeable */
+        if (this.options.resize && typeof Drag != 'undefined') {
+            this.resizeHandle = new Element('div', {
+                'class':'jxDialogResize',
+                title: this.options.resizeTooltip,
+                styles: {
+                    'display':this.options.closed?'none':'block'
+                }
+            });
+            this.domObj.appendChild(this.resizeHandle);
+
+            this.resizeHandleSize = this.resizeHandle.getSize();
+            this.resizeHandle.setStyles({
+                bottom: this.resizeHandleSize.height,
+                right: this.resizeHandleSize.width
+            });
+            this.domObj.makeResizable({
+                handle:this.resizeHandle,
+                modifiers: {x: null, y: 'height'},
+                onStart: (function() {
+                    this.contentContainer.setStyle('visibility','hidden');
+                    this.chrome.addClass('jxChromeDrag');
+                }).bind(this),
+                onDrag: (function() {
+                    this.resizeChrome(this.domObj);
+                }).bind(this),
+                onComplete: (function() {
+                    this.chrome.removeClass('jxChromeDrag');
+                    var size = this.domObj.getMarginBoxSize();
+                    this.options.width = size.width;
+                    this.options.height = size.height;
+                    this.layoutContent();
+                    this.domObj.resize(this.options);
+                    this.contentContainer.setStyle('visibility','');
+                    this.fireEvent('resize');
+                    this.resizeChrome(this.domObj);
+
+                }).bind(this)
+            });
+        }
+    }
+});
+Jx.Layout.Columns = new Class({
+	Family: 'Jx.Layout.Columns',
+	Extends: Jx.Object,
+	
+	options: {
+		columns: [{
+			cssClass: '',
+			width: '30%',
+			items: null
+		},{
+			cssClass: '',
+			width: '*',
+			items: null
+		},{
+			cssClass: '',
+			width: '25%',
+			items: null
+		}],
+		addDefaults: {
+			isDraggable: true,
+			column: 1,
+			position: 'top'
+		},
+		dragDefaults: {
+			dropZoneClass: 'jxDropZone',
+			handle: '',
+			position: 'bottom',
+			isDraggable: true
+		}
+	},
+	
+	parameters: ['target','options'],
+	
+	columns: [],
+	
+	marker: null,
+	
+	target: null,
+	
+	widgets: $H(),
+	
+	init: function () {
+		this.parent();
+		
+		this.target = $(this.options.target);
+		this.target.addClass('jxLayoutColumns');
+		
+		
+		this.marker = new Element('div', {'class': 'jxLayoutColumnMarker'}).setStyles({'opacity': 0.7, 'visibility': 'hidden'}).inject(document.getElement('body'));
+		
+		var w = 0;
+		//create columns in the target
+		this.options.columns.each(function(col, idx){
+			var column = new Element('div', {
+				'class': 'jxLayoutColumn'
+			});
+			column.addClass(col.cssClass);
+			column.addClass(this.options.dragDefaults.dropZoneClass);
+			if (idx == this.options.columns.length - 1) {
+				column.addClass('jxLayoutColumnLast');
+			}
+			column.inject(this.target);
+			this.columns.push(column);
+		},this);
+		
+		
+		
+		this.options.columns.each(function(col, idx){
+			if ($defined(col.items)) {
+				this.add(col.items, {
+					column: idx
+				});
+			}
+		},this);
+		
+		this.windowResize();
+		
+		//listen for the window resize and adjust the columns accordingly
+		window.addEvent('resize', this.windowResize.bindWithEvent(this));
+        window.addEvent('load', this.windowResize.bind(this));
+			
+	},
+	
+	windowResize: function () {
+		var tSize = this.target.getContentBoxSize();
+		//the -10 here is to account for any possible scrollbar on the window.
+		tSize.width -= 50;
+		var  w = 0;
+		this.options.columns.each(function(col, idx){
+			var column = this.columns[idx];
+			if (col.width == '*') {
+				this.fluidCol = column;
+			} else {
+				if (col.width.contains('%')) {
+					var percent = col.width.toInt();
+					var marginRight = column.getStyle('margin-right').toInt();
+					var marginLeft = column.getStyle('margin-left').toInt();
+					column.setStyle('width', (tSize.width * percent / 100) - marginRight - marginLeft);
+				} else {
+					column.setStyle('width', col.width);
+				}
+				var s = column.getMarginBoxSize();
+				w += s.width;
+			}
+		},this);
+		if ($defined(this.fluidCol)) {
+			var marginRight = this.fluidCol.getStyle('margin-right').toInt();
+			var marginLeft = this.fluidCol.getStyle('margin-left').toInt();
+			this.fluidCol.setStyle('width',tSize.width - w - marginRight - marginLeft);
+		}
+		
+		this.resize();
+	},
+	
+	/**
+	 * APIMethod: add
+	 * Use this method to add an element to the layout
+	 * 
+	 * Parameters:
+	 * elem - the element to add. Either a Dom Element or a Jx.Widget instance
+	 * options - the options to use in adding this elem.
+	 * 
+	 * Options: 
+	 * column - the column to add to (zero-based)
+	 * position - where in the column to add (top | bottom | 0...n)
+	 * isDraggable - whether this elem should be draggable (doesn't keep other
+	 * 				 elements from being added before or after)
+	 * handle - the part of the element to use as the drag handle
+	 */
+	add: function (elem, options) {
+		options = $merge(this.options.addDefaults,options);
+		
+		$splat(elem).each(function(el){	
+			el = $(el);
+			el.inject(this.columns[options.column],  options.position);
+			this.widgets.set(el.get('id'), el);
+		},this);
+		
+		if (options.isDraggable) {
+			this.makeDraggable(elem, options.handle);
+		}
+	},
+	
+	makeDraggable: function (elem, handle) {
+		handle = $defined(handle) ? handle : this.options.dragDefaults.handle;
+		$splat(elem).each(function(d){
+			d = $(d);
+			d.addClass('jxLayoutDraggable');
+	        d.makeDraggable({
+	            droppables: $$('.' + this.options.dragDefaults.dropZoneClass), 
+	            handle: d.getElement(handle), 
+	            precalculate: false,
+	            onBeforeStart: function(){
+	        		var coords = d.getCoordinates(d.getParent());
+	                this.marker.setStyles({
+	                	'display': 'block', 
+	                	'visibility': 'visible',
+	                	'height': coords.height, 
+	                	'width': coords.width - 5}).inject(d, 'after');
+	                d.setStyles({
+	                	'position': 'absolute', 
+	                	'top': (coords.top - d.getStyle('margin-top').toFloat()), 
+	                	'left': (coords.left - d.getStyle('margin-left').toFloat()), 
+	                	'width': coords.width, 
+	                	'opacity': 0.7, 
+	                	'z-index': 3});
+	                
+	            }.bind(this), 
+	            onStart: function(){
+	            	
+	            }.bind(this), 
+	            onEnter: function(el, drop){
+	                drop.adopt(this.marker.setStyles({
+	                	'display': 'block', 
+	                	'height': el.getCoordinates().height, 
+	                	'width': drop.getCoordinates().width - 5
+	                	})
+	                );
+	                
+	            }.bind(this), 
+	            onLeave: function(el, drop){
+	                this.marker.dispose();
+	                
+	            }.bind(this), 
+	            onDrag: function(el){
+	                target = null;
+	                drop = this.marker.getParent();
+	                var drag = el.retrieve('dragger');
+	                if (drop && drop.getChildren().length > 1){
+	                    kids = drop.getChildren();
+	                    mouseY = drag.mouse.now.y;
+	                    kids.each(function(k){
+	                        if (mouseY > (k.getCoordinates().top + Math.round(k.getCoordinates().height / 2))) target = k;
+	                    });
+	                    if (target == null){
+	                        if (kids[0] != this.marker) this.marker.inject(drop, 'top');
+	                    } else {
+	                        if ((target != this.marker) && (target != this.marker.getPrevious())) this.marker.inject(target, 'after');
+	                    }
+	                }
+	                
+	            }.bind(this), 
+	            onDrop: function(el, drop){
+	                if (drop) {
+	                	el.setStyles({
+	                		'position': 'relative', 
+	                		'top': '0', 
+	                		'left': '0', 
+	                		'width': 'auto', 
+	                		'opacity': 1, 
+	                		'z-index': 1
+	                	}).replaces(this.marker);
+	                	if ($defined(el.resize)) {
+	                		el.resize({width: null});
+	                	}
+	                } else {
+	                	el.setStyles({
+	                		'position': 'relative', 
+	                		'top': '0', 
+	                		'left': '0', 
+	                		'opacity': 1, 
+	                		'z-index': 1
+	                	});
+	                }
+	            }.bind(this), 
+	            onComplete: function(el){
+	            	this.marker.dispose();
+	            	this.fireEvent('jxLayoutMoveComplete', el);
+	            }.bind(this), 
+	            onCancel: function(el){
+	                this.marker.dispose();
+	                el.setStyles({
+	                	'position': 'relative', 
+	                	'top': '0', 
+	                	'left': '0', 
+	                	'width': null, 
+	                	'opacity': 1, 
+	                	'z-index': 1
+	                });
+	            }.bind(this)
+	        });
+	    },this);
+	},
+	
+	resize: function () {
+		this.widgets.each(function(el){
+			if ($defined(el.resize)) {
+				el.resize();
+			}
+		},this);
+	},
+	/**
+	 * APIMethod: serialize
+	 * Returns an array of objects containing the following information for 
+	 * each object
+	 * 
+	 *  (code)
+	 *  {
+	 *  	id: <object's id>,
+	 *  	width: <object's width>,
+	 *   	height: <object's height>,
+	 *   	column: <column>,
+	 *   	position: <position in the column>
+	 *   }
+	 *   (end)
+	 *   
+	 *   The array can be saved and used to recreate the layout. This layout 
+	 *   cannot recreate itself however. The developer is tasked with taking 
+	 *   this info and supplying the appropriate objects.
+	 */
+	serialize: function () {
+		var result = [];
+		
+		//go through each column and construct the object
+		this.columns.each(function(col, idx){
+			col.getChildren().each(function(widget,i){
+				widget = $(widget);
+				var size = widget.getBorderBoxSize();
+				result.push({
+					id: widget.get('id'),
+					width: size.width,
+					height: size.height,
+					column: idx,
+					position: i
+				});
+			},this);
+		},this);
+		
+		return result;
+	}
+	
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+    
+/**
+ * Jx.Adapter namespace
+ */
+Jx.Adapter = new Class({
+    
+    Family: 'Jx.Adapter',
+    
+    Extends: Jx.Object,
+    
+    options: {
+        template: '',
+        useTemplate: true
+    },
+    
+    parameters: ['store','widget','options'],
+    
+    init: function () {
+        this.parent();
+        this.widget = this.options.widget;
+        this.store = this.options.store;
+        
+        if (this.options.useTemplate) {
+            this.columnsNeeded = this.parseTemplate();
+        }
+    },
+    
+    /**
+     * Method: parseTemplate
+     * parses the provided template to determine which store columns are
+     * required to complete it.
+     *
+     * Parameters:
+     * template - the template to parse
+     */
+    parseTemplate: function () {
+        //we parse the template based on the columns in the data store looking
+        //for the pattern {column-name}. If it's in there we add it to the
+        //array of ones to look for
+        var columns = this.store.getColumns();
+        var arr = [];
+        columns.each(function (col) {
+            var s = '{' + col.name + '}';
+            if (this.options.template.contains(s)) {
+                arr.push(col.name);
+            }
+        }, this);
+        return arr;
+    }.protect(),
+    
+    /**
+     * Method: fillTemplate
+     * Actually does the work of getting the data from the store
+     * and creating a single item based on the provided template
+     * 
+     * Parameters: 
+     * index - the index of the data in the store to use in populating the
+     *          template.
+     */
+    fillTemplate: function (index) {
+        //create the item
+        var itemObj = {};
+        this.columnsNeeded.each(function (col) {
+            itemObj[col] = this.store.get(col, index);
+        }, this);
+        return this.options.template.substitute(itemObj);
+    }.protect(),
+    
+    /**
+     * APIMethod: fill
+     * Takes data from the store and fills in the widget object. This
+     * should be implemented by the adapter subclasses.
+     */
+    fill: $empty
+    
+});/**
+ * Class: Jx.Adapter.Tree
+ * This base class is used to change a store (a flat list of records) into the
+ * data structure needed for a Jx.Tree. It will have 2 subclasses: <Jx.Adapter.Tree.MPTT>
+ * and <Jx.Adapter.Tree.Parent>
+ * 
+ *  
+ */
+Jx.Adapter.Tree = new Class({
+    
+    Family: 'Jx.Adapter.Tree',
+    Extends: Jx.Adapter,
+    
+    Binds: ['fill','checkFolder'],
+    
+    options: {
+        /**
+         * Option: useAjax
+         * Determines if this adapter should use ajax to request data on the
+         * fly. 
+         */
+        useAjax: false,
+        startingNodeKey: 0,
+        folderOptions: {
+            image: null,
+            imageClass: null
+        },
+        itemOptions: {
+            image: null,
+            imageClass: null
+        }
+    },
+    
+    folders: new Hash(),
+    
+    currentRecord: 0,
+    
+    init: function () {
+        this.parent();
+        
+        this.tree = this.widget;
+        
+        this.tree.addEvent('disclose', this.checkFolder);
+        
+        if (this.options.useAjax) {
+            this.strategy = this.store.getStrategy('progressive');
+        
+            if (!$defined(this.strategy)) {
+                this.strategy = new Jx.Store.Strategy.Progressive({
+                    dropRecords: false,
+                    getPaginationParams: function () { return {}; }
+                });
+                this.store.addStrategy(this.strategy);
+            } else {
+                this.strategy.options.dropRecords = false;
+                this.strategy.options.getPaginationParams = function () { return {}; };
+            }
+            
+        }
+        
+        this.store.addEvent('storeDataLoaded', this.fill);
+        
+        //initial store load
+        this.store.load({
+            node: this.options.startingNodeKey
+        });
+    },
+    
+    /**
+     * APIMethod: fill
+     * This function will start at this.currentRecord and add the remaining
+     * items to the tree. 
+     */
+    fill: function () {
+        var l = this.store.count() - 1;
+        for (var i = this.currentRecord; i <= l; i++) {
+            var template = this.fillTemplate(i);
+            $(template).store('storeId', i);
+            $(template).store('jxAdapter', this);
+            var item;
+            if (this.hasChildren(i)) {
+                //add as folder
+                var item = new Jx.TreeFolder($merge(this.options.folderOptions, {
+                    label: template
+                }));
+                
+                this.folders.set(i,item);
+            } else {
+                //add as item
+                var item = new Jx.TreeItem($merge(this.options.itemOptions, {
+                    label: template
+                }));
+            }
+            $(item).store('index', i);
+            //check for a parent
+            if (this.hasParent(i)) {
+                //add as child of parent
+                var p = this.getParentIndex(i);
+                var folder = this.folders.get(p);
+                folder.add(item);
+            } else {
+                //otherwise add to the tree itself
+                this.tree.add(item);
+            }
+        }
+        this.currentRecord = l;
+    },
+    
+    checkFolder: function (folder) {
+        var items = folder.items();
+        if (!$defined(items) || items.length === 0) {
+            //get items via the store
+            this.store.load({
+                node: $(folder).retrieve('index')
+            });
+        }
+    },
+    
+    hasChildren: $empty,
+    
+    hasParent: $empty,
+    
+    getParentIndex: $empty
+    
+    
+});/**
+ * Class: Jx.Adapter.Tree.Parent
+ * This class adapts a table adhering to the classic Parent-style "tree table".
+ * 
+ * Basically, the store needs to have a column that will indicate each the 
+ * parent of each row. The root(s) of the tree should be indicated by a "-1" 
+ * in this column. The name of the "parent" column is configurable in the 
+ * options.
+ * 
+ * if useAjax option is set to true then this adapter will send an Ajax request
+ * to the server, through the store's strategy (should be Jx.Store.Strategy.Progressive)
+ * to request additional nodes. Also, a column indicating whether this is a folder needs 
+ * to be set as there is no way to tell if a node has children without it.
+ */
+Jx.Adapter.Tree.Mptt = new Class({
+    
+    Family: 'Jx.Adapter.Tree.Mptt',
+    Extends: Jx.Adapter.Tree,
+    
+    options: {
+        left: 'left',
+        right: 'right'
+    },
+        
+    /**
+     * APIMethod: hasChildren
+     * 
+     * Parameters: 
+     * index - {integer} the array index of the row in the store (not the 
+     *          primary key).
+     */
+    hasChildren: function (index) {
+        var l = this.store.get(this.options.left, index).toInt();
+        var r = this.store.get(this.options.right, index).toInt();
+        return (l + 1 !== r);
+    },
+    
+    /**
+     * APIMethod: hasParent
+     * 
+     * Parameters: 
+     * index - {integer} the array index of the row in the store (not the 
+     *          primary key).
+     */
+    hasParent: function (index) {
+        var i = this.getParentIndex(index);
+        if ($defined(i)) {
+            return true;
+        }
+        return false;
+    },
+    
+    /**
+     * APIMethod: getParentIndex
+     * 
+     * Parameters: 
+     * index - {integer} the array index of the row in the store (not the 
+     *          primary key).
+     */
+    getParentIndex: function (index) {
+        var l = this.store.get(this.options.left, index).toInt();
+        var r = this.store.get(this.options.right, index).toInt();
+        for (var i = index-1; i >= 0; i--) {
+            var pl = this.store.get(this.options.left, i).toInt();
+            var pr = this.store.get(this.options.right, i).toInt();
+            if (pl < l && pr > r) {
+                return i;
+            }
+        }
+        return null;
+    }
+});/**
+ * Class: Jx.Adapter.Tree.Parent
+ * This class adapts a table adhering to the classic Parent-style "tree table".
+ * 
+ * Basically, the store needs to have a column that will indicate each the 
+ * parent of each row. The root(s) of the tree should be indicated by a "-1" 
+ * in this column. The name of the "parent" column is configurable in the 
+ * options.
+ * 
+ * if useAjax option is set to true then this adapter will send an Ajax request
+ * to the server, through the store's strategy (should be Jx.Store.Strategy.Progressive)
+ * to request additional nodes. Also, a column indicating whether this is a folder needs 
+ * to be set as there is no way to tell if a node has children without it.
+ */
+Jx.Adapter.Tree.Parent = new Class({
+    
+    Family: 'Jx.Adapter.Tree.Parent',
+    Extends: Jx.Adapter.Tree,
+    
+    options: {
+        parentColumn: 'parent',
+        folderColumn: 'folder'
+    },
+        
+    /**
+     * APIMethod: hasChildren
+     * 
+     * Parameters: 
+     * index - {integer} the array index of the row in the store (not the 
+     *          primary key).
+     */
+    hasChildren: function (index) {
+        if (this.options.useAjax) {
+            return this.store.get(this.options.folderColumn, index);
+        } else {
+            //check to see if there are any rows with the primary key of the passed index
+            var id = this.store.get('primaryKey', index);
+            for (var i = 0; i < this.store.count();i++) {
+                if (this.store.get(this.options.parentColumn, i) === id) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    },
+    
+    /**
+     * APIMethod: hasParent
+     * 
+     * Parameters: 
+     * index - {integer} the array index of the row in the store (not the 
+     *          primary key).
+     */
+    hasParent: function (index) {
+        if (this.store.get(this.options.parentColumn, index).toInt() !== -1) {
+            return true;
+        } 
+        return false;
+    },
+    
+    /**
+     * APIMethod: getParentIndex
+     * 
+     * Parameters: 
+     * index - {integer} the array index of the row in the store (not the 
+     *          primary key).
+     */
+    getParentIndex: function (index) {
+        //get the parent based on the index
+        var pk = this.store.get(this.options.parentColumn, index);
+        return this.store.findByColumn('primaryKey', pk);
     }
 });
 Jx.Plugin.Editor = {};
@@ -2074,12 +3298,7 @@ Jx.Plugin.Editor.CustomStyles = new Class({
         
         //now create the combo button
         this.settingState = true;
-        /**
-        this.button = new Jx.Button.Combo({
-            items: items,
-            onChange: this.command.bind(this)
-        });
-        **/
+        
         //Try with an actual Select
         this.button = new Jx.Field.Select({
             comboOpts: items,
@@ -2135,6 +3354,90 @@ Jx.Plugin.Editor.CustomStyles = new Class({
         } else {
             this.button.disable();
         }
+    }
+    
+});
+Jx.Plugin.Editor.Block = new Class({
+    
+    Family: 'Jx.Plugin.Editor.Block',
+    
+    Extends: Jx.Plugin,
+    
+    name: 'block',
+    
+    tags: ['p','div','h1','h2','h3','h4','h5','h6','pre','address'],
+    action: 'formatblock',
+    
+    attach: function (editor) {
+        this.editor = editor;
+        this.parent(editor);
+        
+        items = [{
+            value: '',
+            text: ''
+        }];
+        this.tags.each(function(tag){
+            items.push({
+                value: tag,
+                text: tag
+            });
+        });
+        
+        this.button = new Jx.Field.Select({
+            comboOpts: items,
+            label: 'Block Type'
+        });
+        
+        this.button.field.addEvent('change', this.command.bind(this));
+       
+        this.editor.toolbar.add(this.button);
+    },
+    
+    detach: function () {
+        this.button.destroy();
+        this.parent(editor);
+    },
+    
+    checkState: function (element) {
+        this.setState(false);
+        if ($defined(this.tags)) {
+            var el = element;
+            do {
+                var tag = el.tagName.toLowerCase();
+                if (this.tags.contains(tag)) {
+                    this.setState(true, tag);
+                    break;
+                }
+            } 
+            while ( (el.tagName.toLowerCase() != 'body') && ((el = Element.getParent(el)) != null));
+        }
+        
+        
+    },
+    
+    command: function () {
+        if (!this.settingState) {
+            var tag = this.button.getValue();
+            if (tag !== '') {
+                var block = '<' + this.button.getValue() + '>';
+                this.editor.execute(this.action, false, block);
+            } 
+        }
+    },
+    
+    setEnabled: function (state) {
+        if (state) {
+            this.button.enable();
+        } else {
+            this.button.disable();
+        }
+    },
+    
+    setState: function(flag, tag) {
+        if (!flag) {
+            tag = '';
+        }
+        this.button.setValue(tag);
     }
     
 });

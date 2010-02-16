@@ -1,0 +1,198 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Jx.Dialog.Wizard Example</title>
+    <script type="text/javascript" src="../deps/mootools-core.js"></script>
+    <script type="text/javascript" src="../deps/mootools-more.js"></script>
+    <script type="text/javascript" src="../deps/jxlib.standalone.uncompressed.js"></script>
+    <link href="../deps/themes/crispin/jxtheme.uncompressed.css" type="text/css" rel="stylesheet" media="screen, projection" />
+    
+    <!-- Put the scripts we're testing here -->
+    <link href="../build/lib/css/jxlib-extensions.uncompressed.css" type="text/css" rel="stylesheet" media="screen, projection" />
+     
+    <script type="text/javascript" src="../build/lib/jxlib-extensions.uncompressed.js"></script>
+    
+    
+    <script type="text/javascript">
+        var editor;
+        window.addEvent('domready', function () {
+
+            var wizard = new Jx.Dialog.Wizard({
+                width: 600,
+                height: 500,
+                steps: [ {
+                    title: 'Welcome',
+                    content: 'welcome',
+                },{
+                    title: 'Choice form',
+                    next: function(){
+                        var form = this.steps[this.stepIndex].form.form;
+                        var results = form.getValues();
+                        if (results.nextChoice === 'next') {
+                            return this.stepIndex + 1;
+                        } else {
+                            this.prevStep = this.stepIndex;
+                            return this.steps.length - 1;
+                        } 
+                    },
+                    content: {
+                        hideTitle: true,
+                        id: 'test-formPanel-1',
+                        fields: [
+                            new Element('p', {
+                                html: 'Choose one of the below options.'
+                            }),{
+                                type: 'radio',
+                                options: {
+                                    label: 'Goto next panel',
+                                    name: 'nextChoice',
+                                    id: 'next-panel',
+                                    value: 'next'
+                                }
+                            },{
+                                type: 'radio',
+                                options: {
+                                    label: 'Goto final panel',
+                                    name: 'nextChoice',
+                                    id: 'final-panel',
+                                    value: 'final'
+                                }
+                            }
+                        ],
+                        formOptions: {
+                            id: 'test-form-2',
+                            name: 'test-form-2'
+                        }
+                    }
+                },{
+                    title: 'A Form Panel',
+                    next: null,
+                    previous: 1,
+                    content: {
+                        hideTitle: true,
+                        id: 'test-formPanel-2',
+  
+                        fields: [
+                           new Element('p', {
+                               html: 'This is a paragraph that was added to the form.'
+                           }),{
+                               type: 'text',
+                               options: {
+                                   label: 'First example textbox',
+                                   name: 'textbox-1',
+                                   id: 'textbox-1'
+                               }
+                           },{
+                               type: 'fieldset',
+                               options: {
+                                   legend: 'Fieldset #1',
+                               },
+                               children: [
+                                   {
+                                       type: 'text',
+                                       options: {
+                                           label: 'first child in frameset',
+                                           id: 'frame-text-1',
+                                           name: 'frame-text-1',
+                                           required: true
+                                       }
+                                   },{
+                                       type: 'checkbox',
+                                       options: {
+                                           label: 'a checkbox',
+                                           id: 'checkbox-1',
+                                           name: 'checkbox-1'
+                                       }
+                                   }
+                               ]
+                           },
+                           new Element('div', {
+                               id: 'test-form-editor-container',
+                               styles: {
+                                   width: '100%',
+                                   height: 200,
+                                   clear: 'both',
+                                   position: 'relative'
+                               }
+                           })
+                        ],
+  
+                      validators: {
+                          fields: {
+                              'textbox-1': {
+                                  validators: ['minLength:5', 'maxLength:10']
+                              },
+                              'frame-text-1': {
+                                  validators: []
+                              }
+                          }   
+                      },
+  
+                      notifierType: 'inline',
+  
+                      formOptions: {
+                          id: 'test-form-1',
+                          name: 'test-form-1'
+                      }
+                  }
+              },{
+                  title: 'Finish Step',
+                  content: 'finish-step',
+                  previous: function () {
+                      if ($defined(this.prevStep)) {
+                          return this.prevStep;
+                      } else {
+                          return this.stepIndex - 1;
+                      }
+                  }
+                }
+             ]
+          });
+
+          wizard.addEvent('showStep', function (wizard, step) {
+              if (step == 2) {
+                  new Jx.Editor({
+                      parent: 'test-form-editor-container',
+                      editorCssFile: 'css/editor.css',
+                      content: '<p>Starting content.</p>',
+                      textareaName: 'content',
+                      buttons: [
+                        ['bold','italic','underline','strikethrough','separator','alignment',
+                         'separator','orderedlist','unorderedlist','indent','outdent'],
+                        ['undo','redo','separator','customStyles','block',
+                         'separator', 'link','unlink', 'image','separator', 'toggle']
+                      ]
+                  });
+              }
+          });
+
+          wizard.addEvent('finish', function (data) {
+              console.log(data);
+          });
+
+          wizard.open();
+          
+        });
+
+        
+    </script>
+    
+    <style>
+        #panel-container {
+            width: 80%;
+            height: 500px;
+        }
+    </style>
+</head>
+<body>
+    <div id="welcome">
+        <p>Welcome to the Test Wizard. Click the "Next" button to go to the next panel or choose a step
+        from the panel to the left.</p>
+    </div>
+    
+    <div id="finish-step">
+        <p>Click the "Finish" button below to finish this wizard.</p>
+    </div>
+</body>
+</html>

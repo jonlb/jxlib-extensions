@@ -992,7 +992,7 @@ div.jxFileFake .jxButtonContainer {
     height: 35px;
 }/**
  * @project         Jx
- * @revision        $Id: form.css 615 2009-11-19 22:01:38Z fred.warnock $
+ * @revision        $Id: form.css 689 2010-02-03 16:03:51Z fred.warnock $
  * @author          Fred Warnock (fwarnock@dmsolutions.ca)
  * @copyright       (c) 2006 DM Solutions Group Inc.
  */
@@ -1316,6 +1316,7 @@ form .jxFormInlineblock .jxInputContainer,
 form .jxFieldset span.jxFormInlineblock,
 form.jxForm span.jxFormInlineblock {
   display: block;
+  white-space: nowrap;
 }
 
 /* Inline-Block Label */
@@ -2929,7 +2930,7 @@ a.jxTabClose {
 
 /**
  * @project         Jx
- * @revision        $Id: toolbar.css 657 2009-12-03 22:06:13Z jonlb@comcast.net $
+ * @revision        $Id: toolbar.css 688 2010-02-02 19:54:13Z zak4ms $
  * @author          Fred Warnock (fwarnock@dmsolutions.ca)
  * @copyright       (c) 2006 DM Solutions Group Inc.
  */
@@ -3083,7 +3084,7 @@ li.jxToolItem {
   float: left;
   font-size: 0px;
   line-height: 0px;
-
+  white-space: nowrap;
   padding: 0px;
   margin: 0px;  /* margins don't seem to work properly in IE */
   border: none;

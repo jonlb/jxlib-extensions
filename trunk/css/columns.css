@@ -1,0 +1,50 @@
+
+.jxLayoutColumns {
+	position: relative;
+	width: 100%;	
+	min-height: 100%;
+}
+
+.jxLayoutColumn {
+	float: left;
+	position: relative;
+	margin-right: 10px;
+	min-height: 100%;
+}
+
+.jxLayoutColumn div.jxPanel {
+    margin-bottom: 10px;
+}
+
+.jxLayoutColumnMarker {
+	background-color: blue;
+	border: 1px yellow dashed;
+}
+
+.jxLayoutColumnLast {
+	margin-right: 0;
+}
+
+.jxLayoutDraggable .jxPanelLabel {
+	cursor: pointer;
+}
+
+.jxLayoutColumns:after, .jxLayoutColumn:after { 
+	content: "."; 
+	display: block; 
+	height: 0; 
+	font-size:0; 
+	clear: both; 
+	visibility:hidden; 
+}
+
+.jxLayoutColumns:after, .jxLayoutColumn:after { display: inline-block; }
+
+/* Hides from IE Mac \*/ 
+* html .floatcontainer {
+	height: 1%;
+}
+.jxLayoutColumns:after, .jxLayoutColumn:after { 
+	display:block;
+}
+/* End Hack */ 

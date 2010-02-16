@@ -1,0 +1,121 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Jx.Layout.Columns Example</title>
+    <script type="text/javascript" src="../deps/mootools-core.js"></script>
+    <script type="text/javascript" src="../deps/mootools-more.js"></script>
+    <script type="text/javascript" src="../deps/jxlib.standalone.uncompressed.js"></script>
+    <link href="../deps/themes/crispin/jxtheme.uncompressed.css" type="text/css" rel="stylesheet" media="screen, projection" />
+    
+    <!-- Put the scripts we're testing here -->
+    <link href="../build/lib/css/jxlib-extensions.uncompressed.css" type="text/css" rel="stylesheet" media="screen, projection" />
+     
+    <script type="text/javascript" src="../build/lib/jxlib-extensions.uncompressed.js"></script>
+    
+    
+    <script type="text/javascript">
+        window.addEvent('domready', function () {
+            //panels to add to the layout
+            var panel1 = new Jx.ChromePanel({
+                label: 'Basic Panel 1',
+                content: 'basicPanelContent',
+                height: 200,
+                id: 'widget1'
+            });
+
+            var panel2 = new Jx.ChromePanel({
+                label: 'Basic Panel 2',
+                content: 'basicPanelContent',
+                height: 200,
+                id: 'widget2'
+            });
+
+            var panel3 = new Jx.ChromePanel({
+                label: 'Basic Panel 3',
+                content: 'basicPanelContent',
+                height: 200,
+                id: 'widget3'
+            });
+
+            var panel4 = new Jx.ChromePanel({
+                label: 'Basic Panel 4',
+                content: 'basicPanelContent',
+                height: 200,
+                id: 'widget4'
+            });
+
+            var panel5 = new Jx.ChromePanel({
+                label: 'Basic Panel 5',
+                content: new Jx.Panel({
+                    label: 'Embedded Panel',
+                    content: 'An embedded panel'
+                }),
+                height: 200,
+                id: 'widget5'
+            });
+
+            var panel6 = new Jx.ChromePanel({
+                label: 'Basic Panel 6',
+                content: 'basicPanelContent',
+                height: 200,
+                id: 'widget6'
+            });        
+            
+            var layout = new Jx.Layout.Columns('container',{
+            	columns: [{
+        			cssClass: '',
+        			width: '30%',
+        			items: [panel1, panel2]
+        		},{
+        			cssClass: '',
+        			width: '*',
+        			items: [panel3, panel4]
+        		},{
+        			cssClass: '',
+        			width: '25%',
+        			items: [panel5, panel6]
+        		}],
+        		addDefaults: {
+        			isDraggable: true,
+        			column: 1,
+        			position: 'bottom'
+        		},
+        		dragDefaults: {
+        			dropZoneClass: 'jxDropZone',
+        			handle: '.jxPanelLabel',
+        			position: 'top',
+        			isDraggable: true
+        		}
+        		
+            });
+
+            layout.addEvent('jxLayoutMoveComplete',function(){
+				console.log(layout.serialize());
+    		});
+    		
+            layout.resize();
+         
+        });   
+    </script>
+    
+    <style>
+        #container {
+            width: 99%;
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="container"></div>
+    
+    <!-- 
+    <div id="widget1" class="widget"><div class="handle">this is the handle of widget 1</div> <div class="content">This is the content of the widget</div></div>
+    <div id="widget2" class="widget"><div class="handle">this is the handle of widget 2</div> <div class="content">This is the content of the widget</div></div>
+    <div id="widget3" class="widget"><div class="handle">this is the handle of widget 3</div> <div class="content">This is the content of the widget</div></div>
+    <div id="widget4" class="widget"><div class="handle">this is the handle of widget 4</div> <div class="content">This is the content of the widget</div></div>
+    <div id="widget5" class="widget"><div class="handle">this is the handle of widget 5</div> <div class="content">This is the content of the widget</div></div>
+    <div id="widget6" class="widget"><div class="handle">this is the handle of widget 6</div> <div class="content">This is the content of the widget</div></div>
+	-->
+</body>
+</html>
