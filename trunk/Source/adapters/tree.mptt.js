@@ -1,5 +1,5 @@
 /**
- * Class: Jx.Adapter.Tree.Parent
+ * Class: Jx.Adapter.Tree.Mptt
  * This class adapts a table adhering to the classic Parent-style "tree table".
  * 
  * Basically, the store needs to have a column that will indicate each the 
@@ -14,6 +14,7 @@
  */
 Jx.Adapter.Tree.Mptt = new Class({
     
+
     Family: 'Jx.Adapter.Tree.Mptt',
     Extends: Jx.Adapter.Tree,
     

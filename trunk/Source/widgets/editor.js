@@ -21,7 +21,8 @@ Jx.Editor = new Class({
         buttons: null,
         cleanup: true,
         xhtml : true,
-        semantics : true
+        semantics : true,
+        textareaName: 'editor'
         
     },
     
@@ -51,7 +52,8 @@ Jx.Editor = new Class({
     render: function () {
         this.parent();
         
-        new Jx.Layout(this.domObj);
+        //add name to textarea
+        this.textarea.set('name', this.options.textareaName);
         
         //create the toolbar
         var i = $splat(this.options.buttons).length;
@@ -64,6 +66,7 @@ Jx.Editor = new Class({
         
         if (this.options.parent) {
             this.addTo(this.options.parent);
+            new Jx.Layout(this.domObj);
         }
         this.domObj.resize();
         
@@ -98,10 +101,13 @@ Jx.Editor = new Class({
         
         
         if ($defined(this.options.editorCssFile)) {
-            var css = new Asset.css(this.options.editorCssFile, {
-                title: 'jxEditorStylesheet'
+            this.css = new Asset.css(this.options.editorCssFile, {
+                title: 'jxEditorStylesheet',
+                onload: function () {
+                    
+                }.bind(this)
             });
-            css.inject(this.doc.head);
+            this.css.inject(this.doc.head);
         }
         
         if ($defined(this.options.content)) {

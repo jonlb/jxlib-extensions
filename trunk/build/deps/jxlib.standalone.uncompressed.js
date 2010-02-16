@@ -12288,7 +12288,11 @@ Jx.Field.Hidden = new Class({
 
 
 
+<<<<<<< HEAD
 // $Id: form.js 686 2010-02-01 05:45:28Z jonlb@comcast.net $
+=======
+// $Id: form.js 681 2010-01-15 05:45:28Z jonlb@comcast.net $
+>>>>>>> b14be443ee7fd21d131667b4f8ec9f8451c50a2a
 /**
  * Class: Jx.Form
  *

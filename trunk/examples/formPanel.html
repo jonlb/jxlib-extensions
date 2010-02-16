@@ -25,7 +25,13 @@
                 id: 'test',
 
                 fields: [
+<<<<<<< HEAD
                     {
+=======
+                    new Element('p', {
+                        html: 'This is a paragraph that was added to the form.'
+                    }),{
+>>>>>>> b14be443ee7fd21d131667b4f8ec9f8451c50a2a
                         type: 'text',
                         options: {
                             label: 'First example textbox',
@@ -55,16 +61,36 @@
                                 }
                             }
                         ]
+<<<<<<< HEAD
                     }
+=======
+                    },
+                    new Element('div', {
+                        id: 'test-form-editor-container',
+                        styles: {
+                            width: '80%',
+                            height: 300,
+                            clear: 'both',
+                            position: 'relative'
+                        }
+                    })
+>>>>>>> b14be443ee7fd21d131667b4f8ec9f8451c50a2a
                 ],
 
                 validators: {
                     fields: {
                         'textbox-1': {
+<<<<<<< HEAD
                             validatorClass: 'minLength:5 maxLength:10'
                         },
                         'frame-text-1': {
                             validatorClass: ''
+=======
+                            validators: ['minLength:5', 'maxLength:10']
+                        },
+                        'frame-text-1': {
+                            validators: []
+>>>>>>> b14be443ee7fd21d131667b4f8ec9f8451c50a2a
                         }
                     }   
                 },
@@ -78,14 +104,32 @@
                 
             });
             
+<<<<<<< HEAD
             
+=======
+            new Jx.Editor({
+                parent: 'test-form-editor-container',
+                editorCssFile: 'css/editor.css',
+                content: '<p>Starting content.</p>',
+                buttons: [
+                    ['bold','italic','underline','strikethrough','separator','alignment',
+                          'separator','orderedlist','unorderedlist','indent','outdent'],
+                    ['undo','redo','separator','customStyles','block',
+                          'separator', 'link','unlink', 'image','separator', 'toggle']
+                ]
+            })
+>>>>>>> b14be443ee7fd21d131667b4f8ec9f8451c50a2a
         });
     </script>
     
     <style>
         #panel-container {
             width: 80%;
+<<<<<<< HEAD
             height: 400px;
+=======
+            height: 500px;
+>>>>>>> b14be443ee7fd21d131667b4f8ec9f8451c50a2a
         }
     </style>
 </head>

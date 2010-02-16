@@ -42,23 +42,24 @@
     	}
     },
     "adapters": {
-	   "adapter": {
-	       "deps": ["jxlib"],
-	       "desc": ""
-	   },
-	   "tree": {
-	       "deps": ["adapter"],
-	       "desc": ""
-	   },
-	   "tree.mptt": {
-	       "deps": ["tree"],
-	       "desc": ""
-	   },
-	   "tree.parent": {
-	       "deps": ["tree"],
-	       "desc": ""
-	   }
+        "adapter": {
+            "deps": ["jxlib"],
+            "desc": ""
+        },
+        "tree": {
+            "deps": ["adapter"],
+            "desc": ""
+        },
+        "tree.mptt": {
+            "deps": ["tree"],
+            "desc": ""
+        },
+        "tree.parent": {
+            "deps": ["tree"],
+            "desc": ""
+        }
     },
+    
     "plugins": {
         "plugin.editor": {
             "deps": ["jxlib"],

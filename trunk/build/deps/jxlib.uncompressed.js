@@ -14894,7 +14894,11 @@ Jx.Object = new Class({
     }
 
 });
+<<<<<<< HEAD
 // $Id: widget.js 685 2010-01-29 20:17:31Z zak4ms $
+=======
+// $Id: widget.js 678 2010-01-07 14:05:26Z pagameba $
+>>>>>>> b14be443ee7fd21d131667b4f8ec9f8451c50a2a
 /**
  * Class: Jx.Widget
  * Base class for all widgets (visual classes) in the JxLib Framework. This
@@ -15454,12 +15458,17 @@ Jx.Widget = new Class({
     addTo: function(reference, where) {
         var el = document.id(this.addable) || document.id(this.domObj);
         if (el) {
+<<<<<<< HEAD
             if (reference instanceof Jx.Widget && $defined(reference.add)) {
                 reference.add(el);
             } else {
                 ref = document.id(reference);
                 el.inject(ref,where);
             }
+=======
+            ref = document.id(reference);
+            el.inject(ref,where);
+>>>>>>> b14be443ee7fd21d131667b4f8ec9f8451c50a2a
             this.fireEvent('addTo',this);
         }
         return this;
@@ -16087,7 +16096,11 @@ Jx.List = new Class({
         }
     }
 
+<<<<<<< HEAD
 });// $Id: record.js 686 2010-02-01 05:45:28Z jonlb@comcast.net $
+=======
+});// $Id: record.js 660 2009-12-05 21:21:20Z jonlb@comcast.net $
+>>>>>>> b14be443ee7fd21d131667b4f8ec9f8451c50a2a
 /**
  * Class: Jx.record
  * 
@@ -16296,7 +16309,11 @@ Jx.Record = new Class({
 
 Jx.Record.UPDATE = 1;
 Jx.Record.DELETE = 2;
+<<<<<<< HEAD
 Jx.Record.INSERT = 3;// $Id: store.js 686 2010-02-01 05:45:28Z jonlb@comcast.net $
+=======
+Jx.Record.INSERT = 3;// $Id: store.js 669 2009-12-18 06:02:59Z jonlb@comcast.net $
+>>>>>>> b14be443ee7fd21d131667b4f8ec9f8451c50a2a
 /**
  * Class: Jx.Store 
  * 
@@ -21971,7 +21988,11 @@ Jx.Button.Combo = new Class({
     remove: function(idx) {
         //TODO: implement remove?
     }
+<<<<<<< HEAD
 });// $Id: toolbar.js 687 2010-02-02 16:57:21Z pagameba $
+=======
+});// $Id: toolbar.js 676 2009-12-29 06:49:56Z jonlb@comcast.net $
+>>>>>>> b14be443ee7fd21d131667b4f8ec9f8451c50a2a
 /**
  * Class: Jx.Toolbar
  *
@@ -22245,10 +22266,17 @@ Jx.Toolbar = new Class({
                 var children = this.domObj.getChildren();
                 children.each(function(button){
                     var size = button.getMarginBoxSize();
+<<<<<<< HEAD
                     s += size.width +0.5;
                 },this);
                 if (s !== 0) {
                     this.domObj.setStyle('width', Math.round(s));
+=======
+                    s += size.width;
+                },this);
+                if (s !== 0) {
+                    this.domObj.setStyle('width', s);
+>>>>>>> b14be443ee7fd21d131667b4f8ec9f8451c50a2a
                 } else {
                     this.domObj.setStyle('width','auto');
                 }
@@ -25632,7 +25660,11 @@ Jx.Dialog.Prompt = new Class({
 
 
 });
+<<<<<<< HEAD
 // $Id: dataview.js 686 2010-02-01 05:45:28Z jonlb@comcast.net $
+=======
+// $Id: dataview.js 649 2009-11-30 22:19:48Z pagameba $
+>>>>>>> b14be443ee7fd21d131667b4f8ec9f8451c50a2a
 /**
  * Class: Jx.Panel.DataView
  *
@@ -26103,7 +26135,11 @@ Jx.Field.Hidden = new Class({
 
 
 
+<<<<<<< HEAD
 // $Id: form.js 686 2010-02-01 05:45:28Z jonlb@comcast.net $
+=======
+// $Id: form.js 681 2010-01-15 05:45:28Z jonlb@comcast.net $
+>>>>>>> b14be443ee7fd21d131667b4f8ec9f8451c50a2a
 /**
  * Class: Jx.Form
  *
@@ -29948,7 +29984,11 @@ Jx.Plugin.Field.Validator = new Class({
  *
  * This file is licensed under an MIT style license
  */
+<<<<<<< HEAD
 Jx.Plugin.Form = {};// $Id: form.validator.js 686 2010-02-01 05:45:28Z jonlb@comcast.net $
+=======
+Jx.Plugin.Form = {};// $Id: form.validator.js 668 2009-12-17 06:14:32Z jonlb@comcast.net $
+>>>>>>> b14be443ee7fd21d131667b4f8ec9f8451c50a2a
 /**
  * Class: Jx.Plugin.Form.Validator
  *

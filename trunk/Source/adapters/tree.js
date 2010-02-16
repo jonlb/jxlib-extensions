@@ -75,6 +75,7 @@ Jx.Adapter.Tree = new Class({
         var l = this.store.count() - 1;
         for (var i = this.currentRecord; i <= l; i++) {
             var template = this.fillTemplate(i);
+
             $(template).store('storeId', i);
             $(template).store('jxAdapter', this);
             var item;

@@ -76,8 +76,11 @@
                 }
             });
 
+<<<<<<< HEAD
             var parser2 = new Jx.Store.Parser.JSON();
             var full2 = new Jx.Store.Strategy.Full();
+=======
+>>>>>>> b14be443ee7fd21d131667b4f8ec9f8451c50a2a
             var sorter = new Jx.Store.Strategy.Sort({sortCols: ['left']});
             var store2 = new Jx.Store({
                 columns: [
@@ -86,8 +89,13 @@
                     {name: 'right', type: 'numeric'},
                     {name: 'id', type: 'numeric'}
                 ],
+<<<<<<< HEAD
                 protocol: new Jx.Store.Protocol.Local(mpttData,{parser: parser2}),
                 strategies: [full2, sorter],
+=======
+                protocol: new Jx.Store.Protocol.Local(mpttData,{parser: parser}),
+                strategies: [full, sorter],
+>>>>>>> b14be443ee7fd21d131667b4f8ec9f8451c50a2a
                 record: Jx.Record,
                 recordOptions: {
                     primaryKey: 'id'
@@ -108,7 +116,11 @@
                 left: 'left',
                 right: 'right'
             });
+<<<<<<< HEAD
          
+=======
+          
+>>>>>>> b14be443ee7fd21d131667b4f8ec9f8451c50a2a
         });   
     </script>
     
