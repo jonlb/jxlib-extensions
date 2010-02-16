@@ -35,11 +35,7 @@ Jx.Adapter.Tree.Parent = new Class({
         } else {
             //check to see if there are any rows with the primary key of the passed index
             var id = this.store.get('primaryKey', index);
-<<<<<<< HEAD
             for (var i = 0; i < this.store.count();i++) {
-=======
-            for (var i = 0; i < this.store.count()-1;i++) {
->>>>>>> b14be443ee7fd21d131667b4f8ec9f8451c50a2a
                 if (this.store.get(this.options.parentColumn, i) === id) {
                     return true;
                 }

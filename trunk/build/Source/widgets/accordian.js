@@ -7,7 +7,7 @@ sgd.ui.accordian = new Class({
 		elem: null,		//the element to use as the base for the accordian
 		
 		onSlideOut: $empty,	//called when a panel slides out (shows)
-		onSlideIn: $empty, //called when a panel slides in (hides)
+		onSlideIn: $empty //called when a panel slides in (hides)
 	},
 	
 	container: null,

@@ -101,12 +101,6 @@ Jx.Editor = new Class({
         
         
         if ($defined(this.options.editorCssFile)) {
-<<<<<<< HEAD
-            var css = new Asset.css(this.options.editorCssFile, {
-                title: 'jxEditorStylesheet'
-            });
-            css.inject(this.doc.head);
-=======
             this.css = new Asset.css(this.options.editorCssFile, {
                 title: 'jxEditorStylesheet',
                 onload: function () {
@@ -114,7 +108,6 @@ Jx.Editor = new Class({
                 }.bind(this)
             });
             this.css.inject(this.doc.head);
->>>>>>> b14be443ee7fd21d131667b4f8ec9f8451c50a2a
         }
         
         if ($defined(this.options.content)) {

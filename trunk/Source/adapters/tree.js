@@ -76,8 +76,6 @@ Jx.Adapter.Tree = new Class({
         for (var i = this.currentRecord; i <= l; i++) {
             var template = this.fillTemplate(i);
 
-            $(template).store('storeId', i);
-            $(template).store('jxAdapter', this);
             var item;
             if (this.hasChildren(i)) {
                 //add as folder
@@ -93,6 +91,7 @@ Jx.Adapter.Tree = new Class({
                 }));
             }
             $(item).store('index', i);
+            $(item).store('jxAdapter', this);
             //check for a parent
             if (this.hasParent(i)) {
                 //add as child of parent

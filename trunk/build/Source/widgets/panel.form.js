@@ -42,11 +42,6 @@ Jx.Panel.Form = new Class({
          * The options for the internal instance of Jx.Form
          */
         formOptions: null
-<<<<<<< HEAD
-=======
-        
-        
->>>>>>> b14be443ee7fd21d131667b4f8ec9f8451c50a2a
     },
     
     init: function () {
@@ -70,18 +65,6 @@ Jx.Panel.Form = new Class({
         this.parent();
         
         //create validator
-<<<<<<< HEAD
-        this.validator = new Jx.Plugin.Form.Validator(this.options.validators);
-        this.validator.attach(this.form);
-        
-        //connect validation events
-        this.validator.addEvent({
-            'fieldValidationFailed': this.fieldFailed.bind(this),
-            'fieldValidationPassed': this.fieldPassed.bind(this),
-            'formValidationPassed': this.formPassed.bind(this),
-            'formValidationFailed': this.formFailed.bind(this)
-        });
-=======
         if ($defined(this.options.validators)) {
             this.validator = new Jx.Plugin.Form.Validator(this.options.validators);
             this.validator.attach(this.form);
@@ -92,23 +75,11 @@ Jx.Panel.Form = new Class({
                 'fieldValidationPassed': this.fieldPassed.bind(this)
             });
         }
->>>>>>> b14be443ee7fd21d131667b4f8ec9f8451c50a2a
         
     },
     
     addFields: function (container, options) {
         options.each(function(opt){
-<<<<<<< HEAD
-            if (opt.type.toLowerCase() === 'fieldset') {
-                var field = new Jx.Fieldset(opt.options);
-                container.add(field);
-                if ($defined(opt.children)) {
-                    this.addFields(field, opt.children);
-                }
-            } else {
-                var field = new Jx.Field[opt.type.capitalize()](opt.options);
-                container.add(field);
-=======
             var t = Jx.type(opt);
             if (t === 'element') {
                 opt.inject($(this.form));
@@ -125,7 +96,6 @@ Jx.Panel.Form = new Class({
                     var field = new Jx.Field[opt.type.capitalize()](opt.options);
                     container.add(field);
                 }
->>>>>>> b14be443ee7fd21d131667b4f8ec9f8451c50a2a
             }
         },this);
     },
@@ -146,14 +116,5 @@ Jx.Panel.Form = new Class({
         });
         this.notifier.add(notice);
         this.notices.set(field.id, notice);
-<<<<<<< HEAD
-    },
-    formPassed: function (form, formValidator) {
-        
-    },
-    formFailed: function (form, formValidator) {
-        
-=======
->>>>>>> b14be443ee7fd21d131667b4f8ec9f8451c50a2a
     }
 });

@@ -29,7 +29,6 @@
 	   "wizard": {
 	       "deps": ["jxlib"],
 	       "desc": ""
-<<<<<<< HEAD
 	   },
 	   "chromePanel": {
 	       "deps": ["jxlib"],
@@ -41,26 +40,6 @@
     		"deps": ["jxlib"],
     		"desc": ""
     	}
-    },
-    "adapters": {
-	   "adapter": {
-	       "deps": ["jxlib"],
-	       "desc": ""
-	   },
-	   "tree": {
-	       "deps": ["adapter"],
-	       "desc": ""
-	   },
-	   "tree.mptt": {
-	       "deps": ["tree"],
-	       "desc": ""
-	   },
-	   "tree.parent": {
-	       "deps": ["tree"],
-	       "desc": ""
-=======
->>>>>>> b14be443ee7fd21d131667b4f8ec9f8451c50a2a
-	   }
     },
     "adapters": {
         "adapter": {
