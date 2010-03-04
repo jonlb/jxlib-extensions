@@ -313,20 +313,20 @@ Jx.Request = new Class({
 			try {    		
 		    	//call debug first
 		    	if (options.debug && $defined(data.debug)) {
-		    	    if ($defined(options.events.onDebug)) {
+		    	    if ($defined(options.events) && $defined(options.events.onDebug)) {
 	                	options.events.onDebug.run(data.debug);
 	                }
 		    	}
 		    	
 		    	if (data.success) {
-		    		if ($defined(options.events.onSuccess)) {
+		    		if ($defined(options.events) && $defined(options.events.onSuccess)) {
 	            		options.events.onSuccess.run(data);
 	            	}
 		    	} else {
 		    		//first try to handle the error globally
 		    		if (!this.handleError(data, req, options)) {
 		    			//then pass everything to the registered error handler
-		    			if ($defined(options.events.onError)) {
+		    			if ($defined(options.events) && $defined(options.events.onError)) {
 		    				options.events.onError.run(data);
 		    			}
 		    		}

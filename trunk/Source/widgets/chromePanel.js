@@ -6,7 +6,7 @@ Jx.ChromePanel = new Class({
 		resize: true
 	},
 	
-	init: function(options) {
+	init: function() {
         this.addEvents({
 			/* redraw the chrome when the panel is expanded */
 	        expand: function() {
@@ -15,7 +15,7 @@ Jx.ChromePanel = new Class({
 	            if (this.resizeHandle) {
 	            	this.resizeHandle.setStyle('display','block');
 	            }
-	        },
+	        }.bind(this),
 	        /* redraw the chrome when the panel is collapsed */
 	        collapse: function() {
 	        	
@@ -31,11 +31,15 @@ Jx.ChromePanel = new Class({
 	            if (this.resizeHandle) {
 	            	this.resizeHandle.setStyle('display','none');
 	            }
-	        },
+	        }.bind(this),
 	        /* draw the chrome when the panel is first rendered */
             addTo: function() {
                 this.showChrome(this.domObj);
-            }
+            }.bind(this),
+            
+            sizeChange: function() {
+            	this.showChrome(this.domObj);
+            }.bind(this)
         });
         this.parent();
         
@@ -43,10 +47,20 @@ Jx.ChromePanel = new Class({
     
     render: function () {
     	this.parent();
-    	this.domObj.addClass('jxChromePanel');
+    	
+    	//this.domObj.addClass('jxChromePanel');
+    	
+    	//change the classes to the dialog classes
+    	this.title.removeClass('jxPanelTitle').addClass('jxDialogTitle');
+    	this.domObj.removeClass('jxPanel').addClass('jxDialog');
+    	this.domImg.removeClass('jxPanelIcon').addClass('jxDialogIcon');
+    	this.domLabel.removeClass('jxPanelLabel').addClass('jxDialogLabel');
+    	this.domControls.removeClass('jxPanelControls').addClass('jxDialogControls');
+    	this.contentContainer.removeClass('jxPanelContentContainer').addClass('jxDialogContentContainer');
+    	this.content.removeClass('jxPanelContent').addClass('jxDialogContent');
     	
     	this.showChrome(this.domObj);
-        
+    	
         /* the dialog is resizeable */
         if (this.options.resize && typeof Drag != 'undefined') {
             this.resizeHandle = new Element('div', {
@@ -83,9 +97,12 @@ Jx.ChromePanel = new Class({
                     this.contentContainer.setStyle('visibility','');
                     this.fireEvent('resize');
                     this.resizeChrome(this.domObj);
+                    this.domObj.setStyle('position', 'relative');
 
                 }).bind(this)
             });
         }
     }
+    
+    
 });

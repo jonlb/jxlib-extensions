@@ -47,7 +47,12 @@ Jx.Layout.Columns = new Class({
 		this.target.addClass('jxLayoutColumns');
 		
 		
-		this.marker = new Element('div', {'class': 'jxLayoutColumnMarker'}).setStyles({'opacity': 0.7, 'visibility': 'hidden'}).inject(document.getElement('body'));
+		this.marker = new Element('div', {
+			'class': 'jxLayoutColumnMarker'
+		}).setStyles({
+			'opacity': 0.7, 
+			'visibility': 'hidden'
+		}).inject(document.getElement('body'));
 		
 		var w = 0;
 		//create columns in the target
@@ -71,15 +76,28 @@ Jx.Layout.Columns = new Class({
 				this.add(col.items, {
 					column: idx
 				});
+			} else {
+				this.addPlaceholder(idx);
 			}
 		},this);
 		
 		this.windowResize();
 		
 		//listen for the window resize and adjust the columns accordingly
-		window.addEvent('resize', this.windowResize.bindWithEvent(this));
+		window.addEvent('resize', this.windowResize.bind(this));
         window.addEvent('load', this.windowResize.bind(this));
 			
+	},
+	
+	addPlaceholder: function (idx) {
+		var p = new Element('div', {
+			'class': 'jxLayoutPlaceholder'
+		});
+		this.add(p, { 
+			column: idx,
+			isDraggable: false
+		});
+		this.columns[idx].store('placeholder',p);
 	},
 	
 	windowResize: function () {
@@ -133,13 +151,47 @@ Jx.Layout.Columns = new Class({
 		
 		$splat(elem).each(function(el){	
 			el = $(el);
-			el.inject(this.columns[options.column],  options.position);
+			var col = $(this.columns[options.column]);
+			var children = col.getChildren();
+			var after;
+			children.each(function(child, idx){
+				if (idx + 1 == options.position) {
+					after = child;
+				}
+			},this);
+			
+			if (el.addTo) {
+				if (!$defined(after)) {
+					el.addTo(col, 'bottom');
+				} else {
+					el.addTo(after, 'after');
+				}
+			} else {
+				if (!$defined(after)) {
+					el.inject(col, 'bottom');
+				} else {
+					el.inject(after, 'after');
+				}
+			}
+			if (!el.hasClass('jxLayoutPlaceholder')) {
+				col.getChildren('.jxLayoutPlaceholder').each(function(child){
+					child.dispose();
+				},this);
+			}
 			this.widgets.set(el.get('id'), el);
+			if ($defined(el.resize)) {
+				el.resize();
+			}
+			el.setStyle('position','relative');
 		},this);
+		
+		
 		
 		if (options.isDraggable) {
 			this.makeDraggable(elem, options.handle);
 		}
+		
+		this.fireEvent('jxLayoutColumnAdd');
 	},
 	
 	makeDraggable: function (elem, handle) {
@@ -153,6 +205,11 @@ Jx.Layout.Columns = new Class({
 	            precalculate: false,
 	            onBeforeStart: function(){
 	        		var coords = d.getCoordinates(d.getParent());
+	        		var col = d.getParent();
+	        		if (col.getChildren().length == 1) {
+	        			//add placeholder to bottom of column
+	        			col.retrieve('placeholder').inject(col,'bottom');
+	        		}
 	                this.marker.setStyles({
 	                	'display': 'block', 
 	                	'visibility': 'visible',
@@ -165,10 +222,6 @@ Jx.Layout.Columns = new Class({
 	                	'width': coords.width, 
 	                	'opacity': 0.7, 
 	                	'z-index': 3});
-	                
-	            }.bind(this), 
-	            onStart: function(){
-	            	
 	            }.bind(this), 
 	            onEnter: function(el, drop){
 	                drop.adopt(this.marker.setStyles({
@@ -177,29 +230,47 @@ Jx.Layout.Columns = new Class({
 	                	'width': drop.getCoordinates().width - 5
 	                	})
 	                );
-	                
+	                var p = drop.retrieve('placeholder');
+	                if (drop.hasChild(p)) {
+	                	p.dispose();
+	                }
 	            }.bind(this), 
 	            onLeave: function(el, drop){
 	                this.marker.dispose();
-	                
+	                var p = drop.retrieve('placeholder');
+	                var children = drop.getChildren();
+	                children = children.filter(function(child){ return child != p && child != el;},this);
+	                if (children.length == 0 ) {
+	                	p.inject(drop,'top');
+	                }
+	                	
 	            }.bind(this), 
 	            onDrag: function(el){
 	                target = null;
 	                drop = this.marker.getParent();
 	                var drag = el.retrieve('dragger');
 	                if (drop && drop.getChildren().length > 1){
+	                	//check for placeholder and remove it before adding the marker
+	                	var p = drop.retrieve('placeholder');
+	                	if (drop.hasChild(p)) {
+	                		p.dispose();
+	                	}
 	                    kids = drop.getChildren();
 	                    mouseY = drag.mouse.now.y;
 	                    kids.each(function(k){
 	                        if (mouseY > (k.getCoordinates().top + Math.round(k.getCoordinates().height / 2))) target = k;
 	                    });
 	                    if (target == null){
-	                        if (kids[0] != this.marker) this.marker.inject(drop, 'top');
+	                        if (kids[0] != this.marker) {
+	                        	this.marker.inject(drop, 'top');
+	                        }
 	                    } else {
-	                        if ((target != this.marker) && (target != this.marker.getPrevious())) this.marker.inject(target, 'after');
+	                        if ((target != this.marker) && (target != this.marker.getPrevious())) {
+	                        	this.marker.inject(target, 'after');
+	                        }
 	                    }
 	                }
-	                
+	                //console.log('drag');
 	            }.bind(this), 
 	            onDrop: function(el, drop){
 	                if (drop) {
@@ -214,6 +285,9 @@ Jx.Layout.Columns = new Class({
 	                	if ($defined(el.resize)) {
 	                		el.resize({width: null});
 	                	}
+	                	if (drop.hasChild(drop.retrieve('placeholder'))) {
+	                		$(drop.retrieve('placeholder')).dispose();
+	                	}
 	                } else {
 	                	el.setStyles({
 	                		'position': 'relative', 
@@ -222,10 +296,12 @@ Jx.Layout.Columns = new Class({
 	                		'opacity': 1, 
 	                		'z-index': 1
 	                	});
+	                	console.log('drop not in zone');
 	                }
 	            }.bind(this), 
 	            onComplete: function(el){
 	            	this.marker.dispose();
+	            	el.setStyle('position','relative');
 	            	this.fireEvent('jxLayoutMoveComplete', el);
 	            }.bind(this), 
 	            onCancel: function(el){
@@ -245,6 +321,7 @@ Jx.Layout.Columns = new Class({
 	
 	resize: function () {
 		this.widgets.each(function(el){
+			el = $(el);
 			if ($defined(el.resize)) {
 				el.resize();
 			}
@@ -276,14 +353,16 @@ Jx.Layout.Columns = new Class({
 		this.columns.each(function(col, idx){
 			col.getChildren().each(function(widget,i){
 				widget = $(widget);
-				var size = widget.getBorderBoxSize();
-				result.push({
-					id: widget.get('id'),
-					width: size.width,
-					height: size.height,
-					column: idx,
-					position: i
-				});
+				if (!widget.hasClass('jxLayoutPlaceholder')) {
+					var size = widget.getBorderBoxSize();
+					result.push({
+						id: widget.get('id'),
+						width: size.width,
+						height: size.height,
+						column: idx,
+						position: i
+					});
+				}
 			},this);
 		},this);
 		
@@ -291,34 +370,3 @@ Jx.Layout.Columns = new Class({
 	}
 	
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
-    

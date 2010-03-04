@@ -9,7 +9,7 @@ Author     		Date            Description
 J.Bomgardner    April 5, 2009   initial version copied from jx project
 
 ***************************************************************************-->
-<project basedir="." default="" name="jxlib-extensions">
+<project basedir="." default="prepare" name="jxlib-extensions">
 <!-- ===================== Property Definitions =========================== -->
 <!--
   Each of the following properties are used in the build script.

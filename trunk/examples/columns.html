@@ -65,16 +65,16 @@
             var layout = new Jx.Layout.Columns('container',{
             	columns: [{
         			cssClass: '',
-        			width: '30%',
-        			items: [panel1, panel2]
+        			width: '30%'
+        			//items: [panel1, panel2]
         		},{
         			cssClass: '',
-        			width: '*',
-        			items: [panel3, panel4]
+        			width: '*'
+        			//items: [panel3, panel4]
         		},{
         			cssClass: '',
-        			width: '25%',
-        			items: [panel5, panel6]
+        			width: '25%'
+        			//items: [panel5, panel6]
         		}],
         		addDefaults: {
         			isDraggable: true,
@@ -95,6 +95,8 @@
     		});
     		
             layout.resize();
+			
+			layout.add(panel1,{column: 1});
          
         });   
     </script>
