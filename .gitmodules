@@ -1,0 +1,3 @@
+[submodule "trunk/loader"]
+	path = trunk/loader
+	url = git@github.com:jonlb/jxLoader.git
