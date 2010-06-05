@@ -1,4 +1,23 @@
+/*
+---
 
+name: Jx.Plugin.Editor.Image
+
+description:
+
+license: MIT-style license.
+
+requires:
+ - Jx.Plugin.Editor
+ - jxlib/Jx.Dialog.Prompt
+
+provides: [Jx.Plugin.Editor.Image]
+
+images:
+ - image.png
+
+...
+ */
 Jx.Plugin.Editor.Image = new Class({
     
     Family: 'Jx.Plugin.Editor.Image',

@@ -1,4 +1,21 @@
+/*
+---
 
+name: Jx.Plugin.Editor.Block
+
+description:
+
+license: MIT-style license.
+
+requires:
+ - jxlib/Jx.Field.Select
+ - Jx.Plugin.Editor
+
+provides: [Jx.Plugin.Editor.Block]
+
+
+...
+ */
 Jx.Plugin.Editor.Block = new Class({
     
     Family: 'Jx.Plugin.Editor.Block',

@@ -33,13 +33,39 @@
 	   "chromePanel": {
 	       "deps": ["jxlib"],
 	       "desc": ""
-	   }
+	   },
+       "field.editor": {
+            "deps": ["editor"],
+            "desc": ""
+       },
+       "field.options": {
+           "deps": ["jxlib"],
+           "desc": ""
+       }
     },
     "layouts": {
     	"columns": {
     		"deps": ["jxlib"],
     		"desc": ""
     	}
+    },
+    "adaptors": {
+        "adaptor.options": {
+            "deps": ["jxlib"],
+            "desc": ""
+        },
+        "options.fill": {
+            "deps": ["adaptor.options"],
+            "desc": ""
+        },
+        "adaptor.listview": {
+            "deps": ["jxlib"],
+            "desc": ""
+        },
+        "listview.fill": {
+            "deps": ["adaptor.listview"],
+            "desc": ""
+        }
     },
     "plugins": {
         "plugin.editor": {

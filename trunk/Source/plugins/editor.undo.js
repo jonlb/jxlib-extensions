@@ -1,4 +1,22 @@
+/*
+---
 
+name: Jx.Plugin.Editor.Undo
+
+description:
+
+license: MIT-style license.
+
+requires:
+ - Jx.Plugin.Editor.Button
+
+provides: [Jx.Plugin.Editor.Undo]
+
+images:
+ - edit-undo.png
+
+...
+ */
 Jx.Plugin.Editor.Undo = new Class({
     
     Family: 'Jx.Plugin.Editor.Undo',

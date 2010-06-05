@@ -1,4 +1,23 @@
+/*
+---
 
+name: Jx.Plugin.Editor.Bold
+
+description:
+
+license: MIT-style license.
+
+requires:
+ - Jx.Plugin.Editor.Button
+ - Core/Browser
+
+provides: [Jx.Plugin.Editor.Bold]
+
+images:
+ - text_bold.png
+
+...
+ */
 Jx.Plugin.Editor.Bold = new Class({
     
     Family: 'Jx.Plugin.Editor.Bold',

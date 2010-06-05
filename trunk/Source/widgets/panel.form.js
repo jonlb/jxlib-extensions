@@ -1,4 +1,28 @@
+/*
+---
 
+name: Jx.Panel.Form
+
+description:
+
+license: MIT-style license.
+
+requires:
+ - jxlib/Jx.Panel
+ - jxlib/Jx.Form
+ - jxlib/Jx.Notifier.Float
+ - jxlib/Jx.Notifier
+ - jxlib/Jx.Plugin.Form.Validator
+ - jxlib/Jx.Fieldset
+ - jxlib/Jx.Notice
+
+provides: [Jx.Panel.Form]
+
+css:
+ - panel.form
+
+...
+ */
 Jx.Panel.Form = new Class({
     
     Family: 'Jx.Panel.Form',
@@ -52,15 +76,17 @@ Jx.Panel.Form = new Class({
         this.form = new Jx.Form(this.options.formOptions);
        
         //create the notifier here so it will be at the top of the form
-        if (this.options.notifierType === 'inline') {
-            this.notifier = new Jx.Notifier({parent: $(this.form)});
+        if (this.options.notifierType instanceof Jx.Notifier) {
+            this.notifier = this.options.notifierType;
+        } else if (this.options.notifierType === 'inline') {
+            this.notifier = new Jx.Notifier({parent: document.id(this.form)});
         } else {
             this.notifier = new Jx.Notifier.Float({parent: document.body});
         }
         
         //add fields
         this.addFields(this.form, this.options.fields);
-        this.options.content = $(this.form);
+        this.options.content = document.id(this.form);
         
         this.parent();
         
@@ -82,7 +108,7 @@ Jx.Panel.Form = new Class({
         options.each(function(opt){
             var t = Jx.type(opt);
             if (t === 'element') {
-                opt.inject($(this.form));
+                opt.inject(document.id(this.form));
             } else if (opt instanceof Jx.Widget) {
                 opt.addTo(this.form);
             } else if (t === 'object' && $defined(opt.type)) {

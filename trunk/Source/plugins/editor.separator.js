@@ -1,4 +1,20 @@
+/*
+---
 
+name: Jx.Plugin.Editor.Separator
+
+description:
+
+license: MIT-style license.
+
+requires:
+ - jxlib/Jx.Toolbar.Separator
+ - Jx.Plugin.Editor
+
+provides: [Jx]
+
+...
+ */
 Jx.Plugin.Editor.Separator = new Class({
     
     Family: 'Jx.Plugin.Editor.Separator',

@@ -18,8 +18,8 @@
         var editor;
         window.addEvent('domready', function () {
             //setup editor
-            
-            editor = new Jx.Editor({
+            /*
+            var editor = new Jx.Editor({
                 parent: 'editor-container',
                 editorCssFile: 'css/editor.css',
                 content: '<p>Starting content.</p>',
@@ -30,6 +30,45 @@
                           'separator', 'link','unlink', 'image','separator', 'toggle']
                 ]
             });
+*/
+
+            var form = new Jx.Form({
+                formClass: 'jxFormInlineblock'
+            }).addTo('editor-container');
+
+            //place inside an fieldset
+            var fs = new Jx.Fieldset({
+                legend: 'test fieldset'
+            }).addTo(form);
+            
+            var editorF = new Jx.Field.Editor({
+                name: 'description',
+                label: 'Description',
+                id: 'description',
+                required: true,
+                value: '',
+                editorOptions: {
+                    editorCssFile: 'css/editor.css',
+                    buttons: [
+                        ['bold','italic','underline','strikethrough','separator','alignment',
+                              'separator','orderedlist','unorderedlist','indent','outdent','separator','undo','redo'],
+                        ['customStyles','block',
+                              'separator', 'link','unlink', 'image','separator', 'toggle']
+                    ]
+                }
+            });
+
+            editorF.addTo(fs);
+
+            var submit = new Jx.Field.Button({
+                buttonOptions: {
+                    label: 'Submit',
+                    onClick: function () {
+                        var data = form.getValues();
+                        console.log(data);
+                    }
+                }
+            }).addTo(form);
             
             
         });
@@ -45,6 +84,11 @@
 <body>
     <div id="editor-container">
     
+    </div>
+
+    <div id="editorField">
+
+
     </div>
 </body>
 </html>

@@ -3,116 +3,169 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <title>Jx.Panel.Form Example</title>
-    <script type="text/javascript" src="../deps/mootools-core.js"></script>
-    <script type="text/javascript" src="../deps/mootools-more.js"></script>
-    <script type="text/javascript" src="../deps/jxlib.standalone.uncompressed.js"></script>
-    <link href="../deps/themes/crispin/jxtheme.uncompressed.css" type="text/css" rel="stylesheet" media="screen, projection" />
-    
-    <!-- Put the scripts we're testing here -->
-    <link href="../build/lib/css/jxlib-extensions.uncompressed.css" type="text/css" rel="stylesheet" media="screen, projection" />
-     
-    <script type="text/javascript" src="../build/lib/jxlib-extensions.uncompressed.js"></script>
+       <!-- need to load up the options first, then load the loader -->
+    <script type="text/javascript" src="options.js"></script>
+    <script type="text/javascript" src="../loader/loader.php?file[]=loader&compress=false&allDeps=true&clearSession=true"></script>
     
     
     <script type="text/javascript">
         var editor;
         window.addEvent('domready', function () {
 
-            new Jx.Panel.Form({
+            $uses([
+                    'Jx.Panel.Form',
+                    'Jx.Field.Fieldset',
+                    'Jx.Field.Text',
+                    'Jx.Field.Checkbox',
+                    'Jx.Editor',
+                    'Jx.Field.Button'
+                ], function () {
+                    new Jx.Panel.Form({
 
-                parent: 'panel-container',
-                label: 'Panel Form Example',
-                id: 'test',
+                        parent: 'panel-container',
+                        label: 'Panel Form Example',
+                        id: 'test',
 
-                fields: [
-                    new Element('p', {
-                        html: 'This is a paragraph that was added to the form.'
-                    }),{
-                        type: 'text',
-                        options: {
-                            label: 'First example textbox',
-                            name: 'textbox-1',
-                            id: 'textbox-1'
-                        }
-                    },{
-                        type: 'fieldset',
-                        options: {
-                            legend: 'Fieldset #1',
-                        },
-                        children: [
-                            {
+                        fields: [
+                            new Element('p', {
+                                html: 'This is a paragraph that was added to the form.'
+                            }),{
                                 type: 'text',
                                 options: {
-                                    label: 'first child in frameset',
-                                    id: 'frame-text-1',
-                                    name: 'frame-text-1',
-                                    required: true
+                                    label: 'First example textbox',
+                                    name: 'textbox-1',
+                                    id: 'textbox-1'
                                 }
                             },{
-                                type: 'checkbox',
+                                type: 'fieldset',
                                 options: {
-                                    label: 'a checkbox',
-                                    id: 'checkbox-1',
-                                    name: 'checkbox-1'
+                                    legend: 'Fieldset #1'
+                                },
+                                children: [
+                                    {
+                                        type: 'text',
+                                        options: {
+                                            label: 'first child in frameset',
+                                            id: 'frame-text-1',
+                                            name: 'frame-text-1',
+                                            required: true
+                                        }
+                                    },{
+                                        type: 'checkbox',
+                                        options: {
+                                            label: 'a checkbox',
+                                            id: 'checkbox-1',
+                                            name: 'checkbox-1'
+                                        }
+                                    }
+                                ]
+                            },
+                            new Element('div', {
+                                id: 'test-form-editor-container',
+                                styles: {
+                                    width: '80%',
+                                    height: 300,
+                                    clear: 'both',
+                                    position: 'relative'
+                                }
+                            })
+                        ],
+
+                        validators: {
+                            fields: {
+                                'textbox-1': {
+                                    validators: ['minLength:5', 'maxLength:10']
+                                },
+                                'frame-text-1': {
+                                    validators: []
                                 }
                             }
-                        ]
-                    },
-                    new Element('div', {
-                        id: 'test-form-editor-container',
-                        styles: {
-                            width: '80%',
-                            height: 300,
-                            clear: 'both',
-                            position: 'relative'
-                        }
-                    })
-                ],
-
-                validators: {
-                    fields: {
-                        'textbox-1': {
-                            validators: ['minLength:5', 'maxLength:10']
                         },
-                        'frame-text-1': {
-                            validators: []
+
+                        notifierType: 'inline',
+
+                        formOptions: {
+                            id: 'test-form-1',
+                            name: 'test-form-1'
                         }
-                    }   
-                },
 
-                notifierType: 'inline',
+                    });
 
-                formOptions: {
-                    id: 'test-form-1',
-                    name: 'test-form-1'
-                }
-                
+                    new Jx.Editor({
+                        parent: 'test-form-editor-container',
+                        editorCssFile: 'css/editor.css',
+                        content: '<p>Starting content.</p>',
+                        buttons: [
+                            ['bold','italic','underline','strikethrough','separator','alignment',
+                                  'separator','orderedlist','unorderedlist','indent','outdent'],
+                            ['undo','redo','separator','customStyles','block',
+                                  'separator', 'link','unlink', 'image','separator', 'toggle']
+                        ]
+                    });
+
+                    var formEl = document.id('panel-2');
+
+                    new Jx.Panel.Form({
+                    parent: formEl,
+                    id: 'test',
+                    hideTitle: true,
+
+                    fields: [
+                        {
+                            type: 'text',
+                            options: {
+                                label: 'Enter the name of a Type to add',
+                                name: 'type',
+                                id: 'type'
+                            }
+                        },{
+                            type: 'button',
+                            options: {
+                                defaultAction: true,
+                                buttonOptions: {
+                                    label: 'Add Type',
+                                    onClick: function () {
+                                        console.log('clicked Add type Button!');
+                                    }
+                                }
+                            }
+                        }
+                    ],
+
+                    validators: {
+                        fields: {
+                            'type': {
+                                validators: ['required']
+                            }
+                        }
+                    },
+
+                    notifierType: 'inline',
+
+                    formOptions: {
+                        formClass: 'jxFormInlineblock'
+                    }
+
+                });
             });
-            
-            new Jx.Editor({
-                parent: 'test-form-editor-container',
-                editorCssFile: 'css/editor.css',
-                content: '<p>Starting content.</p>',
-                buttons: [
-                    ['bold','italic','underline','strikethrough','separator','alignment',
-                          'separator','orderedlist','unorderedlist','indent','outdent'],
-                    ['undo','redo','separator','customStyles','block',
-                          'separator', 'link','unlink', 'image','separator', 'toggle']
-                ]
-            })
         });
     </script>
     
     <style>
-        #panel-container {
+        #panel-container, #panel-2 {
             width: 80%;
             height: 400px;
+            position: relative;
         }
     </style>
 </head>
 <body>
     <div id="panel-container">
     
+    </div>
+
+    <div id="panel-2">
+
     </div>
 </body>
 </html>

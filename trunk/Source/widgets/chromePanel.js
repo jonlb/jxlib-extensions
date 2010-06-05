@@ -1,3 +1,22 @@
+/*
+---
+
+name: Jx.ChromePanel
+
+description:
+
+license: MIT-style license.
+
+requires:
+ - jxlib/Jx.Dialog
+ - More/Drag
+
+provides: [Jx.ChromePanel]
+
+
+
+...
+ */
 Jx.ChromePanel = new Class({
     Family: 'Jx.ChromePanel',  
 	Extends: Jx.Panel,

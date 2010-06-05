@@ -669,7 +669,7 @@ a.jxColorClose img {
     height: 16px;
 }/**
  * @project         Jx
- * @revision        $Id: common.css 267 2009-03-31 20:49:16Z fred.warnock $
+ * @revision        $Id: common.css 736 2010-03-05 16:04:56Z pagameba $
  * @author          Fred Warnock (fwarnock@dmsolutions.ca)
  * @copyright       (c) 2006 DM Solutions Group Inc.
  */
@@ -678,10 +678,89 @@ a.jxColorClose img {
 /* COMMON STYLES */
 /* ============= */
 
-.jxClearer{display:block;position:relative;float:none;clear:both;font-size:0;line-height:0;width:0;height:0;margin:0;padding:0;}
-.jxDisabled{opacity:0.4;-ms-filter: "Alpha(opacity=40)";}
-.jxDisabled * {-ms-filter: "Alpha(opacity=40)";}
-iframe.jxIframeShim{position:absolute;top:0px;left:0px;width:100%;height:100%;opacity:0;-ms-filter: "Alpha(opacity=0)";z-index:-1;}/**
+.jxClearer {
+  display: block;
+  position: relative;
+  float: none;
+  clear: both;
+  font-size: 0;
+  line-height: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.jxDisabled {
+  opacity: 0.4;
+  -ms-filter: "Alpha(opacity=40)";
+}
+
+.jxDisabled * {
+  -ms-filter: "Alpha(opacity=40)";
+}
+
+/* ============= */
+/*  MASK STYLES  */
+/* ============= */
+
+.jxMask {
+  opacity: 0.5;
+  -ms-filter: "Alpha(opacity=50)";
+  background-color: #fff;
+}
+
+.jxModalMask {
+  background-color: #000;
+  opacity: 0.2;
+  -ms-filter: "Alpha(opacity=20)";
+}
+
+.jxEventMask {
+  background-image: url(images/a_pixel.png);
+}
+
+
+.jxSpinner {
+  position: absolute;
+  opacity: 0.5;
+  -ms-filter: "Alpha(opacity=50)";
+  z-index: 999;
+  background: #fff;
+}
+
+/* .jxSpinnerContent { } */
+
+.jxSpinnerMessage {
+  text-align: center;
+  font-weight: bold;
+}
+
+.jxSpinnerSmall .jxSpinnerMessage {
+  margin: 0px;
+  padding: 0px;
+  font-size: 11px;
+  line-height: 24px;
+}
+
+.jxSpinnerLarge .jxSpinnerImage {
+  background: url(images/spinner_24.gif) no-repeat;
+  width: 24px;
+  height: 24px;
+  margin: 0 auto;
+}
+
+.jxSpinnerSmall .jxSpinnerImage {
+  background: url(images/spinner_16.gif) no-repeat;
+  width: 16px;
+  height: 16px;
+  margin-right: 4px;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/*iframe.jxIframeShim { }*/
+/**
  * Confirm and Prompt dialog classes
  */
 .jxConfirmQuestion, .jxPrompt {
@@ -690,7 +769,7 @@ iframe.jxIframeShim{position:absolute;top:0px;left:0px;width:100%;height:100%;op
     margin-top: 10px;
 }/**
  * @project         Jx
- * @revision        $Id: dialog.css 658 2009-12-04 03:30:30Z jonlb@comcast.net $
+ * @revision        $Id: dialog.css 732 2010-03-05 14:38:36Z pagameba $
  * @author          Fred Warnock (fwarnock@dmsolutions.ca)
  * @copyright       (c) 2006 DM Solutions Group Inc.
  */
@@ -708,6 +787,9 @@ iframe.jxIframeShim{position:absolute;top:0px;left:0px;width:100%;height:100%;op
   display: block;
   z-index: 1000;
   overflow: hidden;
+
+  /* initial state is hidden */
+  visibility: hidden;
 }
 
 .jxDialogContentContainer {
@@ -715,20 +797,6 @@ iframe.jxIframeShim{position:absolute;top:0px;left:0px;width:100%;height:100%;op
   margin: 0px 11px 13px 12px;
   border: 1px solid #b7b7b7;
   background-color: #f0f0f0;
-}
-
-.jxDialogModal {
-  /* Base setup */
-  position: absolute;
-  display: block;
-  top: 0px;
-  left: 0px;
-  width: 100%;
-  height: 100%;
-
-  background-color: #000;
-  opacity: .2;
-  -ms-filter: "Alpha(opacity=20)";
 }
 
 .jxDialogContent {
@@ -879,15 +947,6 @@ iframe.jxIframeShim{position:absolute;top:0px;left:0px;width:100%;height:100%;op
 /* ========================= */
 
 .jxDialogControls .jxButtonContainer,
-.jxDialogControls span.jxButtonContent,
-.jxDialogControls .jxButton:hover span.jxButtonContent,
-.jxDialogControls .jxButton:active span.jxButtonContent,
-.jxDialogControls .jxButtonActive span.jxButtonContent,
-.jxDialogControls .jxButtonActive:hover span.jxButtonContent,
-.jxDialogControls .jxButtonActive:active span.jxButtonContent,
-.jxDialogControls .jxDisabled .jxButton span.jxButtonContent,
-.jxDialogControls .jxDisabled .jxButton:hover span.jxButtonContent,
-.jxDialogControls .jxDisabled .jxButton:active span.jxButtonContent,
 .jxDialogControls .jxButton,
 .jxDialogControls .jxButton:hover,
 .jxDialogControls .jxButton:active ,
@@ -904,16 +963,6 @@ iframe.jxIframeShim{position:absolute;top:0px;left:0px;width:100%;height:100%;op
   background-image: none;
 }
 
-
-.jxDialogControls .jxButtonMenu span.jxButtonContent,
-.jxDialogControls .jxButtonFlyout span.jxButtonContent {
-  background-image: none;
-}
-
-.jxDialogControls .jxButtonMenu span.jxButtonContent span,
-.jxDialogControls .jxButtonFlyout span.jxButtonContent span {
-  padding-right: 0px;
-}
 
 /* ========================== */
 /* JX TOOLBAR STYLES OVERIDES */
@@ -992,7 +1041,7 @@ div.jxFileFake .jxButtonContainer {
     height: 35px;
 }/**
  * @project         Jx
- * @revision        $Id: form.css 689 2010-02-03 16:03:51Z fred.warnock $
+ * @revision        $Id: form.css 827 2010-04-01 14:22:49Z fred.warnock $
  * @author          Fred Warnock (fwarnock@dmsolutions.ca)
  * @copyright       (c) 2006 DM Solutions Group Inc.
  */
@@ -1021,7 +1070,6 @@ div.jxFileFake .jxButtonContainer {
 .jxForm {
   display: block;
   position: relative;
-  overflow: hidden; /* ensures that floated elements are contained */
   font-family: Arial, Helvetica, sans-serif;
   font-size: 12px;
   line-height: 16px;
@@ -1031,12 +1079,7 @@ div.jxFileFake .jxButtonContainer {
 .jxFieldset {
   display: block;
   position: relative;
-  overflow: hidden; /* ensures that floated elements are contained */
   border: 1px solid #ccc;
-  border-radius: 10px;
-  -moz-border-radius: 10px;
-  -webkit-border-radius: 10px;
-  -khtml-border-radius: 10px;
   margin: 10px;
   padding: 5px;
 }
@@ -1080,18 +1123,85 @@ div.jxFileFake .jxButtonContainer {
   vertical-align: bottom;
 }
 
+.jxInputWrapper {
+  display: inline-block;
+  white-space: normal;
+  position: relative;
+}
+
 .jxInputText,
 .jxInputPassword,
-.jxInputTextarea {
+.jxInputTextarea,
+.jxInputCombo,
+.jxInputColor {
   margin: 0px 4px;
   padding: 4px;
   border: 1px solid #bbb;
+  /* overall width is 250px, margins+padding+border is 18px */
+  width: 232px;
   font-family: Arial, Helvetica, sans-serif;
   font-size: 12px;
   line-height: 16px;
   color: #000;
 }
 
+.jxInputCombo,
+.jxInputColor {
+  padding: 4px 20px 4px 20px;
+  /* overall width is 250px, margins+padding+border is 50px */
+  width: 200px;
+}
+
+.jxInputIconHidden .jxInputCombo {
+  /* overall width is 250px, margins+padding+border is 34px */
+  padding-left: 4px;
+  width: 216px;
+}
+
+.jxInputIcon {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  left: 0px;
+  top: 0px;
+  margin: 4px 4px 4px 8px;
+}
+
+.jxInputContainerColor .jxInputIcon {
+  border: 1px solid #bbb;
+  width: 15px;
+  height: 15px;
+}
+
+.jxInputIconHidden .jxInputIcon {
+  display: none;
+}
+
+.jxInputRevealer {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  right: 0px;
+  top: 0px;
+  margin: 4px 8px 4px 4px;
+  font-size: 0px;
+  line-height: 0px;
+}
+
+img.jxInputRevealerIcon {
+  background-image: url(images/emblems.png);
+  background-position: right -16px;
+  background-repeat: no-repeat;
+}
+
+.jxInputRevealer .jxButtonContainer,
+.jxInputRevealer .jxButton {
+  padding: 0px;
+  margin: 0px;
+  border: 0px;
+  background-color: transparent;
+  background-image: none;
+}
 
 .jxInputSelect {
   margin: 0px 4px;
@@ -1103,13 +1213,6 @@ div.jxFileFake .jxButtonContainer {
   color: #000;
 }
 
-.jxInputText:focus,
-.jxInputPassword:focus,
-.jxInputTextarea:focus,
-.jxInputSelect:focus {
-  border: 1px solid #000;
-}
-
 .jxInputRadio,
 .jxInputCheck {
   margin: 5px;
@@ -1117,6 +1220,15 @@ div.jxFileFake .jxButtonContainer {
   font-size: 12px;
   line-height: 16px;
   color: #000;
+}
+
+.jxInputText:focus,
+.jxInputPassword:focus,
+.jxInputTextarea:focus,
+.jxInputSelect:focus,
+.jxInputCombo:focus,
+.jxInputColor:focus {
+  border: 1px solid #000;
 }
 
 .jxInputContainer .jxButtonContainer {
@@ -1153,7 +1265,9 @@ div.jxFileFake .jxButtonContainer {
 .jxFieldError .jxInputText,
 .jxFieldError .jxInputPassword,
 .jxFieldError .jxInputTextarea,
-.jxFieldError .jxInputSelect {
+.jxFieldError .jxInputSelect,
+.jxFieldError .jxInputCombo,
+.jxFieldError .jxInputColor {
   background-color: #FBE3E4; 
   color: #8a1f11; 
   border-color: #FBC2C4;
@@ -1162,7 +1276,9 @@ div.jxFileFake .jxButtonContainer {
 .jxFieldSuccess .jxInputText,
 .jxFieldSuccess .jxInputPassword,
 .jxFieldSuccess .jxInputTextarea,
-.jxFieldSuccess .jxInputSelect {
+.jxFieldSuccess .jxInputSelect,
+.jxFieldSuccess .jxInputCombo,
+.jxFieldSuccess .jxInputColor {
   background-color: #E6EFC2; 
   color: #264409; 
   border-color: #C6D880;
@@ -1171,14 +1287,18 @@ div.jxFileFake .jxButtonContainer {
 .jxFieldError .jxInputText:focus,
 .jxFieldError .jxInputPassword:focus,
 .jxFieldError .jxInputTextarea:focus,
-.jxFieldError .jxInputSelect:focus {
+.jxFieldError .jxInputSelect:focus,
+.jxFieldError .jxInputCombo:focus,
+.jxFieldError .jxInputColor:focus {
   border-color: #8a1f11;
 }
 
 .jxFieldSuccess .jxInputText:focus,
 .jxFieldSuccess .jxInputPassword:focus,
 .jxFieldSuccess .jxInputTextarea:focus,
-.jxFieldSuccess .jxInputSelect:focus {
+.jxFieldSuccess .jxInputSelect:focus,
+.jxFieldSuccess .jxInputCombo:focus,
+.jxFieldSuccess .jxInputColor:focus {
   border-color: #264409;
 }
 
@@ -1348,9 +1468,22 @@ form .jxFormInlineblock .jxInputGroup .jxInputLabel {
   width: auto;
 }
 
-/**
+/** Jx.Grid Overrides **/
+
+.jxGridCellContent .jxInputContainer,
+.jxGridCellContent .jxInputRadio,
+.jxGridCellContent .jxInputCheck {
+  display: inline;
+  position: relative;
+  border: none;
+  margin: 0px;
+  padding: 0px;
+  font-size: 0px;
+  line-height: 0px;
+  color: #000;
+}/**
  * @project         Jx
- * @revision        $Id: grid.css 572 2009-10-29 05:53:36Z jonlb@comcast.net $
+ * @revision        $Id: grid.css 796 2010-03-26 19:56:43Z pagameba $
  * @author          Fred Warnock (fwarnock@dmsolutions.ca)
  * @copyright       (c) 2006 DM Solutions Group Inc.
  */
@@ -1371,19 +1504,13 @@ form .jxFormInlineblock .jxInputGroup .jxInputLabel {
 }
 
 .jxGridTable {
+    width: 100%;
     position: relative;
     table-layout: fixed;
     border-collapse: collapse;
     border-style: none;
 
     cursor: default;
-    font-family: Arial, Verdana, sans-serif;
-    font-size: 11px;
-    font-weight: normal;
-}
-
-.jxGridHeader {
-    width: 100%;
 }
 
 .jxGridTableBody {
@@ -1393,31 +1520,6 @@ form .jxFormInlineblock .jxInputGroup .jxInputLabel {
     border-style: none;
    /* width: 100%;*/
     cursor: default;
-    font-family: Arial, Verdana, sans-serif;
-    font-size: 11px;
-    font-weight: normal;
-}
-
-
-.jxGridColHeadHide {
-    height: 0px;
-    line-height: 0px;
-    font-size: 0px;
-    background-color: #fff;
-    white-space: normal;
-}
-
-.jxGridColHeadHide p, .jxGridRowHeadHide p {
-    font-size: 0px;
-    line-height: 0px;
-    height: 0px;
-    margin: 0px;
-    padding: 0px;
-}
-
-.jxGridRowHeadHide {
-    width: 0px;
-    white-space: normal;
 }
 
 .jxGridCell {
@@ -1433,9 +1535,15 @@ form .jxFormInlineblock .jxInputGroup .jxInputLabel {
     display: -moz-inline-box;
     display: inline-block;
     overflow: hidden;
-    padding-left: 3px;
-    padding-right: 3px;
+    padding: 0px 3px;
     overflow: hidden;
+    vertical-align: middle;
+    
+    font-family: Arial, Verdana, sans-serif;
+    font-size: 11px;
+    font-weight: normal;
+    line-height: 16px;
+    
     /* can change this to normal */
     white-space: nowrap;
     cursor: cell;
@@ -1443,9 +1551,24 @@ form .jxFormInlineblock .jxInputGroup .jxInputLabel {
     text-overflow: ellipsis;
 }
 
+.jxGridColHead .jxGridCellContent {
+    padding: 0px 3px;
+    text-align: center;
+    font-weight: bold;
+    color: #333;
+    height: 100%;
+}
+
+.jxGridRowHead .jxGridCellContent {
+  text-align: center;
+  font-weight: bold;
+  color: #333;
+}
 /* Normal Styles */
 
 .jxGridColHead {
+    height: 100%;
+  
     border-top: 0px solid  #d8d8d8;
     border-right: 1px solid #d8d8d8;
     border-bottom: 1px solid #d8d8d8;
@@ -1456,12 +1579,11 @@ form .jxFormInlineblock .jxInputGroup .jxInputLabel {
     background-repeat: repeat-x;
 
     text-align: center;
-    font-weight: bold;
-    color: #333;
     cursor: default;
-    padding-left: 3px;
-    padding-right: 3px;
+    padding: 0px;
     white-space: nowrap;
+    
+    overflow: hidden;
 }
 
 .jxGridRowHead {
@@ -1475,8 +1597,6 @@ form .jxFormInlineblock .jxInputGroup .jxInputLabel {
     background-repeat: repeat-y;
 
     text-align: center;
-    font-weight: bold;
-    color: #333;
     cursor: default;
     overflow: hidden;
     white-space: nowrap;
@@ -1509,11 +1629,13 @@ form .jxFormInlineblock .jxInputGroup .jxInputLabel {
     background-color: #f7f7f7;
 }
 
-.jxGridRowSelected td {
+.jxGridRowSelected td,
+.jxGridRowSelected th {
     background-color: #f7f7f7;
 }
 
-td.jxGridCellSelected {
+td.jxGridCellSelected,
+th.jxGridCellSelected {
     background-color: #ebebeb;
 }
 
@@ -1533,36 +1655,35 @@ td.jxGridCellSelected {
     background-color: #e5f1ff;
 }
 
-.jxGridRowPrelight td {
+.jxGridRowPrelight td,
+.jxGridRowPrelight th {
     background-color: #e5f1ff;
 }
 
-td.jxGridCellPrelight {
+td.jxGridCellPrelight,
+th.jxGridCellPrelight {
   background-color: #cce3ff;
 }
 
-/* Sort styles */
-.jxColSortable {
-    padding-right: 20px;
-}
-
-.jxGridCell.jxColSortable {
-    padding-right: 0;
-}
-
-.jxColSortable span {
+.jxGridHeader .jxColSortable img {
+    vertical-align: top;
+    width: 16px;
+    height: 16px;
     background-image: url('images/emblems.png');
-    padding-right: 20px;
     background-repeat: no-repeat;
     background-position: right top;
 }
- 
-.jxGridColumnSortedAsc span {
-    background-position: right -160px;
+
+.jxGridHeader .jxColSortable .jxGridCellContent {
+  margin-right: -16px; /* recenter the column heading text */
 }
  
-.jxGridColumnSortedDesc span {
-    background-position: right -16px;
+.jxGridHeader .jxGridColumnSortedAsc img {
+    background-position: right -162px;
+}
+ 
+.jxGridHeader .jxGridColumnSortedDesc img {
+    background-position: right -18px;
 }
  
 .jxGridColumnResize,
@@ -1581,13 +1702,46 @@ td.jxGridCellPrelight {
     cursor: col-resize;
 }
 
+.jxColSortable .jxGridColumnResize {
+  right: 8px;
+}
+
 .jxGridRowResize {
     left: 0px;
     bottom: 0px;
     height: 4px;
     width: 100%;
     cursor: row-resize;
+}
+
+/* Editor Styles */
+.jxGridEditorPopup {
+  min-width: 130px;
+  margin: 3px;
+  font-size: 10px;
+  box-shadow: 2px 2px 5px #888; /* i really like the boxshadow */
+  -moz-box-shadow : 2px 2px 5px #888;
+  -webkit-box-shadow : 2px 2px 5px #888;
+  /*
+  border-radius: 5px;
+  -moz-border-radius: 5px;
+  -webkit-border-radius: 5px;
+  */
+  background-color: #dddddd;
+  border: 1px solid #999999;
+  position: absolute;
+}
+
+.jxGridEditorPopupInnerWrapper {
+  position: relative;
+  height: 100%;
+  width: 100%;
 }.jxListView {
+  position:relative;
+  display: block;
+  list-style: none;
+  margin: 0px;
+  padding: 0px;
 }
 
 .jxListView .jxListItemContainer {
@@ -1953,19 +2107,20 @@ ul.jxMenu span.jxMenuSeparator {
     padding: 6px 26px 6px 10px; 
 }                          
 
-.jxNoticeError .jxNoticeItem {   background-color: #FBE3E4; color: #8a1f11; border-color: #FBC2C4; background-image: url(images/notice_error.png);}
+.jxNoticeError .jxNoticeItem { background-color: #FBE3E4; color: #8a1f11; border-color: #FBC2C4; background-image: url(images/notice_error.png);}
 .jxNoticeWarning .jxNoticeItem { background-color: #FFF6BF; color: #514721; border-color: #FFD324; background-image: url(images/notice_warning.png);}
 .jxNoticeSuccess .jxNoticeItem { background-color: #E6EFC2; color: #264409; border-color: #C6D880; background-image: url(images/notice_success.png);}
+.jxNoticeInformation .jxNoticeItem { background-color: #F8F8F8; color: #666666; border-color: #CCCCCC; background-image: url(images/notice.png);}
 
-.jxNoticeError .jxNotice {   color: #8a1f11; padding-left: 28px; }
+.jxNoticeError .jxNotice { color: #8a1f11; padding-left: 28px; }
 .jxNoticeWarning .jxNotice { color: #514721; padding-left: 28px; }
 .jxNoticeSuccess .jxNotice { color: #264409; padding-left: 28px; }
-.jxNoticeInfo .jxNotice { padding-left: 28px; }
+.jxNoticeInformation .jxNotice { color: #666666; padding-left: 28px; }
 
-.jxNoticeError .jxNoticeIcon {   background-position: 0px -32px; }
+.jxNoticeError .jxNoticeIcon { background-position: 0px -32px; }
 .jxNoticeWarning .jxNoticeIcon { background-position: 0px -16px; }
 .jxNoticeSuccess .jxNoticeIcon { background-position: 0px -48px; }            
-.jxNoticeInfo .jxNoticeIcon {    background-position: 0px -64px; }
+.jxNoticeInformation .jxNoticeIcon { background-position: 0px -64px; }
 
 .jxNoticeClose {
     position: absolute;
@@ -1979,7 +2134,7 @@ ul.jxMenu span.jxMenuSeparator {
     background-repeat: no-repeat;
 }/**
  * @project         Jx
- * @revision        $Id: panel.css 302 2009-04-02 18:42:56Z fred.warnock $
+ * @revision        $Id: panel.css 716 2010-03-02 16:07:19Z fred.warnock $
  * @author          Fred Warnock (fwarnock@dmsolutions.ca)
  * @copyright       (c) 2006 DM Solutions Group Inc.
  */
@@ -2141,15 +2296,6 @@ ul.jxMenu span.jxMenuSeparator {
 /* ========================= */
 
 .jxPanelControls .jxButtonContainer,
-.jxPanelControls span.jxButtonContent,
-.jxPanelControls .jxButton:hover span.jxButtonContent,
-.jxPanelControls .jxButton:active span.jxButtonContent,
-.jxPanelControls .jxButtonActive span.jxButtonContent,
-.jxPanelControls .jxButtonActive:hover span.jxButtonContent,
-.jxPanelControls .jxButtonActive:active span.jxButtonContent,
-.jxPanelControls .jxDisabled .jxButton span.jxButtonContent,
-.jxPanelControls .jxDisabled .jxButton:hover span.jxButtonContent,
-.jxPanelControls .jxDisabled .jxButton:active span.jxButtonContent,
 .jxPanelControls .jxButton,
 .jxPanelControls .jxButton:hover,
 .jxPanelControls .jxButton:active ,
@@ -2166,15 +2312,6 @@ ul.jxMenu span.jxMenuSeparator {
   background-image: none;
 }
 
-.jxPanelControls .jxButtonMenu span.jxButtonContent,
-.jxPanelControls .jxButtonFlyout span.jxButtonContent {
-  background-image: none;
-}
-
-.jxPanelControls .jxButtonMenu span.jxButtonContent span,
-.jxPanelControls .jxButtonFlyout span.jxButtonContent span {
-  padding-right: 0px;
-}
 
 /* ========================== */
 /* JX TOOLBAR STYLES OVERIDES */
@@ -2214,48 +2351,83 @@ ul.jxMenu span.jxMenuSeparator {
  * progress bar classes
  */
 .jxProgressBar-container {
-    width: 100%;
+    position: relative;
     display: block;
-    clear: both;
-    
+    width: 100%;
 }
 
 .jxProgressBar-message {
+    position: relative;
+    display: block;
     color: black;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 12px;
+    line-height: 20px;
 }
 
-.jxProgressBar-container .jxProgressBar {
+.jxProgressBar {
+    position: relative;
+    display: block;
     width: 100%;
-    clear: both;
-    border-top: none;
+    height: 20px;
+    border: none;
+    margin: 0px;
+    padding: 0px;
 }
 
-.jxProgressBar-container .jxProgressBar .jxProgressBar-outline {
-    border: 1px solid #336600;
+.jxProgressBar-outline {
     position: absolute;
+    display: block;
     top: 0px;
     left: 0px;
     z-index: 10;
+    height: 20px;
+    border-left: 1px solid #cbc8c8;
+    border-right: 1px solid #cbc8c8;
+    background-image: url(images/progressbar.png);
+    background-position: 0px -140px;
+    width: 100%;
 }
 
-.jxProgressBar-container .jxProgressBar .jxProgressBar-fill {
-    background-color: #99cc66;
+.jxProgressBar-fill {
     position: absolute;
-    top: 1px;
-    left: 1px;
+    display: block;
+    top: 0px;
+    left: 0px;
     z-index: 20;
+    height: 20px;
+    border: none;
+    background-image: url(images/progressbar.png);
+    background-position: 0px 0px;
 }
 
-.jxProgressBar-container .jxProgressBar .jxProgressBar-text {
-    color: #336600;
-    margin: 0px;
-    padding: 2px;
+.jxProgressStarting .jxProgressBar-fill {
+    border: none;
+}
+
+.jxProgressWorking .jxProgressBar-fill {
+    border-left: 1px solid #49afe8;
+}
+
+.jxProgressFinished .jxProgressBar-fill {
+    border-left: 1px solid #49afe8;
+    border-right: 1px solid #49afe8;
+}
+
+.jxProgressBar-text {
     position: absolute;
-    top: 1px;
+    display: block;
+    top: 0px;
     left: 1px;
     width: auto;
+    height: 20px;
     z-index: 30;
     border: none;
+    margin: 0px;
+    padding: 0px 0px 0px 4px;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 12px;
+    line-height: 20px;
 }
 .jxHasVerticalScrollbar,
 .jxHasHorizontalScrollbar {
@@ -2451,7 +2623,7 @@ ul.jxMenu span.jxMenuSeparator {
   background-color: #aaa;
 }/**
  * @project         Jx
- * @revision        $Id: tab.css 615 2009-11-19 22:01:38Z fred.warnock $
+ * @revision        $Id: tab.css 875 2010-04-24 06:10:53Z fred.warnock $
  * @author          Fred Warnock (fwarnock@dmsolutions.ca)
  * @copyright       (c) 2006 DM Solutions Group Inc.
  */
@@ -2469,8 +2641,7 @@ ul.jxMenu span.jxMenuSeparator {
      the position need to be explicitly set, as well as the width and height. */
   /* Base setup */
   position: relative;
-  display: -moz-inline-box;
-  display: inline-block;
+  display: block;
   overflow: hidden;
 
   width: 200px;
@@ -2480,7 +2651,7 @@ ul.jxMenu span.jxMenuSeparator {
   background-color: #fff;
 }
 
-.jxTabSetContainer  .jxToolbarContainer {
+.jxTabSetContainer  .jxBarContainer {
   /* Base setup */
   z-index: auto;
 }
@@ -2606,18 +2777,29 @@ a.jxTabClose {
 /* HORIZONTALTAB BAR - TOP and BOTTOM TABS */
 /* ======================================= */
 
-.jxBarTop div.jxTabContainer,
-.jxBarBottom div.jxTabContainer {
+.jxTabBarTop .jxBarWrapper, 
+.jxTabBarBottom .jxBarWrapper {
+  padding-left: 2px;
+}
+
+.jxBarTop span.jxTabContainer,
+.jxBarBottom span.jxTabContainer {
   /* Base setup */
+  margin-right: -1px;
+  padding: 2px 0px;
 }
 
 .jxBarTop a.jxTab,
-.jxBarTop span.jxTabContent {
+.jxBarTop span.jxTabContent,
+.jxTabBarTop .jxBarControls a.jxButton,
+.jxTabBarTop .jxBarControls span.jxButtonContent{
   background-image: url(images/tab_top.png);
 }
 
 .jxBarBottom a.jxTab,
-.jxBarBottom span.jxTabContent {
+.jxBarBottom span.jxTabContent,
+.jxTabBarBottom .jxBarControls a.jxButton,
+.jxTabBarBottom .jxBarControls span.jxButtonContent {
   background-image: url(images/tab_bottom.png);
 }
 
@@ -2777,10 +2959,18 @@ a.jxTabClose {
 /* VERTICAL TAB BAR - LEFT and RIGHT */
 /* ================================= */
 
+.jxTabBarLeft .jxBarWrapper, 
+.jxTabBarRight .jxBarWrapper {
+  padding-top: 2px;
+}
+
 .jxBarLeft span.jxTabContainer,
 .jxBarRight span.jxTabContainer {
   /* Base setup */
+  margin-bottom: -1px;
+  padding: 0px 2px;
 }
+
 
 .jxBarLeft a.jxTab,
 .jxBarLeft span.jxTabContent {
@@ -2930,7 +3120,7 @@ a.jxTabClose {
 
 /**
  * @project         Jx
- * @revision        $Id: toolbar.css 688 2010-02-02 19:54:13Z zak4ms $
+ * @revision        $Id: toolbar.css 875 2010-04-24 06:10:53Z fred.warnock $
  * @author          Fred Warnock (fwarnock@dmsolutions.ca)
  * @copyright       (c) 2006 DM Solutions Group Inc.
  */
@@ -3004,30 +3194,28 @@ a.jxTabClose {
 }
 
 
-.jxBarTop .jxScroller,
-.jxBarBottom .jxScroller {
+.jxBarTop .jxBarScroller,
+.jxBarBottom .jxBarScroller {
   float: left;
   height: 28px;
   overflow: hidden;
+  z-index: 0;
 }
 
-.jxBarTop .jxScroller .jxToolbarWrapper,
-.jxBarBottom .jxScroller .jxToolbarWrapper {
+.jxBarTop .jxBarScroller .jxBarWrapper,
+.jxBarBottom .jxBarScroller .jxBarWrapper {
   float: left;
   height: 28px;
   overflow: hidden;
   width: 10000%;
 }
 
-
-.jxBarTop .jxBarScrollLeft,
-.jxBarBottom .jxBarScrollLeft {
-  float: left;
-}
-
-.jxBarTop .jxBarScrollRight,
-.jxBarBottom .jxBarScrollRight {
-  float: right;
+.jxBarTop .jxBarControls .jxButtonContainer,
+.jxBarBottom .jxBarControls .jxButtonContainer {
+  /* float: right; */
+  z-index: 1;
+  padding: 2px 0px;
+  margin-left: -1px;
 }
 
 .jxBarTop .jxBarScrollLeft img.jxButtonIcon,
@@ -3040,6 +3228,13 @@ a.jxTabClose {
 .jxBarBottom .jxBarScrollRight img.jxButtonIcon {
   background-image: url(images/emblems.png);
   background-position: 0px -96px;
+}
+
+.jxBarControls {
+    float: right;
+    position: relative;
+    font-size: 0px;
+    line-height: 0px;
 }
 
 /* The jx toolbar and tabbar are both built out of a UL
@@ -3062,6 +3257,7 @@ ul.jxTabBar {
   display: block;
   position: relative;
   float: left;
+  clear: none;
   list-style-type: none;
 
   margin: 0px;  /* margins don't seem to work properly in IE */
@@ -3137,7 +3333,28 @@ li.jxToolItem  span.jxBarSeparator {
   clear: both;
 }
 
-/*
+
+/* Aligning options */
+.jxToolbarAlignLeft ul {
+    float: left;
+}
+
+.jxToolbarAlignRight ul {
+    float: right;
+}
+
+.jxToolbarAlignCenter {
+    text-align: center;
+}
+
+.jxToolbarAlignCenter ul {
+    float: none;
+}
+
+.jxToolbarAlignCenter ul li {
+    float: none;
+    display: inline;
+}/*
  * Tooltip classes
  */
 .jxTooltip {
@@ -3151,7 +3368,7 @@ li.jxToolItem  span.jxBarSeparator {
 
 /**
  * @project         Jx
- * @revision        $Id: tree.css 602 2009-11-10 19:41:36Z pagameba $
+ * @revision        $Id: tree.css 755 2010-03-15 03:09:37Z jonlb@comcast.net $
  * @author          Fred Warnock (fwarnock@dmsolutions.ca)
  * @copyright       (c) 2006 DM Solutions Group Inc.
  */
@@ -3351,25 +3568,32 @@ span.jxTreeLabel,
     vertical-align: middle;
 }
 
+img.jxTreeImage.jxBusy {
+	background-image: url(images/spinner_16.gif);
+    background-position: left top;
+}
+
 /* FileUploadPanel */
 .jxFileUploadPanel {
     padding: 5px;
 }
 
 .jxFileUploadPanel .jxInputContainer {
-    width: 300px;
+    /*width: 300px;*/
 }
  
 .jxUploadQueue {
-    width: 100%;  
-    margin-top: 10px;  
+    /*width: 100%;*/  
+    /*margin-top: 10px;*/  
 }
 
-.jxUploadQueue div {
+.jxUploadQueue li {
+    display: block;
     position: relative;
-    width: 95%;
-    clear: both;
-    border-top: 1px solid black;
+    overflow: hidden;
+    /*width: 95%;*/
+    /*clear: both;*/
+    /*border-top: 1px solid black;*/
     padding: 2px;
 }
 
@@ -3377,43 +3601,50 @@ span.jxTreeLabel,
     display: block;
 }
 
-.jxUploadQueue div span.jxUploadFileName {
-    float: left;
-    font-size: 16px;
+.jxUploadQueue li span.jxUploadFileName {
+    /*float: left;*/
+    font-size: 12px;
+    line-height: 16px;
 }
 
-.jxUploadQueue div span.jxUploadFileDelete,
-.jxUploadQueue div span.jxUploadFileProgress,
-.jxUploadQueue div span.jxUploadFileComplete,
-.jxUploadQueue div span.jxUploadFileError {
-    float: right;
+.jxUploadQueue li span.jxUploadFileDelete,
+.jxUploadQueue li span.jxUploadFileProgress,
+.jxUploadQueue li span.jxUploadFileComplete,
+.jxUploadQueue li span.jxUploadFileError {
+    /*float: right;*/
+    position: absolute;
+    top: 0px;
+    right: 0px;
     width: 16px;
     height: 16px;
     background-repeat: no-repeat;
-    background-position: top left;
     cursor: pointer;
 }
 
-.jxUploadQueue div span.jxUploadFileDelete {
-    background-image: url('images/delete.gif');
+.jxUploadQueue li span.jxUploadFileDelete {
+    background-image: url('images/icons.png');
+    background-position: 0px -128px;
 }
 
-.jxUploadQueue div span.jxUploadFileProgress {
-    background-image: url('images/loading.gif');
+.jxUploadQueue li span.jxUploadFileProgress {
+    background-image: url('images/spinner_16.gif');
+    background-position: top left;
 }
 
-.jxUploadQueue div span.jxUploadFileComplete {
-    background-image: url('images/green_tick.png');
+.jxUploadQueue li span.jxUploadFileComplete {
+    background-image: url('images/icons.png');
+    background-position: 0px -48px;
 }
 
-.jxUploadQueue div span.jxUploadFileError {
-    background-image: url('images/error.png');
+.jxUploadQueue li span.jxUploadFileError {
+    background-image: url('images/icons.png');
+    background-position: 0px -32px;
 }
 
 .jxUploadFileErrorTip {
   padding: 4px 4px 4px 20px; 
   border: 2px solid #ddd;
-  background: url("images/error.png") no-repeat left top;
+  background: url("images/icons.png") no-repeat 0px -32px;
   color: black;
   width: 100px;
 }

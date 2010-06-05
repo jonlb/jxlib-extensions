@@ -1,10 +1,124 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
-        "http://www.w3.org/TR/html4/loose.dtd">
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <head>
-    <title></title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Jx.Dialog.Wizard Example</title>
+    <!-- need to load up the options first, then load the loader -->
+    <script type="text/javascript" src="options.js"></script>
+    <script type="text/javascript" src="../loader/loader.php?file[]=loader&compress=false&allDeps=true&clearSession=true"></script>
+
+
+    <script type="text/javascript">
+        window.addEvent('domready', function () {
+
+            $uses([
+                'Jx.Field.Button',
+                'Jx.Form',
+                'Jx.Field.OptionGroup'
+            ], function(){
+                var form = new Jx.Form({
+                    formClass: 'jxFormInlineblock'
+                }).addTo('form1');
+
+                new Jx.Field.OptionGroup({
+                    label: 'Select One or More of these',
+                    columns: 3,
+                    asArray: true,
+                    name: 'test',
+                    items: [
+                        {
+                            label: 'test item 1',
+                            value: 'test1'
+                        },{
+                            label: 'test item 2',
+                            value: 'test2'
+                        },{
+                            label: 'test item 3',
+                            value: 'test3'
+                        },{
+                            label: 'test item 4',
+                            value: 'test4'
+                        },{
+                            label: 'test item 5',
+                            value: 'test5'
+                        },{
+                            label: 'test item 6',
+                            value: 'test6'
+                        }
+                    ]
+                }).addTo(form);
+
+                new Jx.Field.Button({
+                    buttonOptions: {
+                        label: 'Submit',
+                        onClick: function () {
+                            console.log(form.getValues());
+                        }
+                    }
+                }).addTo(form);
+
+                var form2 = new Jx.Form({
+                    formClass: 'jxFormInlineblock'
+                }).addTo('form2');
+
+                new Jx.Field.OptionGroup({
+                    label: 'Select One or More of these',
+                    columns: 3,
+                    type: 'radio',
+                    items: [
+                        {
+                            label: 'test item 1',
+                            name: 'test',
+                            value: 'test1'
+                        },{
+                            label: 'test item 2',
+                            name: 'test',
+                            value: 'test2'
+                        },{
+                            label: 'test item 3',
+                            name: 'test',
+                            value: 'test3'
+                        },{
+                            label: 'test item 4',
+                            name: 'test',
+                            value: 'test4'
+                        },{
+                            label: 'test item 5',
+                            name: 'test',
+                            value: 'test5'
+                        },{
+                            label: 'test item 6',
+                            name: 'test',
+                            value: 'test6'
+                        }
+                    ]
+                }).addTo(form2);
+                new Jx.Field.Button({
+                    buttonOptions: {
+                        label: 'Submit',
+                        onClick: function () {
+                            console.log(form2.getValues());
+                        }
+                    }
+                }).addTo(form2);
+            });
+        });
+    </script>
+
+    <style>
+        .formContainer {
+            width: 50%;
+            border: 1px solid black;
+        }
+    </style>
 </head>
 <body>
+    <p>Field.OptionGroup - checkboxes</p>
+    <div id="form1" class="formContainer"></div>
+
+    <p>Field.OptionGroup - radio buttons</p>
+    <div id="form2" class="formContainer"></div>
+
 
 </body>
 </html>

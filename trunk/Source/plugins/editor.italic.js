@@ -1,4 +1,22 @@
+/*
+---
 
+name: Jx.Plugin.Editor.Italic
+
+description:
+
+license: MIT-style license.
+
+requires:
+ - Jx.Plugin.Editor.Button
+
+provides: [Jx.Plugin.Editor.Italic]
+
+images:
+ - text_italic.png
+
+...
+ */
 Jx.Plugin.Editor.Italic = new Class({
     
     Family: 'Jx.Plugin.Editor.Italic',

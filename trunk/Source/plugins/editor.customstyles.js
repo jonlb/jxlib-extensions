@@ -1,4 +1,20 @@
+/*
+---
 
+name: Jx.Plugin.Editor.CustomStyles
+
+description:
+
+license: MIT-style license.
+
+requires:
+ - Jx.Plugin.Editor
+ - jxlib/Jx.Field.Select
+
+provides: [Jx.Plugin.Editor.CustomStyles]
+
+...
+ */
 Jx.Plugin.Editor.CustomStyles = new Class({
     
     Family: 'Jx.Plugin.Editor.CustomStyles',

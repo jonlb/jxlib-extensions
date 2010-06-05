@@ -1,4 +1,23 @@
+/*
+---
 
+name: Jx.Layout.Columns
+
+description:
+
+license: MIT-style license.
+
+requires:
+ - jxlib/Jx.Layout
+ - More/Drag.Move
+
+provides: [Jx.Layout.Columns]
+
+css:
+ - columns
+
+...
+ */
 Jx.Layout.Columns = new Class({
 	Family: 'Jx.Layout.Columns',
 	Extends: Jx.Object,
@@ -183,13 +202,14 @@ Jx.Layout.Columns = new Class({
 				el.resize();
 			}
 			el.setStyle('position','relative');
+            if (options.isDraggable) {
+                this.makeDraggable(el, options.handle);
+            }
 		},this);
 		
 		
 		
-		if (options.isDraggable) {
-			this.makeDraggable(elem, options.handle);
-		}
+
 		
 		this.fireEvent('jxLayoutColumnAdd');
 	},

@@ -1,4 +1,22 @@
+/*
+---
 
+name: Jx.Plugin.Editor.Redo
+
+description:
+
+license: MIT-style license.
+
+requires:
+ - Jx.Plugin.Editor.Button
+
+provides: [Jx.Plugin.Editor.Redo]
+
+images:
+ - edit-redo.png
+
+...
+ */
 Jx.Plugin.Editor.Redo = new Class({
     
     Family: 'Jx.Plugin.Editor.Redo',

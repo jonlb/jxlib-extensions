@@ -1,5 +1,29 @@
+/*
+---
+
+name: Jx.Editor
+
+description:
+
+license: MIT-style license.
+
+requires:
+ - jxlib/Jx.Widget
+ - jxlib/Jx.Layout
+ - jxlib/Jx.Toolbar.Container
+
+provides: [Jx.Editor]
+
+css:
+ - editor
+
+...
+ */
 /**
  * Class: Jx.Editor
+ *
+ * Extends: <Jx.Widget>
+ * 
  * a very simplistic IFrame-based WYSIWYG editor.
  * 
  * Inspired by (and a great deal of code from) mooEditable
@@ -10,9 +34,10 @@ Jx.Editor = new Class({
     Extends: Jx.Widget,
     
     options: {
-        template: '<div class="jxEditor"><div class="jxEditorToolbar"></div><div class="jxEditorIframe"></div><textarea class="jxEditorTextarea"></textarea></div></div>',
+        template: '<span class="jxEditor"><span class="jxEditorToolbar"></span><span class="jxEditorIframe"></span><textarea class="jxEditorTextarea"></textarea></span></span>',
         editorCssFile: null,
-        html: '<!DOCTYPE html><html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head><body></body></html>',
+        html: '<!DOCTYPE html><html style="height: 100%; margin: 0; padding: 0;"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">{stylesheet}</head><body style="height: 100%; padding: 0; margin: 0;"></body></html>',
+        stylesheetTemplate: ' <link href="{file}" type="text/css" rel="stylesheet" media="screen, projection" title="jxEditorStylesheet" />',
         content: null,
         /**
          * Option: buttons
@@ -23,7 +48,6 @@ Jx.Editor = new Class({
         xhtml : true,
         semantics : true,
         textareaName: 'editor'
-        
     },
     
     classes: $H({
@@ -38,6 +62,12 @@ Jx.Editor = new Class({
     blockEls: /^(H[1-6]|HR|P|DIV|ADDRESS|PRE|FORM|TABLE|LI|OL|UL|TD|CAPTION|BLOCKQUOTE|CENTER|DL|DT|DD)$/i,
     
     init: function () {
+
+        if ($defined(this.options.parent)) {
+            this.options.deferRender = false;
+        } else {
+            this.options.deferRender = true;
+        }
         this.parent();
     },
     
@@ -58,39 +88,52 @@ Jx.Editor = new Class({
         //create the toolbar
         var i = $splat(this.options.buttons).length;
         for (var j = 0; j < i; j++) {
-            var c = new Jx.Toolbar.Container().addTo(this.container);
+            var c = new Jx.Toolbar.Container({
+                scroll: false
+            }).addTo(this.container);
             this.toolbars.push(new Jx.Toolbar());
             c.add(this.toolbars[j]);
         }
         
         
         if (this.options.parent) {
-            this.addTo(this.options.parent);
+            document.id(this.domObj).inject(document.id(this.options.parent));
             new Jx.Layout(this.domObj);
+            this.domObj.resize();
         }
-        this.domObj.resize();
-        
-        
-        var dimensions = this.iframe.getMarginBoxSize();
+
+
         var iframe = new IFrame({
             'class': 'jxEditorIframe',
             src: 'javascript:""',
             frameborder: 0
         });
         
-        iframe.replaces(this.iframe);
-        this.iframe = iframe;
+
         
         this.mode = 'iframe';
-        
-        this.win = this.iframe.contentWindow;
-        this.doc = this.win.document;
-        
+        iframe.replaces(this.iframe);
+        this.iframe = iframe;
+        this.iframe.setStyles({
+            display: 'block',
+            visibility: ''
+        });
+
+        this.win = iframe.contentWindow;
+        this.doc = $defined(this.win) ? this.win.document : iframe.contentDocument.document;
+
+        if ($defined(this.options.editorCssFile)) {
+            this.options.stylesheetTemplate = this.options.stylesheetTemplate.substitute({file: this.options.editorCssFile});
+        } else {
+            this.options.stylesheetTemplate = '';
+        }
+
+        this.options.html = this.options.html.substitute({stylesheet: this.options.stylesheetTemplate});
         this.doc.open();
         this.doc.write(this.options.html);
         this.doc.close();
-        
-        if (!this.win.$family) {
+
+        if (this.win && !this.win.$family) {
             new Window(this.win);
         }
         if (!this.doc.$family) {
@@ -98,29 +141,17 @@ Jx.Editor = new Class({
         }
         document.id(this.doc.body);
         
-        
-        
-        if ($defined(this.options.editorCssFile)) {
-            this.css = new Asset.css(this.options.editorCssFile, {
-                title: 'jxEditorStylesheet',
-                onload: function () {
-                    
-                }.bind(this)
-            });
-            this.css.inject(this.doc.head);
-        }
-        
         if ($defined(this.options.content)) {
             this.doc.body.set('html',this.options.content);
             this.textarea.set('value', this.options.content);
         }
-        
-        if (Browser.Engine.trident) {
+
+        if (Browser.Engine.trident || Browser.Engine.webkit) {
             this.doc.body.contentEditable = true;
         } else {
             this.doc.designMode = 'On';
         }
-        
+    
         this.selection = new Jx.Editor.Selection(this.win);
         
         //add events to doc
@@ -140,10 +171,12 @@ Jx.Editor = new Class({
             focus: this.editorFocus.bindWithEvent(this),
             blur: this.editorBlur.bindWithEvent(this)
         });
-        this.win.addEvents({
-            focus: this.editorFocus.bindWithEvent(this),
-            blur: this.editorBlur.bindWithEvent(this)
-        });
+        if (this.win) {
+            this.win.addEvents({
+                focus: this.editorFocus.bindWithEvent(this),
+                blur: this.editorBlur.bindWithEvent(this)
+            });
+        }
         ['cut','copy','paste'].each(function(event){
             this.doc.body.addListener(event, this.editorStopEvent.bindWithEvent(this,event.capitalize()));
         },this);
@@ -159,7 +192,8 @@ Jx.Editor = new Class({
         this.oldContent = this.getContent();
         
         this.domObj.store('Jx.Editor',this);
-        this.resize();
+
+
         
         this.addEvent('postPluginInit', function(){
             //now loop through button arrays and init the plugins
@@ -216,6 +250,12 @@ Jx.Editor = new Class({
     },
     
     resize: function () {
+        if (this.domObj.resize) {
+            this.domObj.resize();
+        } else {
+            new Jx.Layout(this.domObj);
+            this.domObj.resize();
+        }
         var dimensions = this.domObj.getContentBoxSize();
         var tbDimensions = this.container.getMarginBoxSize();
         
@@ -229,7 +269,11 @@ Jx.Editor = new Class({
     
     focus: function () {
         if (this.mode == 'iframe') {
-            this.win.focus();
+            if (this.win) {
+                this.win.focus();
+            } else {
+                this.iframe.focus();
+            }
         } else {
             this.textarea.focus();
         }
@@ -291,7 +335,7 @@ Jx.Editor = new Class({
     editorClick: function (e) {
         //console.log('editor click event');
         if (Browser.Engine.webkit) {
-            var el = $(e.target);
+            var el = document.id(e.target);
             if (el.get('tag') == 'img'){
                 this.selection.selectNode(el);
             }
@@ -359,7 +403,8 @@ Jx.Editor = new Class({
                     s.selectNode(nbsp);
                     s.collapse(1);
                 }
-                
+
+                //change this.win here for Google Chrome???
                 this.win.scrollTo(0, Element.getOffsets(s.getRange().startContainer).y);
                 
                 e.preventDefault();
@@ -542,5 +587,20 @@ Jx.Editor = new Class({
             plugin.setEnabled(false);
         },this);
     }
-    
+
+    /**
+
+    ,
+
+    addTo: function (reference, where) {
+
+        if (this.options.deferRender) {
+            this.options.parent = $(reference);
+            this.render();
+        } else {
+            this.parent(reference, where);
+        }
+
+    }
+    */
 });

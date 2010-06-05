@@ -21,8 +21,110 @@ provides: [MooTools.More]
 */
 
 MooTools.More = {
-	'version': '1.2.4.1'
+	'version': '1.2.4.4',
+	'build': '6f6057dc645fdb7547689183b2311063bd653ddf'
 };/*
+---
+
+script: MooTools.Lang.js
+
+description: Provides methods for localization.
+
+license: MIT-style license
+
+authors:
+- Aaron Newton
+
+requires:
+- core:1.2.4/Events
+- /MooTools.More
+
+provides: [MooTools.Lang]
+
+...
+*/
+
+(function(){
+
+	var data = {
+		language: 'en-US',
+		languages: {
+			'en-US': {}
+		},
+		cascades: ['en-US']
+	};
+	
+	var cascaded;
+
+	MooTools.lang = new Events();
+
+	$extend(MooTools.lang, {
+
+		setLanguage: function(lang){
+			if (!data.languages[lang]) return this;
+			data.language = lang;
+			this.load();
+			this.fireEvent('langChange', lang);
+			return this;
+		},
+
+		load: function() {
+			var langs = this.cascade(this.getCurrentLanguage());
+			cascaded = {};
+			$each(langs, function(set, setName){
+				cascaded[setName] = this.lambda(set);
+			}, this);
+		},
+
+		getCurrentLanguage: function(){
+			return data.language;
+		},
+
+		addLanguage: function(lang){
+			data.languages[lang] = data.languages[lang] || {};
+			return this;
+		},
+
+		cascade: function(lang){
+			var cascades = (data.languages[lang] || {}).cascades || [];
+			cascades.combine(data.cascades);
+			cascades.erase(lang).push(lang);
+			var langs = cascades.map(function(lng){
+				return data.languages[lng];
+			}, this);
+			return $merge.apply(this, langs);
+		},
+
+		lambda: function(set) {
+			(set || {}).get = function(key, args){
+				return $lambda(set[key]).apply(this, $splat(args));
+			};
+			return set;
+		},
+
+		get: function(set, key, args){
+			if (cascaded && cascaded[set]) return (key ? cascaded[set].get(key, args) : cascaded[set]);
+		},
+
+		set: function(lang, set, members){
+			this.addLanguage(lang);
+			langData = data.languages[lang];
+			if (!langData[set]) langData[set] = {};
+			$extend(langData[set], members);
+			if (lang == this.getCurrentLanguage()){
+				this.load();
+				this.fireEvent('langChange', lang);
+			}
+			return this;
+		},
+
+		list: function(){
+			return Hash.getKeys(data.languages);
+		}
+
+	});
+
+})();/*
 ---
 
 script: Log.js
@@ -183,14 +285,8 @@ var Depender = {
 			this.fireEvent('require', options);
 			this.loadScripts(options.scripts);
 		};
-		if (this.mapLoaded){
-			loaded.call(this);
-		} else {
-			this.addEvent('mapLoaded', function(){
-				loaded.call(this);
-				this.removeEvent('mapLoaded', arguments.callee);
-			});
-		}
+		if (this.mapLoaded) loaded.call(this);
+		else this.addEvent('mapLoaded', loaded.bind(this));
 		return this;
 	},
 
@@ -237,6 +333,7 @@ var Depender = {
 			this.calculateLoaded();
 			this.lastLoaded = this.getLoadedScripts().getLength();
 			this.fireEvent('mapLoaded');
+			this.removeEvents('mapLoaded');
 		}
 	},
 
@@ -435,107 +532,6 @@ Depender.setOptions = function(){
 	return this;
 };
 /*
----
-
-script: MooTools.Lang.js
-
-description: Provides methods for localization.
-
-license: MIT-style license
-
-authors:
-- Aaron Newton
-
-requires:
-- core:1.2.4/Events
-- /MooTools.More
-
-provides: [MooTools.Lang]
-
-...
-*/
-
-(function(){
-
-	var data = {
-		language: 'en-US',
-		languages: {
-			'en-US': {}
-		},
-		cascades: ['en-US']
-	};
-	
-	var cascaded;
-
-	MooTools.lang = new Events();
-
-	$extend(MooTools.lang, {
-
-		setLanguage: function(lang){
-			if (!data.languages[lang]) return this;
-			data.language = lang;
-			this.load();
-			this.fireEvent('langChange', lang);
-			return this;
-		},
-
-		load: function() {
-			var langs = this.cascade(this.getCurrentLanguage());
-			cascaded = {};
-			$each(langs, function(set, setName){
-				cascaded[setName] = this.lambda(set);
-			}, this);
-		},
-
-		getCurrentLanguage: function(){
-			return data.language;
-		},
-
-		addLanguage: function(lang){
-			data.languages[lang] = data.languages[lang] || {};
-			return this;
-		},
-
-		cascade: function(lang){
-			var cascades = (data.languages[lang] || {}).cascades || [];
-			cascades.combine(data.cascades);
-			cascades.erase(lang).push(lang);
-			var langs = cascades.map(function(lng){
-				return data.languages[lng];
-			}, this);
-			return $merge.apply(this, langs);
-		},
-
-		lambda: function(set) {
-			(set || {}).get = function(key, args){
-				return $lambda(set[key]).apply(this, $splat(args));
-			};
-			return set;
-		},
-
-		get: function(set, key, args){
-			if (cascaded && cascaded[set]) return (key ? cascaded[set].get(key, args) : cascaded[set]);
-		},
-
-		set: function(lang, set, members){
-			this.addLanguage(lang);
-			langData = data.languages[lang];
-			if (!langData[set]) langData[set] = {};
-			$extend(langData[set], members);
-			if (lang == this.getCurrentLanguage()){
-				this.load();
-				this.fireEvent('langChange', lang);
-			}
-			return this;
-		},
-
-		list: function(){
-			return Hash.getKeys(data.languages);
-		}
-
-	});
-
-})();/*
 ---
 
 script: Class.Refactor.js
@@ -744,6 +740,15 @@ Array.implement({
 
 	unique: function(){
 		return [].combine(this);
+	},
+
+	shuffle: function(){
+		for (var i = this.length; i && --i;){
+			var temp = this[i], r = Math.floor(Math.random() * ( i + 1 ));
+			this[i] = this[r];
+			this[r] = temp;
+		}
+		return this;
 	}
 
 });/*
@@ -1234,7 +1239,7 @@ var build = function(format){
 			bits = bits.slice(1).associate(parsed);
 			var date = new Date().clearTime();
 			if ('d' in bits) handle.call(date, 'd', 1);
-			if ('m' in bits) handle.call(date, 'm', 1);
+			if ('m' in bits || 'b' in bits || 'B' in bits) handle.call(date, 'm', 1);
 			for (var key in bits) handle.call(date, key, bits[key]);
 			return date;
 		}
@@ -1276,7 +1281,8 @@ Date.defineParsers(
 	'%x( %X)?', // "12/31", "12.31.99", "12-31-1999", "12/31/2008 11:59 PM"
 	'%d%o( %b( %Y)?)?( %X)?', // "31st", "31st December", "31 Dec 1999", "31 Dec 1999 11:59pm"
 	'%b( %d%o)?( %Y)?( %X)?', // Same as above with month and day switched
-	'%Y %b( %d%o( %X)?)?' // Same as above with year coming first
+	'%Y %b( %d%o( %X)?)?', // Same as above with year coming first
+	'%o %b %d %X %T %Y' // "Thu Oct 22 08:11:23 +0000 2009"
 );
 
 MooTools.lang.addEvent('langChange', function(language){
@@ -1622,7 +1628,7 @@ var URI = new Class({
 		/*base: false*/
 	},
 
-	regex: /^(?:(\w+):)?(?:\/\/(?:(?:([^:@]*):?([^:@]*))?@)?([^:\/?#]*)(?::(\d*))?)?(\.\.?$|(?:[^?#\/]*\/)*)([^?#]*)(?:\?([^#]*))?(?:#(.*))?/,
+	regex: /^(?:(\w+):)?(?:\/\/(?:(?:([^:@\/]*):?([^:@\/]*))?@)?([^:\/?#]*)(?::(\d*))?)?(\.\.?$|(?:[^?#\/]*\/)*)([^?#]*)(?:\?([^#]*))?(?:#(.*))?/,
 	parts: ['scheme', 'user', 'password', 'host', 'port', 'directory', 'file', 'query', 'fragment'],
 	schemes: {http: 80, https: 443, ftp: 21, rtsp: 554, mms: 1755, file: 0},
 
@@ -1715,8 +1721,9 @@ var URI = new Class({
 
 	setData: function(values, merge, part){
 		if (typeof values == 'string'){
-			values = this.getData();
-			values[arguments[0]] = arguments[1];
+			data = this.getData();
+			data[arguments[0]] = arguments[1];
+			values = data;
 		} else if (merge) {
 			values = $merge(this.getData(), values);
 		}
@@ -1986,7 +1993,8 @@ provides: [Element.Delegation]
 
 ...
 */
-(function(){
+
+(function(addEvent, removeEvent){
 	
 	var match = /(.*?):relay\(([^)]+)\)$/,
 		combinators = /[+>~\s]/,
@@ -2013,9 +2021,6 @@ provides: [Element.Delegation]
 			return null;
 		};
 
-	var oldAddEvent = Element.prototype.addEvent,
-		oldRemoveEvent = Element.prototype.removeEvent;
-		
 	Element.implement({
 
 		addEvent: function(type, fn){
@@ -2028,10 +2033,10 @@ provides: [Element.Delegation]
 						if (el) this.fireEvent(type, [e, el], 0, el);
 					}.bind(this);
 					monitors[type] = monitor;
-					oldAddEvent.call(this, splitted.event, monitor);
+					addEvent.call(this, splitted.event, monitor);
 				}
 			}
-			return oldAddEvent.apply(this, arguments);
+			return addEvent.apply(this, arguments);
 		},
 
 		removeEvent: function(type, fn){
@@ -2040,19 +2045,18 @@ provides: [Element.Delegation]
 				var events = this.retrieve('events');
 				if (!events || !events[type] || (fn && !events[type].keys.contains(fn))) return this;
 
-				if (fn) oldRemoveEvent.apply(this, [type, fn]);
-				else oldRemoveEvent.apply(this, type);
+				if (fn) removeEvent.apply(this, [type, fn]);
+				else removeEvent.apply(this, type);
 
 				events = this.retrieve('events');
-				if (events && events[type] && events[type].length == 0){
+				if (events && events[type] && events[type].keys.length == 0){
 					var monitors = this.retrieve('$moo:delegateMonitors', {});
-					oldRemoveEvent.apply(this, [splitted.event, monitors[type]]);
+					removeEvent.apply(this, [splitted.event, monitors[type]]);
 					delete monitors[type];
 				}
 				return this;
 			}
-
-			return oldRemoveEvent.apply(this, arguments);
+			return removeEvent.apply(this, arguments);
 		},
 
 		fireEvent: function(type, args, delay, bind){
@@ -2066,7 +2070,7 @@ provides: [Element.Delegation]
 
 	});
 
-})();/*
+})(Element.prototype.addEvent, Element.prototype.removeEvent);/*
 ---
 
 script: Element.Measure.js
@@ -2410,10 +2414,6 @@ Element.implement({
 				calc = rel == document.body ? window.getScroll() : rel.getPosition(),
 				top = calc.y, left = calc.x;
 
-		var scrolls = rel.getScrolls();
-		top += scrolls.y;
-		left += scrolls.x;
-
 		var dim = this.getDimensions({computeSize: true, styles:['padding', 'border','margin']});
 		var pos = {},
 				prefY = options.offset.y,
@@ -2551,15 +2551,15 @@ Element.implement({
 	hide: function(){
 		var d;
 		try {
-			// IE fails here if the element is not in the dom
-			if ((d = this.getStyle('display')) == 'none') d = null;
+			//IE fails here if the element is not in the dom
+			d = this.getStyle('display');
 		} catch(e){}
-		
-		return this.store('originalDisplay', d || 'block').setStyle('display', 'none');
+		return this.store('originalDisplay', d || '').setStyle('display', 'none');
 	},
 
 	show: function(display){
-		return this.setStyle('display', display || this.retrieve('originalDisplay') || 'block');
+		display = display || this.retrieve('originalDisplay') || 'block';
+		return this.setStyle('display', (display == 'none') ? 'block' : display);
 	},
 
 	swapClass: function(remove, add){
@@ -2644,7 +2644,7 @@ var IframeShim = new Class({
 				this[this.options.display ? 'show' : 'hide']();
 				this.fireEvent('inject');
 			}).bind(this);
-			if (IframeShim.ready) window.addEvent('load', inject);
+			if (!IframeShim.ready) window.addEvent('load', inject);
 			else inject();
 		} else {
 			this.position = this.hide = this.show = this.dispose = $lambda(this);
@@ -2722,7 +2722,7 @@ var Mask = new Class({
 
 	Implements: [Options, Events],
 
-	Binds: ['resize'],
+	Binds: ['position'],
 
 	options: {
 		// onShow: $empty,
@@ -2739,12 +2739,13 @@ var Mask = new Class({
 		style: {},
 		'class': 'mask',
 		maskMargins: false,
-		useIframeShim: true
+		useIframeShim: true,
+		iframeShimOptions: {}
 	},
 
 	initialize: function(target, options){
-		this.target = document.id(target) || document.body;
-		this.target.store('mask', this);
+		this.target = document.id(target) || document.id(document.body);
+		this.target.store('Mask', this);
 		this.setOptions(options);
 		this.render();
 		this.inject();
@@ -2776,7 +2777,7 @@ var Mask = new Class({
 		target = target || this.options.inject ? this.options.inject.target : '' || this.target;
 		this.element.inject(target, where);
 		if (this.options.useIframeShim) {
-			this.shim = new IframeShim(this.element);
+			this.shim = new IframeShim(this.element, this.options.iframeShimOptions);
 			this.addEvents({
 				show: this.shim.show.bind(this.shim),
 				hide: this.shim.hide.bind(this.shim),
@@ -2816,8 +2817,7 @@ var Mask = new Class({
 
 	show: function(){
 		if (!this.hidden) return this;
-		this.target.addEvent('resize', this.resize);
-		if (this.target != document.body) document.id(document.body).addEvent('resize', this.resize);
+		window.addEvent('resize', this.position);
 		this.position();
 		this.showMask.apply(this, arguments);
 		return this;
@@ -2831,7 +2831,7 @@ var Mask = new Class({
 
 	hide: function(){
 		if (this.hidden) return this;
-		this.target.removeEvent('resize', this.resize);
+		window.removeEvent('resize', this.position);
 		this.hideMask.apply(this, arguments);
 		if (this.options.destroyOnHide) return this.destroy();
 		return this;
@@ -2996,7 +2996,7 @@ var Spinner = new Class({
 			return this;
 		}
 		this.active = true;
-		return this.parent();
+		return this.parent(noFx);
 	},
 
 	hideMask: function(noFx){
@@ -3021,11 +3021,13 @@ Spinner.implement(new Chain);
 
 if (window.Request) {
 	Request = Class.refactor(Request, {
+		
 		options: {
 			useSpinner: false,
 			spinnerOptions: {},
 			spinnerTarget: false
 		},
+		
 		initialize: function(options){
 			this._send = this.send;
 			this.send = function(options){
@@ -3041,7 +3043,12 @@ if (window.Request) {
 					this.addEvent(event, this.spinner.hide.bind(this.spinner));
 				}, this);
 			}
+		},
+		
+		getSpinner: function(){
+			return this.spinner;
 		}
+		
 	});
 }
 
@@ -3148,19 +3155,18 @@ if (!window.Form) window.Form = {};
 
 		makeRequest: function(){
 			this.request = new Request.HTML($merge({
-					url: this.element.get('action'),
 					update: this.update,
 					emulation: false,
 					spinnerTarget: this.element,
 					method: this.element.get('method') || 'post'
 			}, this.options.requestOptions)).addEvents({
 				success: function(text, xml){
-					['success', 'complete'].each(function(evt){
+					['complete', 'success'].each(function(evt){
 						this.fireEvent(evt, [this.update, text, xml]);
 					}, this);
 				}.bind(this),
 				failure: function(xhr){
-					this.fireEvent('failure', xhr);
+					this.fireEvent('complete').fireEvent('failure', xhr);
 				}.bind(this),
 				exception: function(){
 					this.fireEvent('failure', xhr);
@@ -3192,7 +3198,8 @@ if (!window.Form) window.Form = {};
 		},
 
 		onFormValidate: function(valid, form, e) {
-			if (valid || !fv.options.stopOnFailure) {
+			var fv = this.element.retrieve('validator');
+			if (valid || (fv && !fv.options.stopOnFailure)) {
 				if (e && e.stop) e.stop();
 				this.send();
 			}
@@ -3202,7 +3209,6 @@ if (!window.Form) window.Form = {};
 			if (this.element.retrieve('validator')) {
 				//form validator was created after Form.Request
 				this.detach();
-				this.addFormEvent();
 				return;
 			}
 			e.stop();
@@ -3214,8 +3220,8 @@ if (!window.Form) window.Form = {};
 			var data = $H(this.options.extraData).toQueryString();
 			if (str) str += "&" + data;
 			else str = data;
-			this.fireEvent('send', [this.element, str]);
-			this.request.send({data: str});
+			this.fireEvent('send', [this.element, str.parseQueryString()]);
+			this.request.send({data: str, url: this.element.get("action")});
 			return this;
 		}
 
@@ -3307,18 +3313,17 @@ Fx.Reveal = new Class({
 					this.hiding = true;
 					this.showing = false;
 					this.hidden = true;
+					this.cssText = this.element.style.cssText;
 					var startStyles = this.element.getComputedSize({
 						styles: this.options.styles,
 						mode: this.options.mode
 					});
-					var setToAuto = (this.element.style.height === ''||this.element.style.height == 'auto');
-					this.element.setStyle('display', 'block');
+					this.element.setStyle('display', this.options.display);
 					if (this.options.transitionOpacity) startStyles.opacity = 1;
 					var zero = {};
 					$each(startStyles, function(style, name){
 						zero[name] = [style, 0];
 					}, this);
-					var overflowBefore = this.element.getStyle('overflow');
 					this.element.setStyle('overflow', 'hidden');
 					var hideThese = this.options.hideInputs ? this.element.getElements(this.options.hideInputs) : null;
 					this.$chain.unshift(function(){
@@ -3327,11 +3332,8 @@ Fx.Reveal = new Class({
 							$each(startStyles, function(style, name){
 								startStyles[name] = style;
 							}, this);
-							this.element.setStyles($merge({display: 'none', overflow: overflowBefore}, startStyles));
-							if (setToAuto){
-								if (['vertical', 'both'].contains(this.options.mode)) this.element.style.height = '';
-								if (['width', 'both'].contains(this.options.mode)) this.element.style.width = '';
-							}
+							this.element.style.cssText = this.cssText;
+							this.element.setStyle('display', 'none');
 							if (hideThese) hideThese.setStyle('visibility', 'visible');
 						}
 						this.fireEvent('hide', this.element);
@@ -3368,10 +3370,10 @@ Fx.Reveal = new Class({
 					 this.element.getStyle('opacity') == 0){
 					this.showing = true;
 					this.hiding = this.hidden =  false;
-					var setToAuto, startStyles;
+					var startStyles;
+					this.cssText = this.element.style.cssText;
 					//toggle display, but hide it
 					this.element.measure(function(){
-						setToAuto = (this.element.style.height === '' || this.element.style.height == 'auto');
 						//create the styles for the opened/visible state
 						startStyles = this.element.getComputedSize({
 							styles: this.options.styles,
@@ -3394,7 +3396,6 @@ Fx.Reveal = new Class({
 						display: this.options.display
 					};
 					$each(startStyles, function(style, name){ zero[name] = 0; });
-					var overflowBefore = this.element.getStyle('overflow');
 					//set to zero
 					this.element.setStyles($merge(zero, {overflow: 'hidden'}));
 					//hide inputs
@@ -3403,11 +3404,8 @@ Fx.Reveal = new Class({
 					//start the effect
 					this.start(startStyles);
 					this.$chain.unshift(function(){
-						this.element.setStyle('overflow', overflowBefore);
-						if (!this.options.heightOverride && setToAuto){
-							if (['vertical', 'both'].contains(this.options.mode)) this.element.style.height = '';
-							if (['width', 'both'].contains(this.options.mode)) this.element.style.width = '';
-						}
+						this.element.style.cssText = this.cssText;
+						this.element.setStyle('display', this.options.display);
 						if (!this.hidden) this.showing = false;
 						if (hideThese) hideThese.setStyle('visibility', 'visible');
 						this.callChain();
@@ -3451,6 +3449,7 @@ Fx.Reveal = new Class({
 
 	cancel: function(){
 		this.parent.apply(this, arguments);
+		this.element.style.cssText = this.cssText;
 		this.hidding = false;
 		this.showing = false;
 	}
@@ -3586,7 +3585,7 @@ Form.Request.Append = new Class({
 
 script: Form.Validator.English.js
 
-description: Date messages for English.
+description: Form Validator messages for English.
 
 license: MIT-style license
 
@@ -3637,7 +3636,8 @@ MooTools.lang.set('en-US', 'Form.Validator', {
 	sameMonth: 'These two dates must be in the same month - you must change one or the other.',
 	creditcard: 'The credit card number entered is invalid. Please check the number and try again. {length} digits entered.'
 
-});/*
+});
+/*
 ---
 
 script: Form.Validator.js
@@ -4184,7 +4184,7 @@ Form.Validator.Inline = new Class({
 		var cssClass = (warn) ? 'warning-advice' : 'validation-advice';
 		var advice = this.getAdvice(className, field);
 		if(advice) {
-			advice = advice.clone(true, true).set('html', errorMsg).replaces(advice);
+			advice = advice.set('html', errorMsg);
 		} else {
 			advice = new Element('div', {
 				html: errorMsg,
@@ -4465,7 +4465,7 @@ Form.Validator.addAllThese([
 
 	['validate-cc-num', {
 		errorMsg: function(element){
-			var ccNum = element.get('value').ccNum.replace(/[^0-9]/g, '');
+			var ccNum = element.get('value').replace(/[^0-9]/g, '');
 			return Form.Validator.getMsg('creditcard').substitute({length: ccNum.length});
 		},
 		test: function(element){
@@ -4660,10 +4660,12 @@ var OverText = new Class({
 			this.text.hide();
 			this.fireEvent('textHide', [this.text, this.element]);
 			this.pollingPaused = true;
-			try {
-				if (!suppressFocus) this.element.fireEvent('focus');
-				this.element.focus();
-			} catch(e){} //IE barfs if you call focus on hidden elements
+			if (!suppressFocus){
+				try {
+					this.element.fireEvent('focus');
+					this.element.focus();
+				} catch(e){} //IE barfs if you call focus on hidden elements
+			}
 		}
 		return this;
 	},
@@ -4817,7 +4819,7 @@ provides: [Fx.Accordion]
 ...
 */
 
-var Accordion = Fx.Accordion = new Class({
+Fx.Accordion = new Class({
 
 	Extends: Fx.Elements,
 
@@ -4839,10 +4841,14 @@ var Accordion = Fx.Accordion = new Class({
 	},
 
 	initialize: function(){
-		var params = Array.link(arguments, {'container': Element.type, 'options': Object.type, 'togglers': $defined, 'elements': $defined});
+		var params = Array.link(arguments, {
+			'container': Element.type, //deprecated
+			'options': Object.type,
+			'togglers': $defined,
+			'elements': $defined
+		});
 		this.parent(params.elements, params.options);
 		this.togglers = $$(params.togglers);
-		this.container = document.id(params.container);
 		this.previous = -1;
 		this.internalChain = new Chain();
 		if (this.options.alwaysHide) this.options.wait = true;
@@ -4866,7 +4872,8 @@ var Accordion = Fx.Accordion = new Class({
 				for (var fx in this.effects) el.setStyle(fx, 0);
 			}
 		}, this);
-		if ($chk(this.options.display)) this.display(this.options.display, this.options.initialDisplayFx);
+		if ($chk(this.options.display) || this.options.initialDisplayFx === false) this.display(this.options.display, this.options.initialDisplayFx);
+		if (this.options.fixedHeight !== false) this.options.returnHeightToAuto = false;
 		this.addEvent('complete', this.internalChain.callChain.bind(this.internalChain));
 	},
 
@@ -4901,10 +4908,10 @@ var Accordion = Fx.Accordion = new Class({
 	display: function(index, useFx){
 		if (!this.check(index, useFx)) return this;
 		useFx = $pick(useFx, true);
-		if (this.options.returnHeightToAuto) {
+		if (this.options.returnHeightToAuto){
 			var prev = this.elements[this.previous];
-			if (prev) {
-				for (var fx in this.effects) {
+			if (prev && !this.selfHidden){
+				for (var fx in this.effects){
 					prev.setStyle(fx, prev[this.effects[fx]]);
 				}
 			}
@@ -4915,19 +4922,54 @@ var Accordion = Fx.Accordion = new Class({
 		var obj = {};
 		this.elements.each(function(el, i){
 			obj[i] = {};
-			var hide = (i != index) || 
-						(this.options.alwaysHide && ((el.offsetHeight > 0 && this.options.height) || 
-							el.offsetWidth > 0 && this.options.width));
+			var hide;
+			if (i != index){
+				hide = true;
+			} else if (this.options.alwaysHide && ((el.offsetHeight > 0 && this.options.height) || el.offsetWidth > 0 && this.options.width)){
+				hide = true;
+				this.selfHidden = true;
+			}
 			this.fireEvent(hide ? 'background' : 'active', [this.togglers[i], el]);
 			for (var fx in this.effects) obj[i][fx] = hide ? 0 : el[this.effects[fx]];
 		}, this);
 		this.internalChain.chain(function(){
-			if (this.options.returnHeightToAuto) {
+			if (this.options.returnHeightToAuto && !this.selfHidden){
 				var el = this.elements[index];
-				el.setStyle('height', 'auto');
+				if (el) el.setStyle('height', 'auto');
 			};
 		}.bind(this));
 		return useFx ? this.start(obj) : this.set(obj);
+	}
+
+});
+
+/*
+	Compatibility with 1.2.0
+*/
+var Accordion = new Class({
+
+	Extends: Fx.Accordion,
+
+	initialize: function(){
+		this.parent.apply(this, arguments);
+		var params = Array.link(arguments, {'container': Element.type});
+		this.container = params.container;
+	},
+
+	addSection: function(toggler, element, pos){
+		toggler = document.id(toggler);
+		element = document.id(element);
+		var test = this.togglers.contains(toggler);
+		var len = this.togglers.length;
+		if (len && (!test || pos)){
+			pos = $pick(pos, len - 1);
+			toggler.inject(this.togglers[pos], 'before');
+			element.inject(toggler, 'after');
+		} else if (this.container && !test){
+			toggler.inject(this.container);
+			element.inject(this.container);
+		}
+		return this.parent.apply(this, arguments);
 	}
 
 });/*
@@ -5167,19 +5209,25 @@ Fx.Slide = new Class({
 	Extends: Fx,
 
 	options: {
-		mode: 'vertical'
+		mode: 'vertical',
+		wrapper: false,
+		hideOverflow: true
 	},
 
 	initialize: function(element, options){
 		this.addEvent('complete', function(){
 			this.open = (this.wrapper['offset' + this.layout.capitalize()] != 0);
+			if (this.open) this.wrapper.setStyle('height', '');
 			if (this.open && Browser.Engine.webkit419) this.element.dispose().inject(this.wrapper);
 		}, true);
 		this.element = this.subject = document.id(element);
 		this.parent(options);
 		var wrapper = this.element.retrieve('wrapper');
+		var styles = this.element.getStyles('margin', 'position', 'overflow');
+		if (this.options.hideOverflow) styles = $extend(styles, {overflow: 'hidden'});
+		if (this.options.wrapper) wrapper = document.id(this.options.wrapper).setStyles(styles);
 		this.wrapper = wrapper || new Element('div', {
-			styles: this.element.getStyles('margin', 'position', 'overflow')
+			styles: styles
 		}).wraps(this.element);
 		this.element.store('wrapper', this.wrapper).setStyle('margin', 0);
 		this.now = [];
@@ -5342,7 +5390,9 @@ var SmoothScroll = Fx.SmoothScroll = new Class({
 			if (el) {
 				event.preventDefault();
 				this.anchor = anchor;
-				this.toElement(el);
+				this.toElement(el).chain(function(){
+					this.fireEvent('scrolledTo', [link, el]);
+				}.bind(this));
 				link.blur();
 			}
 		}.bind(this));
@@ -5549,6 +5599,7 @@ var Drag = new Class({
 		handle: false,
 		invert: false,
 		preventDefault: false,
+		stopPropagation: false,
 		modifiers: {x: 'left', y: 'top'}
 	},
 
@@ -5588,6 +5639,7 @@ var Drag = new Class({
 	start: function(event){
 		if (event.rightClick) return;
 		if (this.options.preventDefault) event.preventDefault();
+		if (this.options.stopPropagation) event.stopPropagation();
 		this.mouse.start = event.page;
 		this.fireEvent('beforeStart', this.element);
 		var limit = this.options.limit;
@@ -5725,7 +5777,7 @@ Drag.Move = new Class({
 		if (this.container && $type(this.container) != 'element')
 			this.container = document.id(this.container.getDocument().body);
 		
-		var styles = element.getStyles('left', 'right', 'position');
+		var styles = element.getStyles('left', 'top', 'position');
 		if (styles.left == 'auto' || styles.top == 'auto')
 			element.setPosition(element.getPosition(element.getOffsetParent()));
 		
@@ -6131,12 +6183,20 @@ var Sortables = new Class({
 	getClone: function(event, element){
 		if (!this.options.clone) return new Element('div').inject(document.body);
 		if ($type(this.options.clone) == 'function') return this.options.clone.call(this, event, element, this.list);
-		return element.clone(true).setStyles({
+		var clone = element.clone(true).setStyles({
 			margin: '0px',
 			position: 'absolute',
 			visibility: 'hidden',
 			'width': element.getStyle('width')
-		}).inject(this.list).setPosition(element.getPosition(element.getOffsetParent()));
+		});
+		//prevent the duplicated radio inputs from unchecking the real one
+		if (clone.get('html').test('radio')) {
+			clone.getElements('input[type=radio]').each(function(input, i) {
+				input.set('name', 'clone_' + i);
+			});
+		}
+		
+		return clone.inject(this.list).setPosition(element.getPosition(element.getOffsetParent()));
 	},
 
 	getDroppables: function(){
@@ -6344,15 +6404,15 @@ Request.JSONP = new Class({
 		if (src.length > 2083) this.log('JSONP '+ src +' will fail in Internet Explorer, which enforces a 2083 bytes length limit on URIs');
 
 		var script = new Element('script', {type: 'text/javascript', src: src});
-		Request.JSONP.request_map['request_' + index] = function(data){ this.success(data, script); }.bind(this);
+		Request.JSONP.request_map['request_' + index] = function(){ this.success(arguments, script); }.bind(this);
 		return script.inject(this.options.injectScript);
 	},
 
-	success: function(data, script){
+	success: function(args, script){
 		if (script) script.destroy();
 		this.running = false;
-		this.log('JSONP successfully retrieved: ', data);
-		this.fireEvent('complete', [data]).fireEvent('success', [data]).callChain();
+		this.log('JSONP successfully retrieved: ', args);
+		this.fireEvent('complete', args).fireEvent('success', args).callChain();
 	}
 
 });
@@ -6641,7 +6701,9 @@ var Asset = {
 			document: document,
 			check: $lambda(true)
 		}, properties);
-
+		
+		if (properties.onLoad) properties.onload = properties.onLoad;
+		
 		var script = new Element('script', {src: source, type: 'text/javascript'});
 
 		var load = properties.onload.bind(script), 
@@ -6686,6 +6748,8 @@ var Asset = {
 		var element = document.id(image) || new Element('img');
 		['load', 'abort', 'error'].each(function(name){
 			var type = 'on' + name;
+			var cap = name.capitalize();
+			if (properties['on' + cap]) properties[type] = properties['on' + cap];
 			var event = properties[type];
 			delete properties[type];
 			image[type] = function(){
@@ -7060,7 +7124,9 @@ var HtmlTable = new Class({
 		this.tfoot = document.id(this.element.tFoot);
 		if (this.tfoot) this.foot = document.id(this.thead.rows[0]);
 
-		this.options.rows.each(this.push.bind(this));
+		this.options.rows.each(function(row){
+			this.push(row);
+		}, this);
 
 		['adopt', 'inject', 'wraps', 'grab', 'replaces', 'dispose'].each(function(method){
 				this[method] = this.element[method].bind(this.element);
@@ -7076,39 +7142,44 @@ var HtmlTable = new Class({
 		return this;
 	},
 
+	set: function(what, items) {
+		var target = (what == 'headers') ? 'tHead' : 'tFoot';
+		this[target.toLowerCase()] = (document.id(this.element[target]) || new Element(target.toLowerCase()).inject(this.element, 'top')).empty();
+		var data = this.push(items, {}, this[target.toLowerCase()], what == 'headers' ? 'th' : 'td');
+		if (what == 'headers') this.head = document.id(this.thead.rows[0]);
+		else this.foot = document.id(this.thead.rows[0]);
+		return data;
+	},
+
 	setHeaders: function(headers){
-		this.thead = (document.id(this.element.tHead) || new Element('thead').inject(this.element, 'top')).empty();
-		this.push(headers, this.thead, 'th');
-		this.head = document.id(this.thead.rows[0]);
+		this.set('headers', headers);
 		return this;
 	},
 
 	setFooters: function(footers){
-		this.tfoot = (document.id(this.element.tFoot) || new Element('tfoot').inject(this.element, 'top')).empty();
-		this.push(footers, this.tfoot);
-		this.foot = document.id(this.thead.rows[0]);
+		this.set('footers', footers);
 		return this;
 	},
 
-	push: function(row, target, tag){
+	push: function(row, rowProperties, target, tag){
 		var tds = row.map(function(data){
 			var td = new Element(tag || 'td', data.properties),
 				type = data.content || data || '',
 				element = document.id(type);
-
-			if(element) td.adopt(element);
+			if($type(type) != 'string' && element) td.adopt(element);
 			else td.set('html', type);
 
 			return td;
 		});
 
 		return {
-			tr: new Element('tr').inject(target || this.body).adopt(tds),
+			tr: new Element('tr', rowProperties).inject(target || this.body).adopt(tds),
 			tds: tds
 		};
 	}
 
-});/*
+});
+/*
 ---
 
 script: HtmlTable.Zebra.js
@@ -7216,6 +7287,7 @@ HtmlTable = Class.refactor(HtmlTable, {
 	},
 
 	attachSorts: function(attach){
+		this.element.removeEvents('click:relay(th)');
 		this.element[$pick(attach, true) ? 'addEvent' : 'removeEvent']('click:relay(th)', this.bound.headClick);
 	},
 
@@ -7231,8 +7303,14 @@ HtmlTable = Class.refactor(HtmlTable, {
 
 		// auto-detect
 		this.parsers = $$(this.head.cells).map(function(cell, index) {
-			if (!force && (cell.hasClass(this.options.classNoSort) || cell.retrieve('htmltable-sort'))) return cell.retrieve('htmltable-sort');
-			var sortSpan = new Element('span', {'html': '&#160;', 'class': this.options.classSortSpan}).inject(cell, 'top');
+			if (!force && (cell.hasClass(this.options.classNoSort) || cell.retrieve('htmltable-parser'))) return cell.retrieve('htmltable-parser');
+			var thDiv = new Element('div');
+			$each(cell.childNodes, function(node) {
+				thDiv.adopt(node);
+			});
+			thDiv.inject(cell);
+			var sortSpan = new Element('span', {'html': '&#160;', 'class': this.options.classSortSpan}).inject(thDiv, 'top');
+			
 			this.sortSpans.push(sortSpan);
 
 			var parser = parsers[index], 
@@ -7245,9 +7323,8 @@ HtmlTable = Class.refactor(HtmlTable, {
 				HtmlTable.Parsers.some(function(current) {
 					var match = current.match;
 					if (!match) return false;
-					if (Browser.Engine.trident) return false;
 					for (var i = 0, j = rows.length; i < j; i++) {
-						var text = rows[i].cells[index].get('html').clean();
+						var text = $(rows[i].cells[index]).get('html').clean();
 						if (text && match.test(text)) {
 							parser = current;
 							return true;
@@ -7263,7 +7340,8 @@ HtmlTable = Class.refactor(HtmlTable, {
 	},
 
 	headClick: function(event, el) {
-		if (!this.head) return;
+		console.log(el);
+		if (!this.head || el.hasClass(this.options.classNoSort)) return;
 		var index = Array.indexOf(this.head.cells, el);
 		this.sort(index);
 		return false;
@@ -7317,22 +7395,20 @@ HtmlTable = Class.refactor(HtmlTable, {
 		var data = Array.map(this.body.rows, function(row, i) {
 			var value = parser.convert.call(document.id(row.cells[index]));
 
-			if (parser.number || $type(value) == 'number') {
-				value = String(value).replace(/[^\d]/, '');
-				value = '00000000000000000000000000000000'.substr(0, 32 - value.length).concat(value);
-			}
-
 			return {
 				position: i,
 				value: value,
 				toString:  function() {
-					return value;
+					return value.toString();
 				}
 			};
 		}, this);
-
 		data.reverse(true);
-		data.sort();
+
+		data.sort(function(a, b){
+			if (a.value === b.value) return 0;
+			return a.value > b.value ? 1 : -1;
+		});
 
 		if (!this.sorted.reverse) data.reverse(true);
 
@@ -7382,7 +7458,7 @@ HtmlTable = Class.refactor(HtmlTable, {
 	},
 
 	disableSort: function(){
-		this.element.remove(this.options.classSortable);
+		this.element.removeClass(this.options.classSortable);
 		this.attachSorts(false);
 		this.sortSpans.each(function(span) { span.destroy(); });
 		this.sortSpans.empty();
@@ -7395,9 +7471,9 @@ HtmlTable = Class.refactor(HtmlTable, {
 HtmlTable.Parsers = new Hash({
 
 	'date': {
-		match: /^\d{4}[^\d]|[^\d]\d{4}$/,
+		match: /^\d{2}[-\/ ]\d{2}[-\/ ]\d{2,4}$/,
 		convert: function() {
-			return Date.parse(this.get('text'));
+			return Date.parse(this.get('text')).format('db');
 		},
 		type: 'date'
 	},
@@ -7423,21 +7499,21 @@ HtmlTable.Parsers = new Hash({
 	'numberLax': {
 		match: /^[^\d]+\d+$/,
 		convert: function() {
-			return this.get('text').replace(/[^0-9]/, '').toInt();
+			return this.get('text').replace(/[^-?^0-9]/, '').toInt();
 		},
 		number: true
 	},
 	'float': {
 		match: /^[\d]+\.[\d]+/,
 		convert: function() {
-			return this.get('text').replace(/[^\d.]/, '').toFloat();
+			return this.get('text').replace(/[^-?^\d.]/, '').toFloat();
 		},
 		number: true
 	},
 	'floatLax': {
 		match: /^[^\d]+[\d]+\.[\d]+$/,
 		convert: function() {
-			return this.get('text').replace(/[^\d.]/, '');
+			return this.get('text').replace(/[^-?^\d.]/, '');
 		},
 		number: true
 	},
@@ -7454,7 +7530,9 @@ HtmlTable.Parsers = new Hash({
 		}
 	}
 
-});/*
+});
+
+/*
 ---
 
 script: Keyboard.js
@@ -7480,37 +7558,8 @@ provides: [Keyboard]
 */
 
 (function(){
-
-	var parsed = {};
-	var modifiers = ['shift', 'control', 'alt', 'meta'];
-	var regex = /^(?:shift|control|ctrl|alt|meta)$/;
 	
-	var parse = function(type, eventType){
-		type = type.toLowerCase().replace(/^(keyup|keydown):/, function($0, $1){
-			eventType = $1;
-			return '';
-		});
-		
-		if (!parsed[type]){
-			var key = '', mods = {};
-			type.split('+').each(function(part){
-				if (regex.test(part)) mods[part] = true;
-				else key = part;
-			});
-		
-			mods.control = mods.control || mods.ctrl; // allow both control and ctrl
-			var match = '';
-			modifiers.each(function(mod){
-				if (mods[mod]) match += mod + '+';
-			});
-			
-			parsed[type] = match + key;
-		}
-		
-		return eventType + ':' + parsed[type];
-	};
-
-	this.Keyboard = new Class({
+	var Keyboard = this.Keyboard = new Class({
 
 		Extends: Events,
 
@@ -7523,24 +7572,24 @@ provides: [Keyboard]
 			*/
 			defaultEventType: 'keydown',
 			active: false,
-			events: {}
+			events: {},
+			nonParsedEvents: ['activate', 'deactivate', 'onactivate', 'ondeactivate', 'changed', 'onchanged']
 		},
 
 		initialize: function(options){
 			this.setOptions(options);
-			//if this is the root manager, nothing manages it
-			if (Keyboard.manager) Keyboard.manager.manage(this);
 			this.setup();
-		},
-
+		}, 
 		setup: function(){
 			this.addEvents(this.options.events);
+			//if this is the root manager, nothing manages it
+			if (Keyboard.manager && !this.manager) Keyboard.manager.manage(this);
 			if (this.options.active) this.activate();
 		},
 
 		handle: function(event, type){
 			//Keyboard.stop(event) prevents key propagation
-			if (!this.active || event.preventKeyboardPropagation) return;
+			if (event.preventKeyboardPropagation) return;
 			
 			var bubbles = !!this.manager;
 			if (bubbles && this.activeKB){
@@ -7552,59 +7601,64 @@ provides: [Keyboard]
 			if (!bubbles && this.activeKB) this.activeKB.handle(event, type);
 		},
 
-		addEvent: function(type, fn, internal) {
-			return this.parent(parse(type, this.options.defaultEventType), fn, internal);
+		addEvent: function(type, fn, internal){
+			return this.parent(Keyboard.parse(type, this.options.defaultEventType, this.options.nonParsedEvents), fn, internal);
 		},
 
-		removeEvent: function(type, fn) {
-			return this.parent(parse(type, this.options.defaultEventType), fn);
-		},
-
-		activate: function(){
-			this.active = true;
-			return this.enable();
-		},
-
-		deactivate: function(){
-			this.active = false;
-			return this.fireEvent('deactivate');
+		removeEvent: function(type, fn){
+			return this.parent(Keyboard.parse(type, this.options.defaultEventType, this.options.nonParsedEvents), fn);
 		},
 
 		toggleActive: function(){
 			return this[this.active ? 'deactivate' : 'activate']();
 		},
 
-		enable: function(instance){
+		activate: function(instance){
 			if (instance) {
 				//if we're stealing focus, store the last keyboard to have it so the relenquish command works
 				if (instance != this.activeKB) this.previous = this.activeKB;
 				//if we're enabling a child, assign it so that events are now passed to it
 				this.activeKB = instance.fireEvent('activate');
+				Keyboard.manager.fireEvent('changed');
 			} else if (this.manager) {
 				//else we're enabling ourselves, we must ask our parent to do it for us
-				this.manager.enable(this);
+				this.manager.activate(this);
+			}
+			return this;
+		},
+
+		deactivate: function(instance){
+			if (instance) {
+				if(instance === this.activeKB) {
+					this.activeKB = null;
+					instance.fireEvent('deactivate');
+					Keyboard.manager.fireEvent('changed');
+				}
+			}
+			else if (this.manager) {
+				this.manager.deactivate(this);
 			}
 			return this;
 		},
 
 		relenquish: function(){
-			if (this.previous) this.enable(this.previous);
+			if (this.previous) this.activate(this.previous);
 		},
 
 		//management logic
-		manage: function(instance) {
+		manage: function(instance){
 			if (instance.manager) instance.manager.drop(instance);
 			this.instances.push(instance);
 			instance.manager = this;
-			if (!this.activeKB) this.enable(instance);
+			if (!this.activeKB) this.activate(instance);
 			else this._disable(instance);
 		},
 
-		_disable: function(instance) {
+		_disable: function(instance){
 			if (this.activeKB == instance) this.activeKB = null;
 		},
 
-		drop: function(instance) {
+		drop: function(instance){
 			this._disable(instance);
 			this.instances.erase(instance);
 		},
@@ -7612,35 +7666,81 @@ provides: [Keyboard]
 		instances: [],
 
 		trace: function(){
-			this.enableLog();
-			var item = this;
-			this.log('the following items have focus: ');
-			while (item) {
-				this.log(document.id(item.widget) || item.widget || item, 'active: ' + this.active);
-				item = item.activeKB;
-			}
+			Keyboard.trace(this);
+		},
+
+		each: function(fn){
+			Keyboard.each(this, fn);
 		}
 
 	});
+	
+	var parsed = {};
+	var modifiers = ['shift', 'control', 'alt', 'meta'];
+	var regex = /^(?:shift|control|ctrl|alt|meta)$/;
+	
+	Keyboard.parse = function(type, eventType, ignore){
+		if (ignore && ignore.contains(type.toLowerCase())) return type;
+		
+		type = type.toLowerCase().replace(/^(keyup|keydown):/, function($0, $1){
+			eventType = $1;
+			return '';
+		});
 
-	Keyboard.stop = function(event) {
+		if (!parsed[type]){
+			var key, mods = {};
+			type.split('+').each(function(part){
+				if (regex.test(part)) mods[part] = true;
+				else key = part;
+			});
+
+			mods.control = mods.control || mods.ctrl; // allow both control and ctrl
+			
+			var keys = [];
+			modifiers.each(function(mod){
+				if (mods[mod]) keys.push(mod);
+			});
+			
+			if (key) keys.push(key);
+			parsed[type] = keys.join('+');
+		}
+
+		return eventType + ':' + parsed[type];
+	};
+
+	Keyboard.each = function(keyboard, fn){
+		var current = keyboard || Keyboard.manager;
+		while (current){
+			fn.run(current);
+			current = current.activeKB;
+		}
+	};
+
+	Keyboard.stop = function(event){
 		event.preventKeyboardPropagation = true;
 	};
 
-	Keyboard.manager = new this.Keyboard({
+	Keyboard.manager = new Keyboard({
 		active: true
 	});
 	
-	Keyboard.trace = function(){
-		Keyboard.manager.trace();
+	Keyboard.trace = function(keyboard){
+		keyboard = keyboard || Keyboard.manager;
+		keyboard.enableLog();
+		keyboard.log('the following items have focus: ');
+		Keyboard.each(keyboard, function(current){
+			keyboard.log(document.id(current.widget) || current.wiget || current);
+		});
 	};
 	
 	var handler = function(event){
-		var mods = '';
+		var keys = [];
 		modifiers.each(function(mod){
-			if (event[mod]) mods += mod + '+';
+			if (event[mod]) keys.push(mod);
 		});
-		Keyboard.manager.handle(event, event.type + ':' + mods + event.key);
+		
+		if (!regex.test(event.key)) keys.push(event.key);
+		Keyboard.manager.handle(event, event.type + ':' + keys.join('+'));
 	};
 	
 	document.addEvents({
@@ -7649,13 +7749,27 @@ provides: [Keyboard]
 	});
 
 	Event.Keys.extend({
+		'shift': 16,
+		'control': 17,
+		'alt': 18,
+		'capslock': 20,
 		'pageup': 33,
 		'pagedown': 34,
 		'end': 35,
 		'home': 36,
-		'capslock': 20,
 		'numlock': 144,
-		'scrolllock': 145
+		'scrolllock': 145,
+		';': 186,
+		'=': 187,
+		',': 188,
+		'-': Browser.Engine.Gecko ? 109 : 189,
+		'.': 190,
+		'/': 191,
+		'`': 192,
+		'[': 219,
+		'\\': 220,
+		']': 221,
+		"'": 222
 	});
 
 })();
@@ -7686,8 +7800,8 @@ provides: [HtmlTable.Select]
 HtmlTable = Class.refactor(HtmlTable, {
 
 	options: {
-		/*onRowSelect: $empty,
-		onRowUnselect: $empty,*/
+		/*onRowFocus: $empty,
+		onRowUnfocus: $empty,*/
 		useKeyboard: true,
 		classRowSelected: 'table-tr-selected',
 		classRowHovered: 'table-tr-hovered',
@@ -7805,6 +7919,7 @@ HtmlTable = Class.refactor(HtmlTable, {
 
 	focusRow: function(){
 		var row = arguments[1] || arguments[0]; //delegation passes the event first
+		if (!this.body.getChildren().contains(row)) return;
 		var unfocus = function(row){
 			this.selectedRows.erase(row);
 			row.removeClass(this.options.classRowSelected);
@@ -7833,7 +7948,100 @@ HtmlTable = Class.refactor(HtmlTable, {
 		return this.selectAll(false);
 	}
 
-});/*
+});
+/*
+---
+
+script: Keyboard.js
+
+description: Enhances Keyboard by adding the ability to name and describe keyboard shortcuts, and the ability to grab shortcuts by name and bind the shortcut to different keys.
+
+license: MIT-style license
+
+authors:
+- Perrin Westrich
+
+requires:
+- core:1.2.4/Function
+- /Keyboard.Extras
+
+provides: [Keyboard.Extras]
+
+...
+*/
+Keyboard.prototype.options.nonParsedEvents.combine(['rebound', 'onrebound']);
+
+Keyboard.implement({
+
+	/*
+		shortcut should be in the format of:
+		{
+			'keys': 'shift+s', // the default to add as an event.
+			'description': 'blah blah blah', // a brief description of the functionality.
+			'handler': function(){} // the event handler to run when keys are pressed.
+		}
+	*/
+	addShortcut: function(name, shortcut) {
+		this.shortcuts = this.shortcuts || [];
+		this.shortcutIndex = this.shortcutIndex || {};
+		
+		shortcut.getKeyboard = $lambda(this);
+		shortcut.name = name;
+		this.shortcutIndex[name] = shortcut;
+		this.shortcuts.push(shortcut);
+		if(shortcut.keys) this.addEvent(shortcut.keys, shortcut.handler);
+		return this;
+	},
+
+	addShortcuts: function(obj){
+		for(var name in obj) this.addShortcut(name, obj[name]);
+		return this;
+	},
+
+	getShortcuts: function(){
+		return this.shortcuts || [];
+	},
+
+	getShortcut: function(name){
+		return (this.shortcutIndex || {})[name];
+	}
+
+});
+
+Keyboard.rebind = function(newKeys, shortcuts){
+	$splat(shortcuts).each(function(shortcut){
+		shortcut.getKeyboard().removeEvent(shortcut.keys, shortcut.handler);
+		shortcut.getKeyboard().addEvent(newKeys, shortcut.handler);
+		shortcut.keys = newKeys;
+		shortcut.getKeyboard().fireEvent('rebound');
+	});
+};
+
+
+Keyboard.getActiveShortcuts = function(keyboard) {
+	var activeKBS = [], activeSCS = [];
+	Keyboard.each(keyboard, [].push.bind(activeKBS));
+	activeKBS.each(function(kb){ activeSCS.extend(kb.getShortcuts()); });
+	return activeSCS;
+};
+
+Keyboard.getShortcut = function(name, keyboard, opts){
+	opts = opts || {};
+	var shortcuts = opts.many ? [] : null,
+		set = opts.many ? function(kb){
+				var shortcut = kb.getShortcut(name);
+				if(shortcut) shortcuts.push(shortcut);
+			} : function(kb) { 
+				if(!shortcuts) shortcuts = kb.getShortcut(name);
+			};
+	Keyboard.each(keyboard, set);
+	return shortcuts;
+};
+
+Keyboard.getShortcuts = function(name, keyboard) {
+	return Keyboard.getShortcut(name, keyboard, { many: true });
+};
+/*
 ---
 
 script: Scroller.js
@@ -7872,7 +8080,8 @@ var Scroller = new Class({
 	initialize: function(element, options){
 		this.setOptions(options);
 		this.element = document.id(element);
-		this.listener = ($type(this.element) != 'element') ? document.id(this.element.getDocument().body) : this.element;
+		this.docBody = document.id(this.element.getDocument().body);
+		this.listener = ($type(this.element) != 'element') ?  this.docBody : this.element;
 		this.timer = null;
 		this.bound = {
 			attach: this.attach.bind(this),
@@ -7914,14 +8123,15 @@ var Scroller = new Class({
 	scroll: function(){
 		var size = this.element.getSize(), 
 			scroll = this.element.getScroll(), 
-			pos = this.element.getOffsets(), 
+			pos = this.element != this.docBody ? this.element.getOffsets() : {x: 0, y:0}, 
 			scrollSize = this.element.getScrollSize(), 
 			change = {x: 0, y: 0};
 		for (var z in this.page){
-			if (this.page[z] < (this.options.area + pos[z]) && scroll[z] != 0)
+			if (this.page[z] < (this.options.area + pos[z]) && scroll[z] != 0) {
 				change[z] = (this.page[z] - this.options.area - pos[z]) * this.options.velocity;
-			else if (this.page[z] + this.options.area > (size[z] + pos[z]) && scroll[z] + size[z] != scrollSize[z])
+			} else if (this.page[z] + this.options.area > (size[z] + pos[z]) && scroll[z] + size[z] != scrollSize[z]) {
 				change[z] = (this.page[z] - size[z] + this.options.area - pos[z]) * this.options.velocity;
+			}
 		}
 		if (change.y || change.x) this.fireEvent('change', [scroll.x + change.x, scroll.y + change.y]);
 	}
@@ -7981,25 +8191,23 @@ this.Tips = new Class({
 		hideDelay: 100,
 		className: 'tip-wrap',
 		offset: {x: 16, y: 16},
+		windowPadding: {x:0, y:0},
 		fixed: false
 	},
 
 	initialize: function(){
 		var params = Array.link(arguments, {options: Object.type, elements: $defined});
 		this.setOptions(params.options);
-		document.id(this);
-		
 		if (params.elements) this.attach(params.elements);
+		this.container = new Element('div', {'class': 'tip'});
 	},
 
 	toElement: function(){
 		if (this.tip) return this.tip;
-		
-		this.container = new Element('div', {'class': 'tip'});
+
 		return this.tip = new Element('div', {
 			'class': this.options.className,
 			styles: {
-				display: 'none',
 				position: 'absolute',
 				top: 0,
 				left: 0
@@ -8060,8 +8268,10 @@ this.Tips = new Class({
 		}, this);
 		
 		$clear(this.timer);
-		this.timer = this.show.delay(this.options.showDelay, this, element);
-		this.position((this.options.fixed) ? {page: element.getPosition()} : event);
+		this.timer = (function(){
+			this.show(this, element);
+			this.position((this.options.fixed) ? {page: element.getPosition()} : event);
+		}).delay(this.options.showDelay, this);
 	},
 
 	elementLeave: function(event, element){
@@ -8070,11 +8280,11 @@ this.Tips = new Class({
 		this.fireForParent(event, element);
 	},
 
-	fireForParent: function(event, element) {
-			parentNode = element.getParent();
-			if (parentNode == document.body) return;
-			if (parentNode.retrieve('tip:enter')) parentNode.fireEvent('mouseenter', event);
-			else return this.fireForParent(parentNode, event);
+	fireForParent: function(event, element){
+		element = element.getParent();
+		if (!element || element == document.body) return;
+		if (element.retrieve('tip:enter')) element.fireEvent('mouseenter', event);
+		else this.fireForParent(event, element);
 	},
 
 	elementMove: function(event, element){
@@ -8082,6 +8292,8 @@ this.Tips = new Class({
 	},
 
 	position: function(event){
+		if (!this.tip) document.id(this);
+
 		var size = window.getSize(), scroll = window.getScroll(),
 			tip = {x: this.tip.offsetWidth, y: this.tip.offsetHeight},
 			props = {x: 'left', y: 'top'},
@@ -8089,7 +8301,7 @@ this.Tips = new Class({
 		
 		for (var z in props){
 			obj[props[z]] = event.page[z] + this.options.offset[z];
-			if ((obj[props[z]] + tip[z] - scroll[z]) > size[z]) obj[props[z]] = event.page[z] - this.options.offset[z] - tip[z];
+			if ((obj[props[z]] + tip[z] - scroll[z]) > size[z] - this.options.windowPadding[z]) obj[props[z]] = event.page[z] - this.options.offset[z] - tip[z];
 		}
 		
 		this.tip.setStyles(obj);
@@ -8101,11 +8313,13 @@ this.Tips = new Class({
 	},
 
 	show: function(element){
-		this.fireEvent('show', [element]);
+		if (!this.tip) document.id(this);
+		this.fireEvent('show', [this.tip, element]);
 	},
 
 	hide: function(element){
-		this.fireEvent('hide', [element]);
+		if (!this.tip) document.id(this);
+		this.fireEvent('hide', [this.tip, element]);
 	}
 
 });
@@ -8113,7 +8327,7 @@ this.Tips = new Class({
 })();/*
 ---
 
-script: Date.Catalan.US.js
+script: Date.Catalan.js
 
 description: Date messages for Catalan.
 
@@ -8163,6 +8377,66 @@ MooTools.lang.set('ca-CA', 'Date', {
 	daysUntil: '{delta} dies des d`ara'
 
 });/*
+---
+
+script: Date.Czech.js
+
+description: Date messages for Czech.
+
+license: MIT-style license
+
+authors:
+- Jan Černý chemiX
+
+requires:
+- /Lang
+- /Date
+
+provides: [Date.Czech]
+
+...
+*/
+
+MooTools.lang.set('cs-CZ', 'Date', {
+
+	months: ['Leden', 'Únor', 'Březen', 'Duben', 'Květen', 'Červen', 'Červenec', 'Srpen', 'Září', 'Říjen', 'Listopad', 'Prosinec'],
+	days: ['Neděle', 'Pondělí', 'Úterý', 'Středa', 'Čtvrtek', 'Pátek', 'Sobota'],
+	//culture's date order: MM/DD/YYYY
+	dateOrder: ['date', 'month', 'year'],
+	shortDate: '%d/%m/%Y',
+	shortTime: '%H:%M',
+	AM: 'dop.',
+	PM: 'odp.',
+
+	/* Date.Extras */
+	ordinal: function(dayOfMonth){
+		return '.';
+	},
+
+    // TODO : in examples use and fix it
+	lessThanMinuteAgo: 'méně než minutou',
+	minuteAgo: 'přibližně před minutou',
+	minutesAgo: 'před {delta} minutami',
+	hourAgo: 'přibližně před hodinou',
+	hoursAgo: 'před {delta} hodinami',
+	dayAgo: 'před dnem',
+	daysAgo: 'před {delta} dni',
+	lessThanMinuteUntil: 'před méně než minutou',
+	minuteUntil: 'asi před minutou',
+	minutesUntil: ' asi před {delta} minutami',
+	hourUntil: 'asi před hodinou',
+	hoursUntil: 'před {delta} hodinami',
+	dayUntil: 'před dnem',
+	daysUntil: 'před {delta} dni',
+	weekUntil: 'před týdnem',
+	weeksUntil: 'před {delta} týdny',
+	monthUntil: 'před měsícem',
+	monthsUntil: 'před {delta} měsíci',
+	yearUntil: 'před rokem',
+	yearsUntil: 'před {delta} lety'
+
+});
+/*
 ---
 
 script: Date.Danish.js
@@ -8395,6 +8669,93 @@ MooTools.lang.set('et-EE', 'Date', {
 	yearsUntil: '{delta} aasta pärast'
 
 });/*
+---
+
+script: Date.German.js
+
+description: Date messages for German.
+
+license: MIT-style license
+
+authors:
+- Christoph Pojer
+- Frank Rossi
+- Ulrich Petri
+- Fabian Beiner
+
+requires:
+- /Lang
+- /Date
+
+provides: [Date.German]
+
+...
+*/
+
+MooTools.lang.set('de-DE', 'Date', {
+
+	months: ['Januar', 'Februar', 'M&auml;rz', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'],
+	days: ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'],
+	//culture's date order: MM/DD/YYYY
+	dateOrder: [ 'date', 'month', 'year', '.'],
+
+	AM: 'vormittags',
+	PM: 'nachmittags',
+
+	shortDate: '%d.%m.%Y',
+	shortTime: '%H:%M',
+
+	/* Date.Extras */
+	ordinal: '.',
+
+	lessThanMinuteAgo: 'Vor weniger als einer Minute',
+	minuteAgo: 'Vor einer Minute',
+	minutesAgo: 'Vor {delta} Minuten',
+	hourAgo: 'Vor einer Stunde',
+	hoursAgo: 'Vor {delta} Stunden',
+	dayAgo: 'Vor einem Tag',
+	daysAgo: 'Vor {delta} Tagen',
+	weekAgo: 'Vor einer Woche',
+	weeksAgo: 'Vor {delta} Wochen',
+	monthAgo: 'Vor einem Monat',
+	monthsAgo: 'Vor {delta} Monaten',
+	yearAgo: 'Vor einem Jahr',
+	yearsAgo: 'Vor {delta} Jahren',
+	lessThanMinuteUntil: 'In weniger als einer Minute',
+	minuteUntil: 'In einer Minute',
+	minutesUntil: 'In {delta} Minuten',
+	hourUntil: 'In ca. einer Stunde',
+	hoursUntil: 'In ca. {delta} Stunden',
+	dayUntil: 'In einem Tag',
+	daysUntil: 'In {delta} Tagen',
+	weekUntil: 'In einer Woche',
+	weeksUntil: 'In {delta} Wochen',
+	monthUntil: 'In einem Monat',
+	monthsUntil: 'In {delta} Monaten',
+	yearUntil: 'In einem Jahr',
+	yearsUntil: 'In {delta} Jahren'
+});/*
+---
+
+script: Date.German.CH.js
+
+description: Date messages for German (Switzerland).
+
+license: MIT-style license
+
+authors: 
+- Michael van der Weg
+
+requires:
+- /Lang
+- /Date.German
+
+provides: [Date.German.CH]
+
+...
+*/
+
+MooTools.lang.set('de-CH', 'cascade', ['de-DE']);/*
 ---
 
 script: Date.French.js
@@ -8664,6 +9025,71 @@ MooTools.lang.set('pt-BR', 'Date', {
 	yearsUntil: 'em {delta} anos'
 
 });/*
+Script: Date.Russian.js
+	Date messages for Russian.
+
+	License:
+		MIT-style license.
+
+	Authors:
+		Evstigneev Pavel
+*/
+
+MooTools.lang.set('ru-RU-unicode', 'Date', {
+
+	months: ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'],
+	days: ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'],
+	//culture's date order: MM/DD/YYYY
+	dateOrder: ['date', 'month', 'year'],
+	AM: 'AM',
+	PM: 'PM',
+
+	shortDate: '%d/%m/%Y',
+	shortTime: '%H:%M',
+
+
+  /*
+   *  Russian language pluralization rules, taken from CLDR project, http://unicode.org/cldr/
+   *
+   *  one -> n mod 10 is 1 and n mod 100 is not 11;
+   *  few -> n mod 10 in 2..4 and n mod 100 not in 12..14;
+   *  many -> n mod 10 is 0 or n mod 10 in 5..9 or n mod 100 in 11..14;
+   *  other -> everything else (example 3.14)
+   */
+
+  pluralize: function (n, one, few, many, other) {
+    var modulo10 = n % 10
+    var modulo100 = n % 100
+
+    if (modulo10 == 1 && modulo100 != 11) {
+      return one;
+    } else if ((modulo10 == 2 || modulo10 == 3 || modulo10 == 4) && !(modulo100 == 12 || modulo100 == 13 || modulo100 == 14)) {
+      return few;
+    } else if (modulo10 == 0 || (modulo10 == 5 || modulo10 == 6 || modulo10 == 7 || modulo10 == 8 || modulo10 == 9) || (modulo100 == 11 || modulo100 == 12 || modulo100 == 13 || modulo100 == 14)) {
+      return many;
+    } else {
+      return other;
+    }
+  },
+
+	/* Date.Extras */
+	ordinal: '',
+	lessThanMinuteAgo: 'меньше минуты назад',
+	minuteAgo: 'минута назад',
+	minutesAgo: function (delta) { return  '{delta} ' + this.pluralize(delta, 'минута', 'минуты', 'минут') + ' назад'},
+	hourAgo: 'час назад',
+	hoursAgo: function (delta) { return  '{delta} ' + this.pluralize(delta, 'час', 'часа', 'часов') + ' назад'},
+	dayAgo: 'вчера',
+	daysAgo: function (delta) { return '{delta} ' + this.pluralize(delta, 'день', 'дня', 'дней') + ' назад' },
+	lessThanMinuteUntil: 'меньше минуты назад',
+	minuteUntil: 'через минуту',
+	minutesUntil: function (delta) { return  'через {delta} ' + this.pluralize(delta, 'час', 'часа', 'часов') + ''},
+	hourUntil: 'через час',
+	hoursUntil: function (delta) { return  'через {delta} ' + this.pluralize(delta, 'час', 'часа', 'часов') + ''},
+	dayUntil: 'завтра',
+	daysUntil: function (delta) { return 'через {delta} ' + this.pluralize(delta, 'день', 'дня', 'дней') + '' }
+
+});/*
 ---
 
 script: Date.Spanish.US.js
@@ -8687,7 +9113,7 @@ provides: [Date.Spanish]
 MooTools.lang.set('es-ES', 'Date', {
 
 	months: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
-	days: ['Domingo', 'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado'],
+	days: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
 	//culture's date order: MM/DD/YYYY
 	dateOrder: ['date', 'month', 'year'],
 	AM: 'AM',
@@ -8704,8 +9130,8 @@ MooTools.lang.set('es-ES', 'Date', {
 	minutesAgo: 'hace {delta} minutos',
 	hourAgo: 'hace una hora',
 	hoursAgo: 'hace unas {delta} horas',
-	dayAgo: 'hace un dia',
-	daysAgo: 'hace {delta} dias',
+	dayAgo: 'hace un día',
+	daysAgo: 'hace {delta} días',
 	weekAgo: 'hace una semana',
 	weeksAgo: 'hace unas {delta} semanas',
 	monthAgo: 'hace un mes',
@@ -8717,8 +9143,8 @@ MooTools.lang.set('es-ES', 'Date', {
 	minutesUntil: '{delta} minutos desde ahora',
 	hourUntil: 'una hora desde ahora',
 	hoursUntil: 'unas {delta} horas desde ahora',
-	dayUntil: 'un dia desde ahora',
-	daysUntil: '{delta} dias desde ahora',
+	dayUntil: 'un día desde ahora',
+	daysUntil: '{delta} días desde ahora',
 	weekUntil: 'una semana desde ahora',
 	weeksUntil: 'unas {delta} semanas desde ahora',
 	monthUntil: 'un mes desde ahora',
@@ -8781,6 +9207,104 @@ MooTools.lang.set('sv-SE', 'Date', {
 	daysUntil: '{delta} dagar sedan'
 
 });/*
+---
+
+script: Date.Ukrainian.js
+
+description: Date messages for Ukrainian.
+
+license: MIT-style license
+
+authors:
+- Slik
+
+requires:
+- /Lang
+- /Date
+
+provides: [Date.Ukrainian]
+
+...
+*/
+
+(function(){
+	var pluralize = function(n, one, few, many, other){
+		var d = (n / 10).toInt();
+		var z = n % 10;
+		var s = (n / 100).toInt();
+
+		if(d == 1 && n > 10) return many;
+		if(z == 1) return one;
+		if(z > 0 && z < 5) return few;
+		return many;
+	};
+
+	MooTools.lang.set('uk-UA', 'Date', {
+			months: ['Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень', 'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'],
+			days: ['Неділя', 'Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П\'ятниця', 'Субота'],
+			//culture's date order: DD/MM/YYYY
+			dateOrder: ['date', 'month', 'year'],
+			AM: 'до полудня',
+			PM: 'по полудню',
+
+			shortDate: '%d/%m/%Y',
+			shortTime: '%H:%M',
+
+			/* Date.Extras */
+			ordinal: '',
+			lessThanMinuteAgo: 'меньше хвилини тому',
+			minuteAgo: 'хвилину тому',
+			minutesAgo: function (delta){
+				return '{delta} ' + pluralize(delta, 'хвилину', 'хвилини', 'хвилин') + ' тому';
+			},
+			hourAgo: 'годину тому',
+			hoursAgo: function (delta){
+				return '{delta} ' + pluralize(delta, 'годину', 'години', 'годин') + ' тому';
+			},
+			dayAgo: 'вчора',
+			daysAgo: function (delta){
+				return '{delta} ' + pluralize(delta, 'день', 'дня', 'днів') + ' тому';
+			},
+			weekAgo: 'тиждень тому',
+			weeksAgo: function (delta){
+				return '{delta} ' + pluralize(delta, 'тиждень', 'тижні', 'тижнів') + ' тому';
+			},
+			monthAgo: 'місяць тому',
+			monthsAgo: function (delta){
+				return '{delta} ' + pluralize(delta, 'місяць', 'місяці', 'місяців') + ' тому';
+			},
+			yearAgo: 'рік тому',
+			yearsAgo: function (delta){
+				return '{delta} ' + pluralize(delta, 'рік', 'роки', 'років') + ' тому';
+			},
+			lessThanMinuteUntil: 'за мить',
+			minuteUntil: 'через хвилину',
+			minutesUntil: function (delta){
+				return 'через {delta} ' + pluralize(delta, 'хвилину', 'хвилини', 'хвилин');
+			},
+			hourUntil: 'через годину',
+			hoursUntil: function (delta){
+				return 'через {delta} ' + pluralize(delta, 'годину', 'години', 'годин');
+			},
+			dayUntil: 'завтра',
+			daysUntil: function (delta){
+				return 'через {delta} ' + pluralize(delta, 'день', 'дня', 'днів');
+			},
+			weekUntil: 'через тиждень',
+			weeksUntil: function (delta){
+				return 'через {delta} ' + pluralize(delta, 'тиждень', 'тижні', 'тижнів');
+			},
+			monthUntil: 'через місяць',
+			monthesUntil: function (delta){
+				return 'через {delta} ' + pluralize(delta, 'місяць', 'місяці', 'місяців');
+			},
+			yearUntil: 'через рік',
+			yearsUntil: function (delta){
+				return 'через {delta} ' + pluralize(delta, 'рік', 'роки', 'років');
+			}
+	});
+
+})();/*
 ---
 
 script: Form.Validator.Arabic.js
@@ -8877,6 +9401,63 @@ MooTools.lang.set('ca-CA', 'Form.Validator', {
 	sameMonth: 'Aquestes dos dates deuen estar dins del mateix mes - deus canviar una o altra.'
 
 });/*
+---
+
+script: Form.Validator.Czech.js
+
+description: Form Validator messages for Czech.
+
+license: MIT-style license
+
+authors:
+- Jan Černý chemiX
+
+requires:
+- /Lang
+- /Form.Validator
+
+provides: [Form.Validator.Czech]
+
+...
+*/
+
+MooTools.lang.set('cs-CZ', 'Form.Validator', {
+
+	required:'Tato položka je povinná.',
+	minLength:'Zadejte prosím alespoň {minLength} znaků (napsáno {length} znaků).',
+	maxLength:'Zadejte prosím méně než {maxLength} znaků (nápsáno {length} znaků).',
+	integer:'Zadejte prosím celé číslo. Desetinná čísla (např. 1.25) nejsou povolena.',
+	numeric:'Zadejte jen číselné hodnoty  (tj. "1" nebo "1.1" nebo "-1" nebo "-1.1").',
+	digits:'Zadejte prosím pouze čísla a interpunkční znaménka(například telefonní číslo s pomlčkami nebo tečkami je povoleno).',
+	alpha:'Zadejte prosím pouze písmena (a-z). Mezery nebo jiné znaky nejsou povoleny.',
+	alphanum:'Zadejte prosím pouze písmena (a-z) nebo číslice (0-9). Mezery nebo jiné znaky nejsou povoleny.',
+	dateSuchAs:'Zadejte prosím platné datum jako {date}',
+	dateInFormatMDY:'Zadejte prosím platné datum jako MM / DD / RRRR (tj. "12/31/1999")',
+	email:'Zadejte prosím platnou e-mailovou adresu. Například "fred@domain.com".',
+	url:'Zadejte prosím platnou URL adresu jako http://www.google.com.',
+	currencyDollar:'Zadejte prosím platnou částku. Například $100.00.',
+	oneRequired:'Zadejte prosím alespoň jednu hodnotu pro tyto položky.',
+	errorPrefix: 'Chyba: ',
+	warningPrefix: 'Upozornění: ',
+
+	//Form.Validator.Extras
+
+	noSpace: 'V této položce nejsou povoleny mezery',
+	reqChkByNode: 'Nejsou vybrány žádné položky.',
+	requiredChk: 'Tato položka je vyžadována.',
+	reqChkByName: 'Prosím vyberte {label}.',
+	match: 'Tato položka se musí shodovat s položkou {matchName}',
+	startDate: 'datum zahájení',
+	endDate: 'datum ukončení',
+	currendDate: 'aktuální datum',
+	afterDate: 'Datum by mělo být stejné nebo větší než {label}.',
+	beforeDate: 'Datum by mělo být stejné nebo menší než {label}.',
+	startMonth: 'Vyberte počáteční měsíc.',
+	sameMonth: 'Tyto dva datumy musí být ve stejném měsíci - změňte jeden z nich.',
+    creditcard: 'Zadané číslo kreditní karty je neplatné. Prosím opravte ho. Bylo zadáno {length} čísel.'
+
+});
+/*
 ---
 
 script: Form.Validator.Chinese.js
@@ -9070,6 +9651,119 @@ MooTools.lang.set('et-EE', 'Form.Validator', {
 });/*
 ---
 
+script: Form.Validator.German.js
+
+description: Date messages for German.
+
+license: MIT-style license
+
+authors: 
+- Frank Rossi
+- Ulrich Petri
+- Fabian Beiner
+
+requires:
+- /Lang
+- /Form.Validator
+
+provides: [Form.Validator.German]
+
+...
+*/
+
+MooTools.lang.set('de-DE', 'Form.Validator', {
+
+	required: 'Dieses Eingabefeld muss ausgef&uuml;llt werden.',
+	minLength: 'Geben Sie bitte mindestens {minLength} Zeichen ein (Sie haben nur {length} Zeichen eingegeben).',
+	maxLength: 'Geben Sie bitte nicht mehr als {maxLength} Zeichen ein (Sie haben {length} Zeichen eingegeben).',
+	integer: 'Geben Sie in diesem Eingabefeld bitte eine ganze Zahl ein. Dezimalzahlen (z.B. &quot;1.25&quot;) sind nicht erlaubt.',
+	numeric: 'Geben Sie in diesem Eingabefeld bitte nur Zahlenwerte (z.B. &quot;1&quot;, &quot;1.1&quot;, &quot;-1&quot; oder &quot;-1.1&quot;) ein.',
+	digits: 'Geben Sie in diesem Eingabefeld bitte nur Zahlen und Satzzeichen ein (z.B. eine Telefonnummer mit Bindestrichen und Punkten ist erlaubt).',
+	alpha: 'Geben Sie in diesem Eingabefeld bitte nur Buchstaben (a-z) ein. Leerzeichen und andere Zeichen sind nicht erlaubt.',
+	alphanum: 'Geben Sie in diesem Eingabefeld bitte nur Buchstaben (a-z) und Zahlen (0-9) ein. Leerzeichen oder andere Zeichen sind nicht erlaubt.',
+	dateSuchAs: 'Geben Sie bitte ein g&uuml;ltiges Datum ein (z.B. &quot;{date}&quot;).',
+	dateInFormatMDY: 'Geben Sie bitte ein g&uuml;ltiges Datum im Format TT.MM.JJJJ ein (z.B. &quot;31.12.1999&quot;).',
+	email: 'Geben Sie bitte eine g&uuml;ltige E-Mail-Adresse ein (z.B. &quot;max@mustermann.de&quot;).',
+	url: 'Geben Sie bitte eine g&uuml;ltige URL ein (z.B. &quot;http://www.google.de&quot;).',
+	currencyDollar: 'Geben Sie bitte einen g&uuml;ltigen Betrag in EURO ein (z.B. 100.00&#8364;).',
+	oneRequired: 'Bitte f&uuml;llen Sie mindestens ein Eingabefeld aus.',
+	errorPrefix: 'Fehler: ',
+	warningPrefix: 'Warnung: ',
+
+	//Form.Validator.Extras
+
+	noSpace: 'Es darf kein Leerzeichen in diesem Eingabefeld sein.',
+	reqChkByNode: 'Es wurden keine Elemente gew&auml;hlt.',
+	requiredChk: 'Dieses Feld muss ausgef&uuml;llt werden.',
+	reqChkByName: 'Bitte w&auml;hlen Sie ein {label}.',
+	match: 'Dieses Eingabefeld muss mit dem {matchName} Eingabefeld &uuml;bereinstimmen.',
+	startDate: 'Das Anfangsdatum',
+	endDate: 'Das Enddatum',
+	currendDate: 'Das aktuelle Datum',
+	afterDate: 'Das Datum sollte zur gleichen Zeit oder sp&auml;ter sein als {label}.',
+	beforeDate: 'Das Datum sollte zur gleichen Zeit oder fr&uuml;her sein als {label}.',
+	startMonth: 'W&auml;hlen Sie bitte einen Anfangsmonat',
+	sameMonth: 'Diese zwei Datumsangaben m&uuml;ssen im selben Monat sein - Sie m&uuml;ssen eines von beiden ver&auml;ndern.',
+	creditcard: 'Die eingegebene Kreditkartennummer ist ung&uuml;ltig. Bitte &uuml;berpr&uuml;fen Sie diese und versuchen Sie es erneut. {length} Zahlen eingegeben.'
+});
+/*
+---
+
+script: Form.Validator.German.CH.js
+
+description: Date messages for German (Switzerland).
+ 
+license: MIT-style license
+ 
+authors:
+- Michael van der Weg
+
+requires:
+- /Lang
+- /Form.Validator.German
+
+provides: [Form.Validator.German.CH]
+
+...
+*/
+ 
+MooTools.lang.set('de-CH', 'Form.Validator', {
+ 
+  required:'Dieses Feld ist obligatorisch.',
+  minLength:'Geben Sie bitte mindestens {minLength} Zeichen ein (Sie haben {length} Zeichen eingegeben).',
+  maxLength:'Bitte geben Sie nicht mehr als {maxLength} Zeichen ein (Sie haben {length} Zeichen eingegeben).',
+  integer:'Geben Sie bitte eine ganze Zahl ein. Dezimalzahlen (z.B. 1.25) sind nicht erlaubt.',
+  numeric:'Geben Sie bitte nur Zahlenwerte in dieses Eingabefeld ein (z.B. &quot;1&quot;, &quot;1.1&quot;, &quot;-1&quot; oder &quot;-1.1&quot;).',
+  digits:'Benutzen Sie bitte nur Zahlen und Satzzeichen in diesem Eingabefeld (erlaubt ist z.B. eine Telefonnummer mit Bindestrichen und Punkten).',
+  alpha:'Benutzen Sie bitte nur Buchstaben (a-z) in diesem Feld. Leerzeichen und andere Zeichen sind nicht erlaubt.',
+  alphanum:'Benutzen Sie bitte nur Buchstaben (a-z) und Zahlen (0-9) in diesem Eingabefeld. Leerzeichen und andere Zeichen sind nicht erlaubt.',
+  dateSuchAs:'Geben Sie bitte ein g&uuml;ltiges Datum ein. Wie zum Beispiel {date}',
+  dateInFormatMDY:'Geben Sie bitte ein g&uuml;ltiges Datum ein. Wie zum Beispiel TT.MM.JJJJ (z.B. &quot;31.12.1999&quot;)',
+  email:'Geben Sie bitte eine g&uuml;ltige E-Mail Adresse ein. Wie zum Beispiel &quot;maria@bernasconi.ch&quot;.',
+  url:'Geben Sie bitte eine g&uuml;ltige URL ein. Wie zum Beispiel http://www.google.ch.',
+  currencyDollar:'Geben Sie bitte einen g&uuml;ltigen Betrag in Schweizer Franken ein. Wie zum Beispiel 100.00 CHF .',
+  oneRequired:'Machen Sie f&uuml;r mindestens eines der Eingabefelder einen Eintrag.',
+  errorPrefix: 'Fehler: ',
+  warningPrefix: 'Warnung: ',
+ 
+  //Form.Validator.Extras
+ 
+  noSpace: 'In diesem Eingabefeld darf kein Leerzeichen sein.',
+  reqChkByNode: 'Es wurden keine Elemente gew&auml;hlt.',
+  requiredChk: 'Dieses Feld ist obligatorisch.',
+  reqChkByName: 'Bitte w&auml;hlen Sie ein {label}.',
+  match: 'Dieses Eingabefeld muss mit dem Feld {matchName} &uuml;bereinstimmen.',
+  startDate: 'Das Anfangsdatum',
+  endDate: 'Das Enddatum',
+  currendDate: 'Das aktuelle Datum',
+  afterDate: 'Das Datum sollte zur gleichen Zeit oder sp&auml;ter sein {label}.',
+  beforeDate: 'Das Datum sollte zur gleichen Zeit oder fr&uuml;her sein {label}.',
+  startMonth: 'W&auml;hlen Sie bitte einen Anfangsmonat',
+  sameMonth: 'Diese zwei Datumsangaben m&uuml;ssen im selben Monat sein - Sie m&uuml;ssen eine von beiden ver&auml;ndern.'
+ 
+});/*
+---
+
 script: Form.Validator.French.js
 
 description: Form.Validator messages in French.
@@ -9240,8 +9934,8 @@ provides: [Form.Validator.Polish]
 MooTools.lang.set('pl-PL', 'Form.Validator', {
 
 	required:'To pole jest wymagane.',
-	minLength:'Wymagane jest przynajmniej {minLenght} znaków (wpisanych zostało tylko {length}).',
-	maxLength:'Dozwolone jest nie więcej niż {maxLenght} znaków (wpisanych zostało {length})',
+	minLength:'Wymagane jest przynajmniej {minLength} znaków (wpisanych zostało tylko {length}).',
+	maxLength:'Dozwolone jest nie więcej niż {maxLength} znaków (wpisanych zostało {length})',
 	integer:'To pole wymaga liczb całych. Liczby dziesiętne (np. 1.25) są niedozwolone.',
 	numeric:'Prosimy używać tylko numerycznych wartości w tym polu (np. "1", "1.1", "-1" lub "-1.1").',
 	digits:'Prosimy używać liczb oraz zankow punktuacyjnych w typ polu (dla przykładu, przy numerze telefonu myślniki i kropki są dozwolone).',
@@ -9451,17 +10145,17 @@ MooTools.lang.set('es-ES', 'Form.Validator', {
 
 	required:'Este campo es obligatorio.',
 	minLength:'Por favor introduce al menos {minLength} caracteres (has introducido {length} caracteres).',
-	maxLength:'Por favor introduce no mas de {maxLength} caracteres (has introducido {length} caracteres).',
-	integer:'Por favor introduce un numero entero en este campo. Numeros con decimales (p.e. 1,25) no se permiten.',
-	numeric:'Por favor introduce solo valores numericos en este campo (p.e. "1" o "1,1" o "-1" o "-1,1").',
-	digits:'Por favor usa solo numeros y puntuacion en este campo (por ejemplo, un numero de telefono con guines y puntos no esta permitido).',
+	maxLength:'Por favor introduce no m&aacute;s de {maxLength} caracteres (has introducido {length} caracteres).',
+	integer:'Por favor introduce un n&uacute;mero entero en este campo. N&uacute;meros con decimales (p.e. 1,25) no se permiten.',
+	numeric:'Por favor introduce solo valores num&eacute;ricos en este campo (p.e. "1" o "1,1" o "-1" o "-1,1").',
+	digits:'Por favor usa solo n&uacute;meros y puntuaci&oacute;n en este campo (por ejemplo, un n&uacute;mero de tel&eacute;fono con guiones y puntos no esta permitido).',
 	alpha:'Por favor usa letras solo (a-z) en este campo. No se admiten espacios ni otros caracteres.',
-	alphanum:'Por favor, usa solo letras (a-z) o numeros (0-9) en este campo. No se admiten espacios ni otros caracteres.',
-	dateSuchAs:'Por favor introduce una fecha valida como {date}',
-	dateInFormatMDY:'Por favor introduce una fecha valida como DD/MM/YYYY (p.e. "31/12/1999")',
-	email:'Por favor, introduce una direccione de email valida. Por ejemplo,  "fred@domain.com".',
-	url:'Por favor introduce una URL valida como http://www.google.com.',
-	currencyDollar:'Por favor introduce una cantidad valida de €. Por ejemplo €100,00 .',
+	alphanum:'Por favor, usa solo letras (a-z) o n&uacute;meros (0-9) en este campo. No se admiten espacios ni otros caracteres.',
+	dateSuchAs:'Por favor introduce una fecha v&aacute;lida como {date}',
+	dateInFormatMDY:'Por favor introduce una fecha v&aacute;lida como DD/MM/YYYY (p.e. "31/12/1999")',
+	email:'Por favor, introduce una direcci&oacute;n de email v&aacute;lida. Por ejemplo,  "fred@domain.com".',
+	url:'Por favor introduce una URL v&aacute;lida como http://www.google.com.',
+	currencyDollar:'Por favor introduce una cantidad v&aacute;lida de €. Por ejemplo €100,00 .',
 	oneRequired:'Por favor introduce algo para por lo menos una de estas entradas.',
 	errorPrefix: 'Error: ',
 	warningPrefix: 'Aviso: ',
@@ -9481,7 +10175,8 @@ MooTools.lang.set('es-ES', 'Form.Validator', {
 	startMonth: 'Por favor selecciona un mes de origen',
 	sameMonth: 'Estas dos fechas deben estar en el mismo mes - debes cambiar una u otra.'
 
-});/*
+});
+/*
 ---
 
 script: Form.Validator.Swedish.js
@@ -9536,4 +10231,42 @@ MooTools.lang.set('sv-SE', 'Form.Validator', {
 	startMonth: 'Välj en start månad',
 	sameMonth: 'Dessa två datum måste vara i samma månad - du måste ändra det ena eller det andra.'
 
+});/*
+---
+
+script: Form.Validator.Ukrainian.js
+
+description: Form.Validator messages in Ukrainian (utf-8).
+
+license: MIT-style license
+
+authors:
+- Slik
+
+requires:
+- /Lang
+- /Form.Validator
+
+provides: [Form.Validator.Ukrainian]
+
+...
+*/
+
+MooTools.lang.set('uk-UA', 'Form.Validator', {
+	required:'Це поле повинне бути заповненим.',
+	minLength:'Введіть хоча б {minLength} символів (Ви ввели {length}).',
+	maxLength:'Кількість символів не може бути більше {maxLength} (Ви ввели {length}).',
+	integer:'Введіть в це поле число. Дробові числа (наприклад 1.25) не дозволені.',
+	numeric:'Введіть в це поле число (наприклад "1" або "1.1", або "-1", або "-1.1").',
+	digits:'В цьому полі ви можете використовувати лише цифри і знаки пунктіації (наприклад, телефонний номер з знаками дефізу або з крапками).',
+	alpha:'В цьому полі можна використовувати лише латинські літери (a-z). Пробіли і інші символи заборонені.',
+	alphanum:'В цьому полі можна використовувати лише латинські літери (a-z) і цифри (0-9). Пробіли і інші символи заборонені.',
+	dateSuchAs:'Введіть коректну дату {date}.',
+	dateInFormatMDY:'Введіть дату в форматі ММ/ДД/РРРР (наприклад "12/31/2009").',
+	email:'Введіть коректну адресу електронної пошти (наприклад "name@domain.com").',
+	url:'Введіть коректне інтернет-посилання (наприклад http://www.google.com).',
+	currencyDollar:'Введіть суму в доларах (наприклад "$100.00").',
+	oneRequired:'Заповніть одне з полів.',
+	errorPrefix: 'Помилка: ',
+	warningPrefix: 'Увага: '
 });

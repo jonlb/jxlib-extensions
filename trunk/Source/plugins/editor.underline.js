@@ -1,4 +1,22 @@
+/*
+---
 
+name: Jx.Plugin.Editor.Underline
+
+description:
+
+license: MIT-style license.
+
+requires:
+ - Jx.Plugin.Editor.Button
+
+provides: [Jx.Plugin.Editor.Underline]
+
+images:
+ - text_underline.png
+
+...
+ */
 Jx.Plugin.Editor.Underline = new Class({
     
     Family: 'Jx.Plugin.Editor.Underline',

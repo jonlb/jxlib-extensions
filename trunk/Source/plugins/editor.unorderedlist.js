@@ -1,4 +1,22 @@
+/*
+---
 
+name: Jx.Plugin.Editor.Unorderedlist
+
+description:
+
+license: MIT-style license.
+
+requires:
+ - Jx.Plugin.Editor.Button
+
+provides: [Jx.Plugin.Editor.Unorderedlist]
+
+images:
+ - text_list_bullets.png
+
+...
+ */
 Jx.Plugin.Editor.Unorderedlist = new Class({
     
     Family: 'Jx.Plugin.Editor.Unoderedlist',

@@ -1,4 +1,20 @@
+/*
+---
 
+name: Jx.Plugin.Editor.ButtonSet
+
+description:
+
+license: MIT-style license.
+
+requires:
+ - Jx.Plugin.Editor
+ - jxlib/Jx.ButtonSet
+
+provides: [Jx.Plugin.Editor.ButtonSet]
+
+...
+ */
 Jx.Plugin.Editor.ButtonSet = new Class({
     
     Family: 'Jx.Plugin.Editor.ButtonSet',

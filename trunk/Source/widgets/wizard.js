@@ -1,3 +1,35 @@
+/*
+---
+
+name: Jx.Dialog.Wizard
+
+description:
+
+license: MIT-style license.
+
+requires:
+ - jxlib/Jx.Dialog
+ - jxlib/Jx.Toolbar
+ - jxlib/Jx.Button
+ - jxlib/Jx.Splitter
+ - jxlib/Jx.ListView
+ - jxlib/Jx.TabSet
+ - jxlib/Jx.Tab
+ - Jx.Panel.Form
+
+provides: [Jx.Dialog.Wizard]
+
+css:
+ - wizard
+
+images:
+ - arrow_left.png
+ - arrow_right.png
+ - cancel.png
+ - tick.png
+
+...
+ */
 /**
  * Class: Jx.Wizard
  * This is a simple wizard class that allows input through a variety of steps. It is based
@@ -175,18 +207,18 @@ Jx.Dialog.Wizard = new Class({
 			if ($defined(t)) {
 				switch (t) {
 				    case "string":
-				        tab = new Jx.Button.Tab({
+				        tab = new Jx.Tab({
 				            content: $(item.content)
 				        });
 				        break;
 					case "element":
-						tab = new Jx.Button.Tab({
+						tab = new Jx.Tab({
 							content: item.content
 						});
 						break;
 					case "object":
 						if ($defined(item.content.domObj)) {
-							tab = new Jx.Button.Tab({
+							tab = new Jx.Tab({
 								content: item.content.domObj
 							});
 						} else {
@@ -199,7 +231,7 @@ Jx.Dialog.Wizard = new Class({
 						    }
 							f = new Jx.Panel.Form(item.content);
 							item.form = f;
-							tab = new Jx.Button.Tab({
+							tab = new Jx.Tab({
 								content: $(f)
 							});
 						}

@@ -1,4 +1,22 @@
+/*
+---
 
+name: Jx.Plugin.Editor.Outdent
+
+description:
+
+license: MIT-style license.
+
+requires:
+ - Jx.Plugin.Editor.Button
+
+provides: [Jx.Plugin.Editor.Outdent]
+
+images:
+ - text_indent_remove.png
+
+...
+ */
 Jx.Plugin.Editor.Outdent = new Class({
     
     Family: 'Jx.Plugin.Editor.Outdent',

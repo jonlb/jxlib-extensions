@@ -1,4 +1,23 @@
-/** 
+/*
+---
+
+name: Jx.Preloader
+
+description:
+
+license: MIT-style license.
+
+requires:
+ - jxlib/Jx
+ - Core/Class
+ - Core/Class.Extras
+ - Core/Hash
+ - More/Assets
+
+provides: [Jx.Preloader]
+...
+ */
+/**
  * Class: Jx.Preloader
  * Class designed to preload images for web pages. It loades them into a hash but doesn't inject them
  * into the page. After all the images are loaded it passes the Hash of images back to the caller via the 

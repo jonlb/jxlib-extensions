@@ -1,4 +1,20 @@
+/*
+---
 
+name: Jx.Editor.Selection
+
+description:
+
+license: MIT-style license.
+
+requires:
+ - Jx.Editor
+ - jxlib/Jx.Object
+
+provides: [Jx.Editor.Selection]
+
+...
+ */
 Jx.Editor.Selection = new Class({
     
     Family: 'Jx.Editor.Selection',

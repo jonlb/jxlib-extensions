@@ -1,4 +1,20 @@
+/*
+---
 
+name: Jx.Plugin.Editor.Button
+
+description:
+
+license: MIT-style license.
+
+requires:
+ - Jx.Plugin.Editor
+ - jxlib/Jx.Button
+
+provides: [Jx.Plugin.Editor.Button]
+
+...
+ */
 
 Jx.Plugin.Editor.Button = new Class({
     

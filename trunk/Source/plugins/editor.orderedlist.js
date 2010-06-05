@@ -1,4 +1,22 @@
+/*
+---
 
+name: Jx.Plugin.Editor.Orderedlist
+
+description:
+
+license: MIT-style license.
+
+requires:
+ - Jx.Plugin.Editor.Button
+
+provides: [Jx.Plugin.Editor.Orderedlist]
+
+images:
+ - text_list_numbers.png
+
+...
+ */
 Jx.Plugin.Editor.Orderedlist = new Class({
     
     Family: 'Jx.Plugin.Editor.Orderedlist',

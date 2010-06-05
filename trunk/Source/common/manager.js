@@ -1,3 +1,19 @@
+/*
+---
+
+name: Jx.Manager
+
+description: This class is used to create managers to control stores, widgets, or other components
+
+license: MIT-style license.
+
+requires:
+ - Core/Class
+
+provides: [Jx.Manager, Jx.StoreMgr]
+
+...
+ */
 /**
  * Class: Jx.Manager
  * This class is used to create managers to 

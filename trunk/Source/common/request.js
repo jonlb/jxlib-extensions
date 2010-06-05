@@ -1,3 +1,23 @@
+/*
+---
+
+name: Jx.Request
+
+description:
+
+license: MIT-style license.
+
+requires:
+ -jxlib/ Jx.Object
+ - Core/Request.JSON
+ - Core/Request.HTML
+ - More/Spinner
+ - jxlib/Jx.Dialog.Message
+
+provides: [Jx.Request]
+
+...
+ */
 /**
  * Class: Jx.Request
  * Class that is used to wrap the mootools AJAX request object to make its use as transparent as
@@ -182,7 +202,7 @@ Jx.Request = new Class({
 	 * args - the arguments sent to the success function by the request [responseTree, responseElements, responseHTML, responseJavaScript]
 	 */
 	success: function (id, args) {
-		var req = this.getRequest(id);
+		var req = this.currentRequest;
 		var opt = req.get('options');
 		this.removeMask(req);
 		this.running = false;

@@ -1,4 +1,22 @@
+/*
+---
 
+name: Jx.Plugin.Editor.Strikethrough
+
+description:
+
+license: MIT-style license.
+
+requires:
+ - Jx.Plugin.Editor.Button
+
+provides: [Jx.Plugin.Editor.Strikethrough]
+
+images:
+ - text_strikethrough.png
+
+...
+ */
 Jx.Plugin.Editor.Strikethrough = new Class({
     
     Family: 'Jx.Plugin.Editor.Strikethrough',

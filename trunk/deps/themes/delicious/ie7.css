@@ -1,6 +1,6 @@
 /**
  * @project         Jx
- * @revision        $Id: ie7.css 321 2009-04-06 18:23:39Z fred.warnock $
+ * @revision        $Id: ie7.css 732 2010-03-05 14:38:36Z pagameba $
  * @author          Fred Warnock (fwarnock@dmsolutions.ca)
  * @copyright       (c) 2006 DM Solutions Group Inc.
  */
@@ -18,9 +18,11 @@
  * Please note that IE8 changed how filters are written. 
  */
 .jxChromeDrag {filter: Alpha(opacity=50);}
-.jxDialogModal {filter: Alpha(opacity=20);}
 .jxDisabled {filter:Alpha(opacity=40);}
 .jxDisabled * {filter:Alpha(opacity=40);}
+.jxMask {filter:Alpha(opacity=50);}
+.jxModalMask {filter: Alpha(opacity=20);}
+.jxSpinner {filter: alpha(opacity=50);}
 iframe.jxIframeShim {filter:Alpha(opacity:0);}
 
 /* tree item focus style */

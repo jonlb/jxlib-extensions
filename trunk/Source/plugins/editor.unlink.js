@@ -1,4 +1,22 @@
+/*
+---
 
+name: Jx.Plugin.Editor.Unlink
+
+description:
+
+license: MIT-style license.
+
+requires:
+ - Jx.Plugin.Editor.Button
+
+provides: [Jx.Plugin.Editor.Unlink]
+
+images:
+ - link_break.png
+
+...
+ */
 Jx.Plugin.Editor.Unlink = new Class({
     
     Family: 'Jx.Plugin.Editor.Unlink',

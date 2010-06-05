@@ -1,4 +1,22 @@
+/*
+---
 
+name: Jx.Plugin.Editor.Toggle
+
+description:
+
+license: MIT-style license.
+
+requires:
+ - Jx.Plugin.Editor.Button
+
+provides: [Jx.Plugin.Editor.Toggle]
+
+images:
+ - toggleview.png
+
+...
+ */
 
 Jx.Plugin.Editor.Toggle = new Class({
     

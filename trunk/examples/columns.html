@@ -3,100 +3,100 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <title>Jx.Layout.Columns Example</title>
-    <script type="text/javascript" src="../deps/mootools-core.js"></script>
-    <script type="text/javascript" src="../deps/mootools-more.js"></script>
-    <script type="text/javascript" src="../deps/jxlib.standalone.uncompressed.js"></script>
-    <link href="../deps/themes/crispin/jxtheme.uncompressed.css" type="text/css" rel="stylesheet" media="screen, projection" />
-    
-    <!-- Put the scripts we're testing here -->
-    <link href="../build/lib/css/jxlib-extensions.uncompressed.css" type="text/css" rel="stylesheet" media="screen, projection" />
-     
-    <script type="text/javascript" src="../build/lib/jxlib-extensions.uncompressed.js"></script>
+    <!-- need to load up the options first, then load the loader -->
+    <script type="text/javascript" src="options.js"></script>
+    <script type="text/javascript" src="../loader/loader.php?file[]=loader&compress=false&allDeps=true&clearSession=true"></script>
     
     
     <script type="text/javascript">
         window.addEvent('domready', function () {
-            //panels to add to the layout
-            var panel1 = new Jx.ChromePanel({
-                label: 'Basic Panel 1',
-                content: 'basicPanelContent',
-                height: 200,
-                id: 'widget1'
-            });
 
-            var panel2 = new Jx.ChromePanel({
-                label: 'Basic Panel 2',
-                content: 'basicPanelContent',
-                height: 200,
-                id: 'widget2'
-            });
+            $uses([
+                'Jx.ChromePanel',
+                'Jx.Layout.Columns'
+            ],function(){
+                //panels to add to the layout
+                var panel1 = new Jx.ChromePanel({
+                    label: 'Basic Panel 1',
+                    content: 'basicPanelContent',
+                    height: 200,
+                    id: 'widget1'
+                });
 
-            var panel3 = new Jx.ChromePanel({
-                label: 'Basic Panel 3',
-                content: 'basicPanelContent',
-                height: 200,
-                id: 'widget3'
-            });
+                var panel2 = new Jx.ChromePanel({
+                    label: 'Basic Panel 2',
+                    content: 'basicPanelContent',
+                    height: 200,
+                    id: 'widget2'
+                });
 
-            var panel4 = new Jx.ChromePanel({
-                label: 'Basic Panel 4',
-                content: 'basicPanelContent',
-                height: 200,
-                id: 'widget4'
-            });
+                var panel3 = new Jx.ChromePanel({
+                    label: 'Basic Panel 3',
+                    content: 'basicPanelContent',
+                    height: 200,
+                    id: 'widget3'
+                });
 
-            var panel5 = new Jx.ChromePanel({
-                label: 'Basic Panel 5',
-                content: new Jx.Panel({
-                    label: 'Embedded Panel',
-                    content: 'An embedded panel'
-                }),
-                height: 200,
-                id: 'widget5'
-            });
+                var panel4 = new Jx.ChromePanel({
+                    label: 'Basic Panel 4',
+                    content: 'basicPanelContent',
+                    height: 200,
+                    id: 'widget4'
+                });
 
-            var panel6 = new Jx.ChromePanel({
-                label: 'Basic Panel 6',
-                content: 'basicPanelContent',
-                height: 200,
-                id: 'widget6'
-            });        
-            
-            var layout = new Jx.Layout.Columns('container',{
-            	columns: [{
-        			cssClass: '',
-        			width: '30%'
-        			//items: [panel1, panel2]
-        		},{
-        			cssClass: '',
-        			width: '*'
-        			//items: [panel3, panel4]
-        		},{
-        			cssClass: '',
-        			width: '25%'
-        			//items: [panel5, panel6]
-        		}],
-        		addDefaults: {
-        			isDraggable: true,
-        			column: 1,
-        			position: 'bottom'
-        		},
-        		dragDefaults: {
-        			dropZoneClass: 'jxDropZone',
-        			handle: '.jxPanelTitle',
-        			position: 'top',
-        			isDraggable: true
-        		}
-        		
-            });
+                var panel5 = new Jx.ChromePanel({
+                    label: 'Basic Panel 5',
+                    content: new Jx.Panel({
+                        label: 'Embedded Panel',
+                        content: 'An embedded panel'
+                    }),
+                    height: 200,
+                    id: 'widget5'
+                });
 
-            layout.addEvent('jxLayoutMoveComplete',function(){
-				console.log(layout.serialize());
-    		});
-    		
-            layout.resize();
-			
-			layout.add(panel1,{column: 1});
+                var panel6 = new Jx.ChromePanel({
+                    label: 'Basic Panel 6',
+                    content: 'basicPanelContent',
+                    height: 200,
+                    id: 'widget6'
+                });
+
+                var layout = new Jx.Layout.Columns('container',{
+                    columns: [{
+                        cssClass: '',
+                        width: '30%'
+                        //items: [panel1, panel2]
+                    },{
+                        cssClass: '',
+                        width: '*'
+                        //items: [panel3, panel4]
+                    },{
+                        cssClass: '',
+                        width: '25%'
+                        //items: [panel5, panel6]
+                    }],
+                    addDefaults: {
+                        isDraggable: true,
+                        column: 1,
+                        position: 'bottom'
+                    },
+                    dragDefaults: {
+                        dropZoneClass: 'jxDropZone',
+                        handle: '.jxPanelTitle',
+                        position: 'top',
+                        isDraggable: true
+                    }
+
+                });
+
+                layout.addEvent('jxLayoutMoveComplete',function(){
+                    console.log(layout.serialize());
+                });
+
+                layout.resize();
+
+                layout.add(panel1,{column: 1});
+            });
          
         });   
     </script>

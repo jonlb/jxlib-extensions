@@ -77,6 +77,9 @@ J.Bomgardner    April 5, 2009   initial version copied from jx project
   <property name="deploy.home" value="${basedir}/www"/>
   <property name="docs.home" value="${basedir}/www/reference"/>
 
+  <property name="deps.core" value="${basedir}/../../jxlib/branches/jon-moo1.3-experimental/vendor/mootools-core/"/>
+  <property name="deps.more" value="${basedir}/../../jxlib/branches/jon-moo1.3-experimental/vendor/mootools-more/"/>
+  <property name="deps.jxlib" value="${basedir}/../../jxlib/branches/jon-moo1.3-experimental/src"/>
 <!-- ==================== External Dependencies =========================== -->
 
 <!--
@@ -245,6 +248,30 @@ J.Bomgardner    April 5, 2009   initial version copied from jx project
     <echo message="Removing build directories"/>
     <delete dir="${build.home}"/>
     <delete dir="${dist.home}"/>
+  </target>
+
+
+  <target description="Copy all files to repos" name="repos">
+      <!-- Call build files in all other projects -->
+      <delete dir="${basedir}/repos"/>
+      <mkdir dir="${basedir}/repos" />
+      <mkdir dir="${basedir}/repos/core" />
+      <mkdir dir="${basedir}/repos/more" />
+      <mkdir dir="${basedir}/repos/jxlib" />
+      <mkdir dir="${basedir}/repos/jxlibext" />
+      <copy todir="${basedir}/repos/core">
+          <fileset dir="${deps.core}" includes="**"/>
+      </copy>
+      <copy todir="${basedir}/repos/more">
+          <fileset dir="${deps.more}" includes="**"/>
+      </copy>
+      <copy todir="${basedir}/repos/jxlib">
+          <fileset dir="${deps.jxlib}" includes="Source/** images/** themes/**"/>
+      </copy>
+      <copy todir="${basedir}/repos/jxlibext">
+          <fileset dir="${basedir}" includes="Source/** css/**"/>
+      </copy>
+
   </target>
 
 </project>

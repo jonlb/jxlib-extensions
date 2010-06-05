@@ -1,4 +1,24 @@
+/*
+---
 
+name: Jx.Plugin.Editor.Link
+
+description:
+
+license: MIT-style license.
+
+requires:
+ - Jx.Plugin.Editor.Button
+ - jxlib/Jx.Dialog.Message
+ - jxlib/Jx.Dialog.Prompt
+
+provides: [Jx.Plugin.Editor.Link]
+
+images:
+ - link.png
+
+...
+ */
 Jx.Plugin.Editor.Link = new Class({
     
     Family: 'Jx.Plugin.Editor.Link',

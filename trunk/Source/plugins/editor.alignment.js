@@ -1,4 +1,25 @@
+/*
+---
 
+name: Jx.Plugin.Editor.Alignment
+
+description:
+
+license: MIT-style license.
+
+requires:
+ - Jx.Plugin.Editor.ButtonSet
+
+provides: [Jx.Plugin.Editor.Alignment]
+
+images:
+ - text_align_left.png
+ - text_align_center.png
+ - text_align_right.png
+ - text_align_justify.png
+
+...
+ */
 Jx.Plugin.Editor.Alignment = new Class({
     
     Family: 'Jx.Plugin.Editor.Aligmment',

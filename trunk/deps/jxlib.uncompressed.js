@@ -6,7 +6,7 @@
  * reset.css - Copyright (c) 2006, Yahoo! Inc. All rights reserved.
  * Code licensed under the BSD License: http://developer.yahoo.net/yui/license.txt
  ******************************************************************************
- * Jx UI Library, 2.0.1
+ * Jx UI Library, 3.0alpha
  * Copyright (c) 2006-2008, DM Solutions Group Inc. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -44,14 +44,14 @@ inspiration:
 - Class implementation inspired by [Base.js](http://dean.edwards.name/weblog/2006/03/base/) Copyright (c) 2006 Dean Edwards, [GNU Lesser General Public License](http://opensource.org/licenses/lgpl-license.php)
 - Some functionality inspired by [Prototype.js](http://prototypejs.org) Copyright (c) 2005-2007 Sam Stephenson, [MIT License](http://opensource.org/licenses/mit-license.php)
 
-provides: [Mootools, Native, Hash.base, Array.each, $util]
+provides: [MooTools, Native, Hash.base, Array.each, $util]
 
 ...
 */
 
 var MooTools = {
-	'version': '1.2.4',
-	'build': '0d9113241a90b9cd5643b926795852a2026710d4'
+	'version': '1.2.5dev',
+	'build': '%build%'
 };
 
 var Native = function(options){
@@ -1651,6 +1651,7 @@ var get = function(uid){
 var clean = function(item, retain){
 	if (!item) return;
 	var uid = item.uid;
+	if (retain !== true) retain = false;
 	if (Browser.Engine.trident){
 		if (item.clearAttributes){
 			var clone = retain && item.cloneNode(false);
@@ -4327,8 +4328,110 @@ provides: [MooTools.More]
 */
 
 MooTools.More = {
-	'version': '1.2.4.1'
+	'version': '1.2.4.4',
+	'build': '6f6057dc645fdb7547689183b2311063bd653ddf'
 };/*
+---
+
+script: MooTools.Lang.js
+
+description: Provides methods for localization.
+
+license: MIT-style license
+
+authors:
+- Aaron Newton
+
+requires:
+- core:1.2.4/Events
+- /MooTools.More
+
+provides: [MooTools.Lang]
+
+...
+*/
+
+(function(){
+
+	var data = {
+		language: 'en-US',
+		languages: {
+			'en-US': {}
+		},
+		cascades: ['en-US']
+	};
+	
+	var cascaded;
+
+	MooTools.lang = new Events();
+
+	$extend(MooTools.lang, {
+
+		setLanguage: function(lang){
+			if (!data.languages[lang]) return this;
+			data.language = lang;
+			this.load();
+			this.fireEvent('langChange', lang);
+			return this;
+		},
+
+		load: function() {
+			var langs = this.cascade(this.getCurrentLanguage());
+			cascaded = {};
+			$each(langs, function(set, setName){
+				cascaded[setName] = this.lambda(set);
+			}, this);
+		},
+
+		getCurrentLanguage: function(){
+			return data.language;
+		},
+
+		addLanguage: function(lang){
+			data.languages[lang] = data.languages[lang] || {};
+			return this;
+		},
+
+		cascade: function(lang){
+			var cascades = (data.languages[lang] || {}).cascades || [];
+			cascades.combine(data.cascades);
+			cascades.erase(lang).push(lang);
+			var langs = cascades.map(function(lng){
+				return data.languages[lng];
+			}, this);
+			return $merge.apply(this, langs);
+		},
+
+		lambda: function(set) {
+			(set || {}).get = function(key, args){
+				return $lambda(set[key]).apply(this, $splat(args));
+			};
+			return set;
+		},
+
+		get: function(set, key, args){
+			if (cascaded && cascaded[set]) return (key ? cascaded[set].get(key, args) : cascaded[set]);
+		},
+
+		set: function(lang, set, members){
+			this.addLanguage(lang);
+			langData = data.languages[lang];
+			if (!langData[set]) langData[set] = {};
+			$extend(langData[set], members);
+			if (lang == this.getCurrentLanguage()){
+				this.load();
+				this.fireEvent('langChange', lang);
+			}
+			return this;
+		},
+
+		list: function(){
+			return Hash.getKeys(data.languages);
+		}
+
+	});
+
+})();/*
 ---
 
 script: Log.js
@@ -4489,14 +4592,8 @@ var Depender = {
 			this.fireEvent('require', options);
 			this.loadScripts(options.scripts);
 		};
-		if (this.mapLoaded){
-			loaded.call(this);
-		} else {
-			this.addEvent('mapLoaded', function(){
-				loaded.call(this);
-				this.removeEvent('mapLoaded', arguments.callee);
-			});
-		}
+		if (this.mapLoaded) loaded.call(this);
+		else this.addEvent('mapLoaded', loaded.bind(this));
 		return this;
 	},
 
@@ -4543,6 +4640,7 @@ var Depender = {
 			this.calculateLoaded();
 			this.lastLoaded = this.getLoadedScripts().getLength();
 			this.fireEvent('mapLoaded');
+			this.removeEvents('mapLoaded');
 		}
 	},
 
@@ -4741,107 +4839,6 @@ Depender.setOptions = function(){
 	return this;
 };
 /*
----
-
-script: MooTools.Lang.js
-
-description: Provides methods for localization.
-
-license: MIT-style license
-
-authors:
-- Aaron Newton
-
-requires:
-- core:1.2.4/Events
-- /MooTools.More
-
-provides: [MooTools.Lang]
-
-...
-*/
-
-(function(){
-
-	var data = {
-		language: 'en-US',
-		languages: {
-			'en-US': {}
-		},
-		cascades: ['en-US']
-	};
-	
-	var cascaded;
-
-	MooTools.lang = new Events();
-
-	$extend(MooTools.lang, {
-
-		setLanguage: function(lang){
-			if (!data.languages[lang]) return this;
-			data.language = lang;
-			this.load();
-			this.fireEvent('langChange', lang);
-			return this;
-		},
-
-		load: function() {
-			var langs = this.cascade(this.getCurrentLanguage());
-			cascaded = {};
-			$each(langs, function(set, setName){
-				cascaded[setName] = this.lambda(set);
-			}, this);
-		},
-
-		getCurrentLanguage: function(){
-			return data.language;
-		},
-
-		addLanguage: function(lang){
-			data.languages[lang] = data.languages[lang] || {};
-			return this;
-		},
-
-		cascade: function(lang){
-			var cascades = (data.languages[lang] || {}).cascades || [];
-			cascades.combine(data.cascades);
-			cascades.erase(lang).push(lang);
-			var langs = cascades.map(function(lng){
-				return data.languages[lng];
-			}, this);
-			return $merge.apply(this, langs);
-		},
-
-		lambda: function(set) {
-			(set || {}).get = function(key, args){
-				return $lambda(set[key]).apply(this, $splat(args));
-			};
-			return set;
-		},
-
-		get: function(set, key, args){
-			if (cascaded && cascaded[set]) return (key ? cascaded[set].get(key, args) : cascaded[set]);
-		},
-
-		set: function(lang, set, members){
-			this.addLanguage(lang);
-			langData = data.languages[lang];
-			if (!langData[set]) langData[set] = {};
-			$extend(langData[set], members);
-			if (lang == this.getCurrentLanguage()){
-				this.load();
-				this.fireEvent('langChange', lang);
-			}
-			return this;
-		},
-
-		list: function(){
-			return Hash.getKeys(data.languages);
-		}
-
-	});
-
-})();/*
 ---
 
 script: Class.Refactor.js
@@ -5050,6 +5047,15 @@ Array.implement({
 
 	unique: function(){
 		return [].combine(this);
+	},
+
+	shuffle: function(){
+		for (var i = this.length; i && --i;){
+			var temp = this[i], r = Math.floor(Math.random() * ( i + 1 ));
+			this[i] = this[r];
+			this[r] = temp;
+		}
+		return this;
 	}
 
 });/*
@@ -5540,7 +5546,7 @@ var build = function(format){
 			bits = bits.slice(1).associate(parsed);
 			var date = new Date().clearTime();
 			if ('d' in bits) handle.call(date, 'd', 1);
-			if ('m' in bits) handle.call(date, 'm', 1);
+			if ('m' in bits || 'b' in bits || 'B' in bits) handle.call(date, 'm', 1);
 			for (var key in bits) handle.call(date, key, bits[key]);
 			return date;
 		}
@@ -5582,7 +5588,8 @@ Date.defineParsers(
 	'%x( %X)?', // "12/31", "12.31.99", "12-31-1999", "12/31/2008 11:59 PM"
 	'%d%o( %b( %Y)?)?( %X)?', // "31st", "31st December", "31 Dec 1999", "31 Dec 1999 11:59pm"
 	'%b( %d%o)?( %Y)?( %X)?', // Same as above with month and day switched
-	'%Y %b( %d%o( %X)?)?' // Same as above with year coming first
+	'%Y %b( %d%o( %X)?)?', // Same as above with year coming first
+	'%o %b %d %X %T %Y' // "Thu Oct 22 08:11:23 +0000 2009"
 );
 
 MooTools.lang.addEvent('langChange', function(language){
@@ -5783,7 +5790,7 @@ provides: [String.Extras]
 
 (function(){
   
-var special = ['À','à','Á','á','Â','â','Ã','ã','Ä','ä','Å','å','Ă','ă','Ą','ą','Ć','ć','Č','č','Ç','ç', 'Ď','ď','Đ','đ', 'È','è','É','é','Ê','ê','Ë','ë','Ě','ě','Ę','ę', 'Ğ','ğ','Ì','ì','Í','í','Î','î','Ï','ï', 'Ĺ','ĺ','Ľ','ľ','Ł','ł', 'Ñ','ñ','Ň','ň','Ń','ń','Ò','ò','Ó','ó','Ô','ô','Õ','õ','Ö','ö','Ø','ø','ő','Ř','ř','Ŕ','ŕ','Š','š','Ş','ş','Ś','ś', 'Ť','ť','Ť','ť','Ţ','ţ','Ù','ù','Ú','ú','Û','û','Ü','ü','Ů','ů', 'Ÿ','ÿ','ý','Ý','Ž','ž','Ź','ź','Ż','ż', 'Þ','þ','Ð','ð','ß','Œ','œ','Æ','æ','µ'];
+var special = ['À','à','�?','á','Â','â','Ã','ã','Ä','ä','Å','å','Ă','ă','Ą','ą','Ć','ć','Č','�?','Ç','ç', 'Ď','�?','�?','đ', 'È','è','É','é','Ê','ê','Ë','ë','Ě','ě','Ę','ę', 'Ğ','ğ','Ì','ì','�?','í','Î','î','�?','ï', 'Ĺ','ĺ','Ľ','ľ','�?','ł', 'Ñ','ñ','Ň','ň','Ń','ń','Ò','ò','Ó','ó','Ô','ô','Õ','õ','Ö','ö','Ø','ø','ő','Ř','ř','Ŕ','ŕ','Š','š','Ş','ş','Ś','ś', 'Ť','ť','Ť','ť','Ţ','ţ','Ù','ù','Ú','ú','Û','û','Ü','ü','Ů','ů', 'Ÿ','ÿ','ý','�?','Ž','ž','Ź','ź','Ż','ż', 'Þ','þ','�?','ð','ß','Œ','œ','Æ','æ','µ'];
 
 var standard = ['A','a','A','a','A','a','A','a','Ae','ae','A','a','A','a','A','a','C','c','C','c','C','c','D','d','D','d', 'E','e','E','e','E','e','E','e','E','e','E','e','G','g','I','i','I','i','I','i','I','i','L','l','L','l','L','l', 'N','n','N','n','N','n', 'O','o','O','o','O','o','O','o','Oe','oe','O','o','o', 'R','r','R','r', 'S','s','S','s','S','s','T','t','T','t','T','t', 'U','u','U','u','U','u','Ue','ue','U','u','Y','y','Y','y','Z','z','Z','z','Z','z','TH','th','DH','dh','ss','OE','oe','AE','ae','u'];
 
@@ -5908,7 +5915,7 @@ description: Provides methods useful in managing the window location and uris.
 license: MIT-style license
 
 authors:
-- Sebastian Markb�ge
+- Sebastian Markb�ge
 - Aaron Newton
 
 requires:
@@ -5928,7 +5935,7 @@ var URI = new Class({
 		/*base: false*/
 	},
 
-	regex: /^(?:(\w+):)?(?:\/\/(?:(?:([^:@]*):?([^:@]*))?@)?([^:\/?#]*)(?::(\d*))?)?(\.\.?$|(?:[^?#\/]*\/)*)([^?#]*)(?:\?([^#]*))?(?:#(.*))?/,
+	regex: /^(?:(\w+):)?(?:\/\/(?:(?:([^:@\/]*):?([^:@\/]*))?@)?([^:\/?#]*)(?::(\d*))?)?(\.\.?$|(?:[^?#\/]*\/)*)([^?#]*)(?:\?([^#]*))?(?:#(.*))?/,
 	parts: ['scheme', 'user', 'password', 'host', 'port', 'directory', 'file', 'query', 'fragment'],
 	schemes: {http: 80, https: 443, ftp: 21, rtsp: 554, mms: 1755, file: 0},
 
@@ -6021,8 +6028,9 @@ var URI = new Class({
 
 	setData: function(values, merge, part){
 		if (typeof values == 'string'){
-			values = this.getData();
-			values[arguments[0]] = arguments[1];
+			data = this.getData();
+			data[arguments[0]] = arguments[1];
+			values = data;
 		} else if (merge) {
 			values = $merge(this.getData(), values);
 		}
@@ -6292,7 +6300,8 @@ provides: [Element.Delegation]
 
 ...
 */
-(function(){
+
+(function(addEvent, removeEvent){
 	
 	var match = /(.*?):relay\(([^)]+)\)$/,
 		combinators = /[+>~\s]/,
@@ -6319,9 +6328,6 @@ provides: [Element.Delegation]
 			return null;
 		};
 
-	var oldAddEvent = Element.prototype.addEvent,
-		oldRemoveEvent = Element.prototype.removeEvent;
-		
 	Element.implement({
 
 		addEvent: function(type, fn){
@@ -6334,10 +6340,10 @@ provides: [Element.Delegation]
 						if (el) this.fireEvent(type, [e, el], 0, el);
 					}.bind(this);
 					monitors[type] = monitor;
-					oldAddEvent.call(this, splitted.event, monitor);
+					addEvent.call(this, splitted.event, monitor);
 				}
 			}
-			return oldAddEvent.apply(this, arguments);
+			return addEvent.apply(this, arguments);
 		},
 
 		removeEvent: function(type, fn){
@@ -6346,19 +6352,18 @@ provides: [Element.Delegation]
 				var events = this.retrieve('events');
 				if (!events || !events[type] || (fn && !events[type].keys.contains(fn))) return this;
 
-				if (fn) oldRemoveEvent.apply(this, [type, fn]);
-				else oldRemoveEvent.apply(this, type);
+				if (fn) removeEvent.apply(this, [type, fn]);
+				else removeEvent.apply(this, type);
 
 				events = this.retrieve('events');
-				if (events && events[type] && events[type].length == 0){
+				if (events && events[type] && events[type].keys.length == 0){
 					var monitors = this.retrieve('$moo:delegateMonitors', {});
-					oldRemoveEvent.apply(this, [splitted.event, monitors[type]]);
+					removeEvent.apply(this, [splitted.event, monitors[type]]);
 					delete monitors[type];
 				}
 				return this;
 			}
-
-			return oldRemoveEvent.apply(this, arguments);
+			return removeEvent.apply(this, arguments);
 		},
 
 		fireEvent: function(type, args, delay, bind){
@@ -6372,7 +6377,7 @@ provides: [Element.Delegation]
 
 	});
 
-})();/*
+})(Element.prototype.addEvent, Element.prototype.removeEvent);/*
 ---
 
 script: Element.Measure.js
@@ -6716,10 +6721,6 @@ Element.implement({
 				calc = rel == document.body ? window.getScroll() : rel.getPosition(),
 				top = calc.y, left = calc.x;
 
-		var scrolls = rel.getScrolls();
-		top += scrolls.y;
-		left += scrolls.x;
-
 		var dim = this.getDimensions({computeSize: true, styles:['padding', 'border','margin']});
 		var pos = {},
 				prefY = options.offset.y,
@@ -6857,15 +6858,15 @@ Element.implement({
 	hide: function(){
 		var d;
 		try {
-			// IE fails here if the element is not in the dom
-			if ((d = this.getStyle('display')) == 'none') d = null;
+			//IE fails here if the element is not in the dom
+			d = this.getStyle('display');
 		} catch(e){}
-		
-		return this.store('originalDisplay', d || 'block').setStyle('display', 'none');
+		return this.store('originalDisplay', d || '').setStyle('display', 'none');
 	},
 
 	show: function(display){
-		return this.setStyle('display', display || this.retrieve('originalDisplay') || 'block');
+		display = display || this.retrieve('originalDisplay') || 'block';
+		return this.setStyle('display', (display == 'none') ? 'block' : display);
 	},
 
 	swapClass: function(remove, add){
@@ -6950,7 +6951,7 @@ var IframeShim = new Class({
 				this[this.options.display ? 'show' : 'hide']();
 				this.fireEvent('inject');
 			}).bind(this);
-			if (IframeShim.ready) window.addEvent('load', inject);
+			if (!IframeShim.ready) window.addEvent('load', inject);
 			else inject();
 		} else {
 			this.position = this.hide = this.show = this.dispose = $lambda(this);
@@ -7028,7 +7029,7 @@ var Mask = new Class({
 
 	Implements: [Options, Events],
 
-	Binds: ['resize'],
+	Binds: ['position'],
 
 	options: {
 		// onShow: $empty,
@@ -7045,12 +7046,13 @@ var Mask = new Class({
 		style: {},
 		'class': 'mask',
 		maskMargins: false,
-		useIframeShim: true
+		useIframeShim: true,
+		iframeShimOptions: {}
 	},
 
 	initialize: function(target, options){
-		this.target = document.id(target) || document.body;
-		this.target.store('mask', this);
+		this.target = document.id(target) || document.id(document.body);
+		this.target.store('Mask', this);
 		this.setOptions(options);
 		this.render();
 		this.inject();
@@ -7082,7 +7084,7 @@ var Mask = new Class({
 		target = target || this.options.inject ? this.options.inject.target : '' || this.target;
 		this.element.inject(target, where);
 		if (this.options.useIframeShim) {
-			this.shim = new IframeShim(this.element);
+			this.shim = new IframeShim(this.element, this.options.iframeShimOptions);
 			this.addEvents({
 				show: this.shim.show.bind(this.shim),
 				hide: this.shim.hide.bind(this.shim),
@@ -7122,8 +7124,7 @@ var Mask = new Class({
 
 	show: function(){
 		if (!this.hidden) return this;
-		this.target.addEvent('resize', this.resize);
-		if (this.target != document.body) document.id(document.body).addEvent('resize', this.resize);
+		window.addEvent('resize', this.position);
 		this.position();
 		this.showMask.apply(this, arguments);
 		return this;
@@ -7137,7 +7138,7 @@ var Mask = new Class({
 
 	hide: function(){
 		if (this.hidden) return this;
-		this.target.removeEvent('resize', this.resize);
+		window.removeEvent('resize', this.position);
 		this.hideMask.apply(this, arguments);
 		if (this.options.destroyOnHide) return this.destroy();
 		return this;
@@ -7302,7 +7303,7 @@ var Spinner = new Class({
 			return this;
 		}
 		this.active = true;
-		return this.parent();
+		return this.parent(noFx);
 	},
 
 	hideMask: function(noFx){
@@ -7327,11 +7328,13 @@ Spinner.implement(new Chain);
 
 if (window.Request) {
 	Request = Class.refactor(Request, {
+		
 		options: {
 			useSpinner: false,
 			spinnerOptions: {},
 			spinnerTarget: false
 		},
+		
 		initialize: function(options){
 			this._send = this.send;
 			this.send = function(options){
@@ -7347,7 +7350,12 @@ if (window.Request) {
 					this.addEvent(event, this.spinner.hide.bind(this.spinner));
 				}, this);
 			}
+		},
+		
+		getSpinner: function(){
+			return this.spinner;
 		}
+		
 	});
 }
 
@@ -7454,19 +7462,18 @@ if (!window.Form) window.Form = {};
 
 		makeRequest: function(){
 			this.request = new Request.HTML($merge({
-					url: this.element.get('action'),
 					update: this.update,
 					emulation: false,
 					spinnerTarget: this.element,
 					method: this.element.get('method') || 'post'
 			}, this.options.requestOptions)).addEvents({
 				success: function(text, xml){
-					['success', 'complete'].each(function(evt){
+					['complete', 'success'].each(function(evt){
 						this.fireEvent(evt, [this.update, text, xml]);
 					}, this);
 				}.bind(this),
 				failure: function(xhr){
-					this.fireEvent('failure', xhr);
+					this.fireEvent('complete').fireEvent('failure', xhr);
 				}.bind(this),
 				exception: function(){
 					this.fireEvent('failure', xhr);
@@ -7498,7 +7505,8 @@ if (!window.Form) window.Form = {};
 		},
 
 		onFormValidate: function(valid, form, e) {
-			if (valid || !fv.options.stopOnFailure) {
+			var fv = this.element.retrieve('validator');
+			if (valid || (fv && !fv.options.stopOnFailure)) {
 				if (e && e.stop) e.stop();
 				this.send();
 			}
@@ -7508,7 +7516,6 @@ if (!window.Form) window.Form = {};
 			if (this.element.retrieve('validator')) {
 				//form validator was created after Form.Request
 				this.detach();
-				this.addFormEvent();
 				return;
 			}
 			e.stop();
@@ -7520,8 +7527,8 @@ if (!window.Form) window.Form = {};
 			var data = $H(this.options.extraData).toQueryString();
 			if (str) str += "&" + data;
 			else str = data;
-			this.fireEvent('send', [this.element, str]);
-			this.request.send({data: str});
+			this.fireEvent('send', [this.element, str.parseQueryString()]);
+			this.request.send({data: str, url: this.element.get("action")});
 			return this;
 		}
 
@@ -7613,18 +7620,17 @@ Fx.Reveal = new Class({
 					this.hiding = true;
 					this.showing = false;
 					this.hidden = true;
+					this.cssText = this.element.style.cssText;
 					var startStyles = this.element.getComputedSize({
 						styles: this.options.styles,
 						mode: this.options.mode
 					});
-					var setToAuto = (this.element.style.height === ''||this.element.style.height == 'auto');
-					this.element.setStyle('display', 'block');
+					this.element.setStyle('display', this.options.display);
 					if (this.options.transitionOpacity) startStyles.opacity = 1;
 					var zero = {};
 					$each(startStyles, function(style, name){
 						zero[name] = [style, 0];
 					}, this);
-					var overflowBefore = this.element.getStyle('overflow');
 					this.element.setStyle('overflow', 'hidden');
 					var hideThese = this.options.hideInputs ? this.element.getElements(this.options.hideInputs) : null;
 					this.$chain.unshift(function(){
@@ -7633,11 +7639,8 @@ Fx.Reveal = new Class({
 							$each(startStyles, function(style, name){
 								startStyles[name] = style;
 							}, this);
-							this.element.setStyles($merge({display: 'none', overflow: overflowBefore}, startStyles));
-							if (setToAuto){
-								if (['vertical', 'both'].contains(this.options.mode)) this.element.style.height = '';
-								if (['width', 'both'].contains(this.options.mode)) this.element.style.width = '';
-							}
+							this.element.style.cssText = this.cssText;
+							this.element.setStyle('display', 'none');
 							if (hideThese) hideThese.setStyle('visibility', 'visible');
 						}
 						this.fireEvent('hide', this.element);
@@ -7674,10 +7677,10 @@ Fx.Reveal = new Class({
 					 this.element.getStyle('opacity') == 0){
 					this.showing = true;
 					this.hiding = this.hidden =  false;
-					var setToAuto, startStyles;
+					var startStyles;
+					this.cssText = this.element.style.cssText;
 					//toggle display, but hide it
 					this.element.measure(function(){
-						setToAuto = (this.element.style.height === '' || this.element.style.height == 'auto');
 						//create the styles for the opened/visible state
 						startStyles = this.element.getComputedSize({
 							styles: this.options.styles,
@@ -7700,7 +7703,6 @@ Fx.Reveal = new Class({
 						display: this.options.display
 					};
 					$each(startStyles, function(style, name){ zero[name] = 0; });
-					var overflowBefore = this.element.getStyle('overflow');
 					//set to zero
 					this.element.setStyles($merge(zero, {overflow: 'hidden'}));
 					//hide inputs
@@ -7709,11 +7711,8 @@ Fx.Reveal = new Class({
 					//start the effect
 					this.start(startStyles);
 					this.$chain.unshift(function(){
-						this.element.setStyle('overflow', overflowBefore);
-						if (!this.options.heightOverride && setToAuto){
-							if (['vertical', 'both'].contains(this.options.mode)) this.element.style.height = '';
-							if (['width', 'both'].contains(this.options.mode)) this.element.style.width = '';
-						}
+						this.element.style.cssText = this.cssText;
+						this.element.setStyle('display', this.options.display);
 						if (!this.hidden) this.showing = false;
 						if (hideThese) hideThese.setStyle('visibility', 'visible');
 						this.callChain();
@@ -7757,6 +7756,7 @@ Fx.Reveal = new Class({
 
 	cancel: function(){
 		this.parent.apply(this, arguments);
+		this.element.style.cssText = this.cssText;
 		this.hidding = false;
 		this.showing = false;
 	}
@@ -7892,7 +7892,7 @@ Form.Request.Append = new Class({
 
 script: Form.Validator.English.js
 
-description: Date messages for English.
+description: Form Validator messages for English.
 
 license: MIT-style license
 
@@ -7943,7 +7943,8 @@ MooTools.lang.set('en-US', 'Form.Validator', {
 	sameMonth: 'These two dates must be in the same month - you must change one or the other.',
 	creditcard: 'The credit card number entered is invalid. Please check the number and try again. {length} digits entered.'
 
-});/*
+});
+/*
 ---
 
 script: Form.Validator.js
@@ -8490,7 +8491,7 @@ Form.Validator.Inline = new Class({
 		var cssClass = (warn) ? 'warning-advice' : 'validation-advice';
 		var advice = this.getAdvice(className, field);
 		if(advice) {
-			advice = advice.clone(true, true).set('html', errorMsg).replaces(advice);
+			advice = advice.set('html', errorMsg);
 		} else {
 			advice = new Element('div', {
 				html: errorMsg,
@@ -8771,7 +8772,7 @@ Form.Validator.addAllThese([
 
 	['validate-cc-num', {
 		errorMsg: function(element){
-			var ccNum = element.get('value').ccNum.replace(/[^0-9]/g, '');
+			var ccNum = element.get('value').replace(/[^0-9]/g, '');
 			return Form.Validator.getMsg('creditcard').substitute({length: ccNum.length});
 		},
 		test: function(element){
@@ -8966,10 +8967,12 @@ var OverText = new Class({
 			this.text.hide();
 			this.fireEvent('textHide', [this.text, this.element]);
 			this.pollingPaused = true;
-			try {
-				if (!suppressFocus) this.element.fireEvent('focus');
-				this.element.focus();
-			} catch(e){} //IE barfs if you call focus on hidden elements
+			if (!suppressFocus){
+				try {
+					this.element.fireEvent('focus');
+					this.element.focus();
+				} catch(e){} //IE barfs if you call focus on hidden elements
+			}
 		}
 		return this;
 	},
@@ -9123,7 +9126,7 @@ provides: [Fx.Accordion]
 ...
 */
 
-var Accordion = Fx.Accordion = new Class({
+Fx.Accordion = new Class({
 
 	Extends: Fx.Elements,
 
@@ -9145,10 +9148,14 @@ var Accordion = Fx.Accordion = new Class({
 	},
 
 	initialize: function(){
-		var params = Array.link(arguments, {'container': Element.type, 'options': Object.type, 'togglers': $defined, 'elements': $defined});
+		var params = Array.link(arguments, {
+			'container': Element.type, //deprecated
+			'options': Object.type,
+			'togglers': $defined,
+			'elements': $defined
+		});
 		this.parent(params.elements, params.options);
 		this.togglers = $$(params.togglers);
-		this.container = document.id(params.container);
 		this.previous = -1;
 		this.internalChain = new Chain();
 		if (this.options.alwaysHide) this.options.wait = true;
@@ -9172,7 +9179,8 @@ var Accordion = Fx.Accordion = new Class({
 				for (var fx in this.effects) el.setStyle(fx, 0);
 			}
 		}, this);
-		if ($chk(this.options.display)) this.display(this.options.display, this.options.initialDisplayFx);
+		if ($chk(this.options.display) || this.options.initialDisplayFx === false) this.display(this.options.display, this.options.initialDisplayFx);
+		if (this.options.fixedHeight !== false) this.options.returnHeightToAuto = false;
 		this.addEvent('complete', this.internalChain.callChain.bind(this.internalChain));
 	},
 
@@ -9207,10 +9215,10 @@ var Accordion = Fx.Accordion = new Class({
 	display: function(index, useFx){
 		if (!this.check(index, useFx)) return this;
 		useFx = $pick(useFx, true);
-		if (this.options.returnHeightToAuto) {
+		if (this.options.returnHeightToAuto){
 			var prev = this.elements[this.previous];
-			if (prev) {
-				for (var fx in this.effects) {
+			if (prev && !this.selfHidden){
+				for (var fx in this.effects){
 					prev.setStyle(fx, prev[this.effects[fx]]);
 				}
 			}
@@ -9221,19 +9229,54 @@ var Accordion = Fx.Accordion = new Class({
 		var obj = {};
 		this.elements.each(function(el, i){
 			obj[i] = {};
-			var hide = (i != index) || 
-						(this.options.alwaysHide && ((el.offsetHeight > 0 && this.options.height) || 
-							el.offsetWidth > 0 && this.options.width));
+			var hide;
+			if (i != index){
+				hide = true;
+			} else if (this.options.alwaysHide && ((el.offsetHeight > 0 && this.options.height) || el.offsetWidth > 0 && this.options.width)){
+				hide = true;
+				this.selfHidden = true;
+			}
 			this.fireEvent(hide ? 'background' : 'active', [this.togglers[i], el]);
 			for (var fx in this.effects) obj[i][fx] = hide ? 0 : el[this.effects[fx]];
 		}, this);
 		this.internalChain.chain(function(){
-			if (this.options.returnHeightToAuto) {
+			if (this.options.returnHeightToAuto && !this.selfHidden){
 				var el = this.elements[index];
-				el.setStyle('height', 'auto');
+				if (el) el.setStyle('height', 'auto');
 			};
 		}.bind(this));
 		return useFx ? this.start(obj) : this.set(obj);
+	}
+
+});
+
+/*
+	Compatibility with 1.2.0
+*/
+var Accordion = new Class({
+
+	Extends: Fx.Accordion,
+
+	initialize: function(){
+		this.parent.apply(this, arguments);
+		var params = Array.link(arguments, {'container': Element.type});
+		this.container = params.container;
+	},
+
+	addSection: function(toggler, element, pos){
+		toggler = document.id(toggler);
+		element = document.id(element);
+		var test = this.togglers.contains(toggler);
+		var len = this.togglers.length;
+		if (len && (!test || pos)){
+			pos = $pick(pos, len - 1);
+			toggler.inject(this.togglers[pos], 'before');
+			element.inject(toggler, 'after');
+		} else if (this.container && !test){
+			toggler.inject(this.container);
+			element.inject(this.container);
+		}
+		return this.parent.apply(this, arguments);
 	}
 
 });/*
@@ -9473,19 +9516,25 @@ Fx.Slide = new Class({
 	Extends: Fx,
 
 	options: {
-		mode: 'vertical'
+		mode: 'vertical',
+		wrapper: false,
+		hideOverflow: true
 	},
 
 	initialize: function(element, options){
 		this.addEvent('complete', function(){
 			this.open = (this.wrapper['offset' + this.layout.capitalize()] != 0);
+			if (this.open) this.wrapper.setStyle('height', '');
 			if (this.open && Browser.Engine.webkit419) this.element.dispose().inject(this.wrapper);
 		}, true);
 		this.element = this.subject = document.id(element);
 		this.parent(options);
 		var wrapper = this.element.retrieve('wrapper');
+		var styles = this.element.getStyles('margin', 'position', 'overflow');
+		if (this.options.hideOverflow) styles = $extend(styles, {overflow: 'hidden'});
+		if (this.options.wrapper) wrapper = document.id(this.options.wrapper).setStyles(styles);
 		this.wrapper = wrapper || new Element('div', {
-			styles: this.element.getStyles('margin', 'position', 'overflow')
+			styles: styles
 		}).wraps(this.element);
 		this.element.store('wrapper', this.wrapper).setStyle('margin', 0);
 		this.now = [];
@@ -9648,7 +9697,9 @@ var SmoothScroll = Fx.SmoothScroll = new Class({
 			if (el) {
 				event.preventDefault();
 				this.anchor = anchor;
-				this.toElement(el);
+				this.toElement(el).chain(function(){
+					this.fireEvent('scrolledTo', [link, el]);
+				}.bind(this));
 				link.blur();
 			}
 		}.bind(this));
@@ -9855,6 +9906,7 @@ var Drag = new Class({
 		handle: false,
 		invert: false,
 		preventDefault: false,
+		stopPropagation: false,
 		modifiers: {x: 'left', y: 'top'}
 	},
 
@@ -9894,6 +9946,7 @@ var Drag = new Class({
 	start: function(event){
 		if (event.rightClick) return;
 		if (this.options.preventDefault) event.preventDefault();
+		if (this.options.stopPropagation) event.stopPropagation();
 		this.mouse.start = event.page;
 		this.fireEvent('beforeStart', this.element);
 		var limit = this.options.limit;
@@ -10031,7 +10084,7 @@ Drag.Move = new Class({
 		if (this.container && $type(this.container) != 'element')
 			this.container = document.id(this.container.getDocument().body);
 		
-		var styles = element.getStyles('left', 'right', 'position');
+		var styles = element.getStyles('left', 'top', 'position');
 		if (styles.left == 'auto' || styles.top == 'auto')
 			element.setPosition(element.getPosition(element.getOffsetParent()));
 		
@@ -10437,12 +10490,20 @@ var Sortables = new Class({
 	getClone: function(event, element){
 		if (!this.options.clone) return new Element('div').inject(document.body);
 		if ($type(this.options.clone) == 'function') return this.options.clone.call(this, event, element, this.list);
-		return element.clone(true).setStyles({
+		var clone = element.clone(true).setStyles({
 			margin: '0px',
 			position: 'absolute',
 			visibility: 'hidden',
 			'width': element.getStyle('width')
-		}).inject(this.list).setPosition(element.getPosition(element.getOffsetParent()));
+		});
+		//prevent the duplicated radio inputs from unchecking the real one
+		if (clone.get('html').test('radio')) {
+			clone.getElements('input[type=radio]').each(function(input, i) {
+				input.set('name', 'clone_' + i);
+			});
+		}
+		
+		return clone.inject(this.list).setPosition(element.getPosition(element.getOffsetParent()));
 	},
 
 	getDroppables: function(){
@@ -10650,15 +10711,15 @@ Request.JSONP = new Class({
 		if (src.length > 2083) this.log('JSONP '+ src +' will fail in Internet Explorer, which enforces a 2083 bytes length limit on URIs');
 
 		var script = new Element('script', {type: 'text/javascript', src: src});
-		Request.JSONP.request_map['request_' + index] = function(data){ this.success(data, script); }.bind(this);
+		Request.JSONP.request_map['request_' + index] = function(){ this.success(arguments, script); }.bind(this);
 		return script.inject(this.options.injectScript);
 	},
 
-	success: function(data, script){
+	success: function(args, script){
 		if (script) script.destroy();
 		this.running = false;
-		this.log('JSONP successfully retrieved: ', data);
-		this.fireEvent('complete', [data]).fireEvent('success', [data]).callChain();
+		this.log('JSONP successfully retrieved: ', args);
+		this.fireEvent('complete', args).fireEvent('success', args).callChain();
 	}
 
 });
@@ -10947,7 +11008,9 @@ var Asset = {
 			document: document,
 			check: $lambda(true)
 		}, properties);
-
+		
+		if (properties.onLoad) properties.onload = properties.onLoad;
+		
 		var script = new Element('script', {src: source, type: 'text/javascript'});
 
 		var load = properties.onload.bind(script), 
@@ -10992,6 +11055,8 @@ var Asset = {
 		var element = document.id(image) || new Element('img');
 		['load', 'abort', 'error'].each(function(name){
 			var type = 'on' + name;
+			var cap = name.capitalize();
+			if (properties['on' + cap]) properties[type] = properties['on' + cap];
 			var event = properties[type];
 			delete properties[type];
 			image[type] = function(){
@@ -11366,7 +11431,9 @@ var HtmlTable = new Class({
 		this.tfoot = document.id(this.element.tFoot);
 		if (this.tfoot) this.foot = document.id(this.thead.rows[0]);
 
-		this.options.rows.each(this.push.bind(this));
+		this.options.rows.each(function(row){
+			this.push(row);
+		}, this);
 
 		['adopt', 'inject', 'wraps', 'grab', 'replaces', 'dispose'].each(function(method){
 				this[method] = this.element[method].bind(this.element);
@@ -11382,39 +11449,44 @@ var HtmlTable = new Class({
 		return this;
 	},
 
+	set: function(what, items) {
+		var target = (what == 'headers') ? 'tHead' : 'tFoot';
+		this[target.toLowerCase()] = (document.id(this.element[target]) || new Element(target.toLowerCase()).inject(this.element, 'top')).empty();
+		var data = this.push(items, {}, this[target.toLowerCase()], what == 'headers' ? 'th' : 'td');
+		if (what == 'headers') this.head = document.id(this.thead.rows[0]);
+		else this.foot = document.id(this.thead.rows[0]);
+		return data;
+	},
+
 	setHeaders: function(headers){
-		this.thead = (document.id(this.element.tHead) || new Element('thead').inject(this.element, 'top')).empty();
-		this.push(headers, this.thead, 'th');
-		this.head = document.id(this.thead.rows[0]);
+		this.set('headers', headers);
 		return this;
 	},
 
 	setFooters: function(footers){
-		this.tfoot = (document.id(this.element.tFoot) || new Element('tfoot').inject(this.element, 'top')).empty();
-		this.push(footers, this.tfoot);
-		this.foot = document.id(this.thead.rows[0]);
+		this.set('footers', footers);
 		return this;
 	},
 
-	push: function(row, target, tag){
+	push: function(row, rowProperties, target, tag){
 		var tds = row.map(function(data){
 			var td = new Element(tag || 'td', data.properties),
 				type = data.content || data || '',
 				element = document.id(type);
-
-			if(element) td.adopt(element);
+			if($type(type) != 'string' && element) td.adopt(element);
 			else td.set('html', type);
 
 			return td;
 		});
 
 		return {
-			tr: new Element('tr').inject(target || this.body).adopt(tds),
+			tr: new Element('tr', rowProperties).inject(target || this.body).adopt(tds),
 			tds: tds
 		};
 	}
 
-});/*
+});
+/*
 ---
 
 script: HtmlTable.Zebra.js
@@ -11522,6 +11594,7 @@ HtmlTable = Class.refactor(HtmlTable, {
 	},
 
 	attachSorts: function(attach){
+		this.element.removeEvents('click:relay(th)');
 		this.element[$pick(attach, true) ? 'addEvent' : 'removeEvent']('click:relay(th)', this.bound.headClick);
 	},
 
@@ -11537,8 +11610,14 @@ HtmlTable = Class.refactor(HtmlTable, {
 
 		// auto-detect
 		this.parsers = $$(this.head.cells).map(function(cell, index) {
-			if (!force && (cell.hasClass(this.options.classNoSort) || cell.retrieve('htmltable-sort'))) return cell.retrieve('htmltable-sort');
-			var sortSpan = new Element('span', {'html': '&#160;', 'class': this.options.classSortSpan}).inject(cell, 'top');
+			if (!force && (cell.hasClass(this.options.classNoSort) || cell.retrieve('htmltable-parser'))) return cell.retrieve('htmltable-parser');
+			var thDiv = new Element('div');
+			$each(cell.childNodes, function(node) {
+				thDiv.adopt(node);
+			});
+			thDiv.inject(cell);
+			var sortSpan = new Element('span', {'html': '&#160;', 'class': this.options.classSortSpan}).inject(thDiv, 'top');
+			
 			this.sortSpans.push(sortSpan);
 
 			var parser = parsers[index], 
@@ -11551,9 +11630,8 @@ HtmlTable = Class.refactor(HtmlTable, {
 				HtmlTable.Parsers.some(function(current) {
 					var match = current.match;
 					if (!match) return false;
-					if (Browser.Engine.trident) return false;
 					for (var i = 0, j = rows.length; i < j; i++) {
-						var text = rows[i].cells[index].get('html').clean();
+						var text = $(rows[i].cells[index]).get('html').clean();
 						if (text && match.test(text)) {
 							parser = current;
 							return true;
@@ -11569,7 +11647,8 @@ HtmlTable = Class.refactor(HtmlTable, {
 	},
 
 	headClick: function(event, el) {
-		if (!this.head) return;
+		console.log(el);
+		if (!this.head || el.hasClass(this.options.classNoSort)) return;
 		var index = Array.indexOf(this.head.cells, el);
 		this.sort(index);
 		return false;
@@ -11623,22 +11702,20 @@ HtmlTable = Class.refactor(HtmlTable, {
 		var data = Array.map(this.body.rows, function(row, i) {
 			var value = parser.convert.call(document.id(row.cells[index]));
 
-			if (parser.number || $type(value) == 'number') {
-				value = String(value).replace(/[^\d]/, '');
-				value = '00000000000000000000000000000000'.substr(0, 32 - value.length).concat(value);
-			}
-
 			return {
 				position: i,
 				value: value,
 				toString:  function() {
-					return value;
+					return value.toString();
 				}
 			};
 		}, this);
-
 		data.reverse(true);
-		data.sort();
+
+		data.sort(function(a, b){
+			if (a.value === b.value) return 0;
+			return a.value > b.value ? 1 : -1;
+		});
 
 		if (!this.sorted.reverse) data.reverse(true);
 
@@ -11688,7 +11765,7 @@ HtmlTable = Class.refactor(HtmlTable, {
 	},
 
 	disableSort: function(){
-		this.element.remove(this.options.classSortable);
+		this.element.removeClass(this.options.classSortable);
 		this.attachSorts(false);
 		this.sortSpans.each(function(span) { span.destroy(); });
 		this.sortSpans.empty();
@@ -11701,9 +11778,9 @@ HtmlTable = Class.refactor(HtmlTable, {
 HtmlTable.Parsers = new Hash({
 
 	'date': {
-		match: /^\d{4}[^\d]|[^\d]\d{4}$/,
+		match: /^\d{2}[-\/ ]\d{2}[-\/ ]\d{2,4}$/,
 		convert: function() {
-			return Date.parse(this.get('text'));
+			return Date.parse(this.get('text')).format('db');
 		},
 		type: 'date'
 	},
@@ -11729,21 +11806,21 @@ HtmlTable.Parsers = new Hash({
 	'numberLax': {
 		match: /^[^\d]+\d+$/,
 		convert: function() {
-			return this.get('text').replace(/[^0-9]/, '').toInt();
+			return this.get('text').replace(/[^-?^0-9]/, '').toInt();
 		},
 		number: true
 	},
 	'float': {
 		match: /^[\d]+\.[\d]+/,
 		convert: function() {
-			return this.get('text').replace(/[^\d.]/, '').toFloat();
+			return this.get('text').replace(/[^-?^\d.]/, '').toFloat();
 		},
 		number: true
 	},
 	'floatLax': {
 		match: /^[^\d]+[\d]+\.[\d]+$/,
 		convert: function() {
-			return this.get('text').replace(/[^\d.]/, '');
+			return this.get('text').replace(/[^-?^\d.]/, '');
 		},
 		number: true
 	},
@@ -11760,7 +11837,9 @@ HtmlTable.Parsers = new Hash({
 		}
 	}
 
-});/*
+});
+
+/*
 ---
 
 script: Keyboard.js
@@ -11786,37 +11865,8 @@ provides: [Keyboard]
 */
 
 (function(){
-
-	var parsed = {};
-	var modifiers = ['shift', 'control', 'alt', 'meta'];
-	var regex = /^(?:shift|control|ctrl|alt|meta)$/;
 	
-	var parse = function(type, eventType){
-		type = type.toLowerCase().replace(/^(keyup|keydown):/, function($0, $1){
-			eventType = $1;
-			return '';
-		});
-		
-		if (!parsed[type]){
-			var key = '', mods = {};
-			type.split('+').each(function(part){
-				if (regex.test(part)) mods[part] = true;
-				else key = part;
-			});
-		
-			mods.control = mods.control || mods.ctrl; // allow both control and ctrl
-			var match = '';
-			modifiers.each(function(mod){
-				if (mods[mod]) match += mod + '+';
-			});
-			
-			parsed[type] = match + key;
-		}
-		
-		return eventType + ':' + parsed[type];
-	};
-
-	this.Keyboard = new Class({
+	var Keyboard = this.Keyboard = new Class({
 
 		Extends: Events,
 
@@ -11829,24 +11879,24 @@ provides: [Keyboard]
 			*/
 			defaultEventType: 'keydown',
 			active: false,
-			events: {}
+			events: {},
+			nonParsedEvents: ['activate', 'deactivate', 'onactivate', 'ondeactivate', 'changed', 'onchanged']
 		},
 
 		initialize: function(options){
 			this.setOptions(options);
-			//if this is the root manager, nothing manages it
-			if (Keyboard.manager) Keyboard.manager.manage(this);
 			this.setup();
-		},
-
+		}, 
 		setup: function(){
 			this.addEvents(this.options.events);
+			//if this is the root manager, nothing manages it
+			if (Keyboard.manager && !this.manager) Keyboard.manager.manage(this);
 			if (this.options.active) this.activate();
 		},
 
 		handle: function(event, type){
 			//Keyboard.stop(event) prevents key propagation
-			if (!this.active || event.preventKeyboardPropagation) return;
+			if (event.preventKeyboardPropagation) return;
 			
 			var bubbles = !!this.manager;
 			if (bubbles && this.activeKB){
@@ -11858,59 +11908,64 @@ provides: [Keyboard]
 			if (!bubbles && this.activeKB) this.activeKB.handle(event, type);
 		},
 
-		addEvent: function(type, fn, internal) {
-			return this.parent(parse(type, this.options.defaultEventType), fn, internal);
+		addEvent: function(type, fn, internal){
+			return this.parent(Keyboard.parse(type, this.options.defaultEventType, this.options.nonParsedEvents), fn, internal);
 		},
 
-		removeEvent: function(type, fn) {
-			return this.parent(parse(type, this.options.defaultEventType), fn);
-		},
-
-		activate: function(){
-			this.active = true;
-			return this.enable();
-		},
-
-		deactivate: function(){
-			this.active = false;
-			return this.fireEvent('deactivate');
+		removeEvent: function(type, fn){
+			return this.parent(Keyboard.parse(type, this.options.defaultEventType, this.options.nonParsedEvents), fn);
 		},
 
 		toggleActive: function(){
 			return this[this.active ? 'deactivate' : 'activate']();
 		},
 
-		enable: function(instance){
+		activate: function(instance){
 			if (instance) {
 				//if we're stealing focus, store the last keyboard to have it so the relenquish command works
 				if (instance != this.activeKB) this.previous = this.activeKB;
 				//if we're enabling a child, assign it so that events are now passed to it
 				this.activeKB = instance.fireEvent('activate');
+				Keyboard.manager.fireEvent('changed');
 			} else if (this.manager) {
 				//else we're enabling ourselves, we must ask our parent to do it for us
-				this.manager.enable(this);
+				this.manager.activate(this);
+			}
+			return this;
+		},
+
+		deactivate: function(instance){
+			if (instance) {
+				if(instance === this.activeKB) {
+					this.activeKB = null;
+					instance.fireEvent('deactivate');
+					Keyboard.manager.fireEvent('changed');
+				}
+			}
+			else if (this.manager) {
+				this.manager.deactivate(this);
 			}
 			return this;
 		},
 
 		relenquish: function(){
-			if (this.previous) this.enable(this.previous);
+			if (this.previous) this.activate(this.previous);
 		},
 
 		//management logic
-		manage: function(instance) {
+		manage: function(instance){
 			if (instance.manager) instance.manager.drop(instance);
 			this.instances.push(instance);
 			instance.manager = this;
-			if (!this.activeKB) this.enable(instance);
+			if (!this.activeKB) this.activate(instance);
 			else this._disable(instance);
 		},
 
-		_disable: function(instance) {
+		_disable: function(instance){
 			if (this.activeKB == instance) this.activeKB = null;
 		},
 
-		drop: function(instance) {
+		drop: function(instance){
 			this._disable(instance);
 			this.instances.erase(instance);
 		},
@@ -11918,35 +11973,81 @@ provides: [Keyboard]
 		instances: [],
 
 		trace: function(){
-			this.enableLog();
-			var item = this;
-			this.log('the following items have focus: ');
-			while (item) {
-				this.log(document.id(item.widget) || item.widget || item, 'active: ' + this.active);
-				item = item.activeKB;
-			}
+			Keyboard.trace(this);
+		},
+
+		each: function(fn){
+			Keyboard.each(this, fn);
 		}
 
 	});
+	
+	var parsed = {};
+	var modifiers = ['shift', 'control', 'alt', 'meta'];
+	var regex = /^(?:shift|control|ctrl|alt|meta)$/;
+	
+	Keyboard.parse = function(type, eventType, ignore){
+		if (ignore && ignore.contains(type.toLowerCase())) return type;
+		
+		type = type.toLowerCase().replace(/^(keyup|keydown):/, function($0, $1){
+			eventType = $1;
+			return '';
+		});
 
-	Keyboard.stop = function(event) {
+		if (!parsed[type]){
+			var key, mods = {};
+			type.split('+').each(function(part){
+				if (regex.test(part)) mods[part] = true;
+				else key = part;
+			});
+
+			mods.control = mods.control || mods.ctrl; // allow both control and ctrl
+			
+			var keys = [];
+			modifiers.each(function(mod){
+				if (mods[mod]) keys.push(mod);
+			});
+			
+			if (key) keys.push(key);
+			parsed[type] = keys.join('+');
+		}
+
+		return eventType + ':' + parsed[type];
+	};
+
+	Keyboard.each = function(keyboard, fn){
+		var current = keyboard || Keyboard.manager;
+		while (current){
+			fn.run(current);
+			current = current.activeKB;
+		}
+	};
+
+	Keyboard.stop = function(event){
 		event.preventKeyboardPropagation = true;
 	};
 
-	Keyboard.manager = new this.Keyboard({
+	Keyboard.manager = new Keyboard({
 		active: true
 	});
 	
-	Keyboard.trace = function(){
-		Keyboard.manager.trace();
+	Keyboard.trace = function(keyboard){
+		keyboard = keyboard || Keyboard.manager;
+		keyboard.enableLog();
+		keyboard.log('the following items have focus: ');
+		Keyboard.each(keyboard, function(current){
+			keyboard.log(document.id(current.widget) || current.wiget || current);
+		});
 	};
 	
 	var handler = function(event){
-		var mods = '';
+		var keys = [];
 		modifiers.each(function(mod){
-			if (event[mod]) mods += mod + '+';
+			if (event[mod]) keys.push(mod);
 		});
-		Keyboard.manager.handle(event, event.type + ':' + mods + event.key);
+		
+		if (!regex.test(event.key)) keys.push(event.key);
+		Keyboard.manager.handle(event, event.type + ':' + keys.join('+'));
 	};
 	
 	document.addEvents({
@@ -11955,13 +12056,27 @@ provides: [Keyboard]
 	});
 
 	Event.Keys.extend({
+		'shift': 16,
+		'control': 17,
+		'alt': 18,
+		'capslock': 20,
 		'pageup': 33,
 		'pagedown': 34,
 		'end': 35,
 		'home': 36,
-		'capslock': 20,
 		'numlock': 144,
-		'scrolllock': 145
+		'scrolllock': 145,
+		';': 186,
+		'=': 187,
+		',': 188,
+		'-': Browser.Engine.Gecko ? 109 : 189,
+		'.': 190,
+		'/': 191,
+		'`': 192,
+		'[': 219,
+		'\\': 220,
+		']': 221,
+		"'": 222
 	});
 
 })();
@@ -11992,8 +12107,8 @@ provides: [HtmlTable.Select]
 HtmlTable = Class.refactor(HtmlTable, {
 
 	options: {
-		/*onRowSelect: $empty,
-		onRowUnselect: $empty,*/
+		/*onRowFocus: $empty,
+		onRowUnfocus: $empty,*/
 		useKeyboard: true,
 		classRowSelected: 'table-tr-selected',
 		classRowHovered: 'table-tr-hovered',
@@ -12111,6 +12226,7 @@ HtmlTable = Class.refactor(HtmlTable, {
 
 	focusRow: function(){
 		var row = arguments[1] || arguments[0]; //delegation passes the event first
+		if (!this.body.getChildren().contains(row)) return;
 		var unfocus = function(row){
 			this.selectedRows.erase(row);
 			row.removeClass(this.options.classRowSelected);
@@ -12139,7 +12255,100 @@ HtmlTable = Class.refactor(HtmlTable, {
 		return this.selectAll(false);
 	}
 
-});/*
+});
+/*
+---
+
+script: Keyboard.js
+
+description: Enhances Keyboard by adding the ability to name and describe keyboard shortcuts, and the ability to grab shortcuts by name and bind the shortcut to different keys.
+
+license: MIT-style license
+
+authors:
+- Perrin Westrich
+
+requires:
+- core:1.2.4/Function
+- /Keyboard.Extras
+
+provides: [Keyboard.Extras]
+
+...
+*/
+Keyboard.prototype.options.nonParsedEvents.combine(['rebound', 'onrebound']);
+
+Keyboard.implement({
+
+	/*
+		shortcut should be in the format of:
+		{
+			'keys': 'shift+s', // the default to add as an event.
+			'description': 'blah blah blah', // a brief description of the functionality.
+			'handler': function(){} // the event handler to run when keys are pressed.
+		}
+	*/
+	addShortcut: function(name, shortcut) {
+		this.shortcuts = this.shortcuts || [];
+		this.shortcutIndex = this.shortcutIndex || {};
+		
+		shortcut.getKeyboard = $lambda(this);
+		shortcut.name = name;
+		this.shortcutIndex[name] = shortcut;
+		this.shortcuts.push(shortcut);
+		if(shortcut.keys) this.addEvent(shortcut.keys, shortcut.handler);
+		return this;
+	},
+
+	addShortcuts: function(obj){
+		for(var name in obj) this.addShortcut(name, obj[name]);
+		return this;
+	},
+
+	getShortcuts: function(){
+		return this.shortcuts || [];
+	},
+
+	getShortcut: function(name){
+		return (this.shortcutIndex || {})[name];
+	}
+
+});
+
+Keyboard.rebind = function(newKeys, shortcuts){
+	$splat(shortcuts).each(function(shortcut){
+		shortcut.getKeyboard().removeEvent(shortcut.keys, shortcut.handler);
+		shortcut.getKeyboard().addEvent(newKeys, shortcut.handler);
+		shortcut.keys = newKeys;
+		shortcut.getKeyboard().fireEvent('rebound');
+	});
+};
+
+
+Keyboard.getActiveShortcuts = function(keyboard) {
+	var activeKBS = [], activeSCS = [];
+	Keyboard.each(keyboard, [].push.bind(activeKBS));
+	activeKBS.each(function(kb){ activeSCS.extend(kb.getShortcuts()); });
+	return activeSCS;
+};
+
+Keyboard.getShortcut = function(name, keyboard, opts){
+	opts = opts || {};
+	var shortcuts = opts.many ? [] : null,
+		set = opts.many ? function(kb){
+				var shortcut = kb.getShortcut(name);
+				if(shortcut) shortcuts.push(shortcut);
+			} : function(kb) { 
+				if(!shortcuts) shortcuts = kb.getShortcut(name);
+			};
+	Keyboard.each(keyboard, set);
+	return shortcuts;
+};
+
+Keyboard.getShortcuts = function(name, keyboard) {
+	return Keyboard.getShortcut(name, keyboard, { many: true });
+};
+/*
 ---
 
 script: Scroller.js
@@ -12178,7 +12387,8 @@ var Scroller = new Class({
 	initialize: function(element, options){
 		this.setOptions(options);
 		this.element = document.id(element);
-		this.listener = ($type(this.element) != 'element') ? document.id(this.element.getDocument().body) : this.element;
+		this.docBody = document.id(this.element.getDocument().body);
+		this.listener = ($type(this.element) != 'element') ?  this.docBody : this.element;
 		this.timer = null;
 		this.bound = {
 			attach: this.attach.bind(this),
@@ -12220,14 +12430,15 @@ var Scroller = new Class({
 	scroll: function(){
 		var size = this.element.getSize(), 
 			scroll = this.element.getScroll(), 
-			pos = this.element.getOffsets(), 
+			pos = this.element != this.docBody ? this.element.getOffsets() : {x: 0, y:0}, 
 			scrollSize = this.element.getScrollSize(), 
 			change = {x: 0, y: 0};
 		for (var z in this.page){
-			if (this.page[z] < (this.options.area + pos[z]) && scroll[z] != 0)
+			if (this.page[z] < (this.options.area + pos[z]) && scroll[z] != 0) {
 				change[z] = (this.page[z] - this.options.area - pos[z]) * this.options.velocity;
-			else if (this.page[z] + this.options.area > (size[z] + pos[z]) && scroll[z] + size[z] != scrollSize[z])
+			} else if (this.page[z] + this.options.area > (size[z] + pos[z]) && scroll[z] + size[z] != scrollSize[z]) {
 				change[z] = (this.page[z] - size[z] + this.options.area - pos[z]) * this.options.velocity;
+			}
 		}
 		if (change.y || change.x) this.fireEvent('change', [scroll.x + change.x, scroll.y + change.y]);
 	}
@@ -12287,25 +12498,23 @@ this.Tips = new Class({
 		hideDelay: 100,
 		className: 'tip-wrap',
 		offset: {x: 16, y: 16},
+		windowPadding: {x:0, y:0},
 		fixed: false
 	},
 
 	initialize: function(){
 		var params = Array.link(arguments, {options: Object.type, elements: $defined});
 		this.setOptions(params.options);
-		document.id(this);
-		
 		if (params.elements) this.attach(params.elements);
+		this.container = new Element('div', {'class': 'tip'});
 	},
 
 	toElement: function(){
 		if (this.tip) return this.tip;
-		
-		this.container = new Element('div', {'class': 'tip'});
+
 		return this.tip = new Element('div', {
 			'class': this.options.className,
 			styles: {
-				display: 'none',
 				position: 'absolute',
 				top: 0,
 				left: 0
@@ -12366,8 +12575,10 @@ this.Tips = new Class({
 		}, this);
 		
 		$clear(this.timer);
-		this.timer = this.show.delay(this.options.showDelay, this, element);
-		this.position((this.options.fixed) ? {page: element.getPosition()} : event);
+		this.timer = (function(){
+			this.show(this, element);
+			this.position((this.options.fixed) ? {page: element.getPosition()} : event);
+		}).delay(this.options.showDelay, this);
 	},
 
 	elementLeave: function(event, element){
@@ -12376,11 +12587,11 @@ this.Tips = new Class({
 		this.fireForParent(event, element);
 	},
 
-	fireForParent: function(event, element) {
-			parentNode = element.getParent();
-			if (parentNode == document.body) return;
-			if (parentNode.retrieve('tip:enter')) parentNode.fireEvent('mouseenter', event);
-			else return this.fireForParent(parentNode, event);
+	fireForParent: function(event, element){
+		element = element.getParent();
+		if (!element || element == document.body) return;
+		if (element.retrieve('tip:enter')) element.fireEvent('mouseenter', event);
+		else this.fireForParent(event, element);
 	},
 
 	elementMove: function(event, element){
@@ -12388,6 +12599,8 @@ this.Tips = new Class({
 	},
 
 	position: function(event){
+		if (!this.tip) document.id(this);
+
 		var size = window.getSize(), scroll = window.getScroll(),
 			tip = {x: this.tip.offsetWidth, y: this.tip.offsetHeight},
 			props = {x: 'left', y: 'top'},
@@ -12395,7 +12608,7 @@ this.Tips = new Class({
 		
 		for (var z in props){
 			obj[props[z]] = event.page[z] + this.options.offset[z];
-			if ((obj[props[z]] + tip[z] - scroll[z]) > size[z]) obj[props[z]] = event.page[z] - this.options.offset[z] - tip[z];
+			if ((obj[props[z]] + tip[z] - scroll[z]) > size[z] - this.options.windowPadding[z]) obj[props[z]] = event.page[z] - this.options.offset[z] - tip[z];
 		}
 		
 		this.tip.setStyles(obj);
@@ -12407,11 +12620,13 @@ this.Tips = new Class({
 	},
 
 	show: function(element){
-		this.fireEvent('show', [element]);
+		if (!this.tip) document.id(this);
+		this.fireEvent('show', [this.tip, element]);
 	},
 
 	hide: function(element){
-		this.fireEvent('hide', [element]);
+		if (!this.tip) document.id(this);
+		this.fireEvent('hide', [this.tip, element]);
 	}
 
 });
@@ -12419,7 +12634,7 @@ this.Tips = new Class({
 })();/*
 ---
 
-script: Date.Catalan.US.js
+script: Date.Catalan.js
 
 description: Date messages for Catalan.
 
@@ -12469,6 +12684,66 @@ MooTools.lang.set('ca-CA', 'Date', {
 	daysUntil: '{delta} dies des d`ara'
 
 });/*
+---
+
+script: Date.Czech.js
+
+description: Date messages for Czech.
+
+license: MIT-style license
+
+authors:
+- Jan Černý chemiX
+
+requires:
+- /Lang
+- /Date
+
+provides: [Date.Czech]
+
+...
+*/
+
+MooTools.lang.set('cs-CZ', 'Date', {
+
+	months: ['Leden', 'Únor', 'Březen', 'Duben', 'Květen', 'Červen', 'Červenec', 'Srpen', 'Září', 'Říjen', 'Listopad', 'Prosinec'],
+	days: ['Neděle', 'Pondělí', 'Úterý', 'Středa', 'Čtvrtek', 'Pátek', 'Sobota'],
+	//culture's date order: MM/DD/YYYY
+	dateOrder: ['date', 'month', 'year'],
+	shortDate: '%d/%m/%Y',
+	shortTime: '%H:%M',
+	AM: 'dop.',
+	PM: 'odp.',
+
+	/* Date.Extras */
+	ordinal: function(dayOfMonth){
+		return '.';
+	},
+
+    // TODO : in examples use and fix it
+	lessThanMinuteAgo: 'méně než minutou',
+	minuteAgo: 'přibližně před minutou',
+	minutesAgo: 'před {delta} minutami',
+	hourAgo: 'přibližně před hodinou',
+	hoursAgo: 'před {delta} hodinami',
+	dayAgo: 'před dnem',
+	daysAgo: 'před {delta} dni',
+	lessThanMinuteUntil: 'před méně než minutou',
+	minuteUntil: 'asi před minutou',
+	minutesUntil: ' asi před {delta} minutami',
+	hourUntil: 'asi před hodinou',
+	hoursUntil: 'před {delta} hodinami',
+	dayUntil: 'před dnem',
+	daysUntil: 'před {delta} dni',
+	weekUntil: 'před týdnem',
+	weeksUntil: 'před {delta} týdny',
+	monthUntil: 'před měsícem',
+	monthsUntil: 'před {delta} měsíci',
+	yearUntil: 'před rokem',
+	yearsUntil: 'před {delta} lety'
+
+});
+/*
 ---
 
 script: Date.Danish.js
@@ -12701,6 +12976,93 @@ MooTools.lang.set('et-EE', 'Date', {
 	yearsUntil: '{delta} aasta pärast'
 
 });/*
+---
+
+script: Date.German.js
+
+description: Date messages for German.
+
+license: MIT-style license
+
+authors:
+- Christoph Pojer
+- Frank Rossi
+- Ulrich Petri
+- Fabian Beiner
+
+requires:
+- /Lang
+- /Date
+
+provides: [Date.German]
+
+...
+*/
+
+MooTools.lang.set('de-DE', 'Date', {
+
+	months: ['Januar', 'Februar', 'M&auml;rz', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'],
+	days: ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'],
+	//culture's date order: MM/DD/YYYY
+	dateOrder: [ 'date', 'month', 'year', '.'],
+
+	AM: 'vormittags',
+	PM: 'nachmittags',
+
+	shortDate: '%d.%m.%Y',
+	shortTime: '%H:%M',
+
+	/* Date.Extras */
+	ordinal: '.',
+
+	lessThanMinuteAgo: 'Vor weniger als einer Minute',
+	minuteAgo: 'Vor einer Minute',
+	minutesAgo: 'Vor {delta} Minuten',
+	hourAgo: 'Vor einer Stunde',
+	hoursAgo: 'Vor {delta} Stunden',
+	dayAgo: 'Vor einem Tag',
+	daysAgo: 'Vor {delta} Tagen',
+	weekAgo: 'Vor einer Woche',
+	weeksAgo: 'Vor {delta} Wochen',
+	monthAgo: 'Vor einem Monat',
+	monthsAgo: 'Vor {delta} Monaten',
+	yearAgo: 'Vor einem Jahr',
+	yearsAgo: 'Vor {delta} Jahren',
+	lessThanMinuteUntil: 'In weniger als einer Minute',
+	minuteUntil: 'In einer Minute',
+	minutesUntil: 'In {delta} Minuten',
+	hourUntil: 'In ca. einer Stunde',
+	hoursUntil: 'In ca. {delta} Stunden',
+	dayUntil: 'In einem Tag',
+	daysUntil: 'In {delta} Tagen',
+	weekUntil: 'In einer Woche',
+	weeksUntil: 'In {delta} Wochen',
+	monthUntil: 'In einem Monat',
+	monthsUntil: 'In {delta} Monaten',
+	yearUntil: 'In einem Jahr',
+	yearsUntil: 'In {delta} Jahren'
+});/*
+---
+
+script: Date.German.CH.js
+
+description: Date messages for German (Switzerland).
+
+license: MIT-style license
+
+authors: 
+- Michael van der Weg
+
+requires:
+- /Lang
+- /Date.German
+
+provides: [Date.German.CH]
+
+...
+*/
+
+MooTools.lang.set('de-CH', 'cascade', ['de-DE']);/*
 ---
 
 script: Date.French.js
@@ -12970,6 +13332,71 @@ MooTools.lang.set('pt-BR', 'Date', {
 	yearsUntil: 'em {delta} anos'
 
 });/*
+Script: Date.Russian.js
+	Date messages for Russian.
+
+	License:
+		MIT-style license.
+
+	Authors:
+		Evstigneev Pavel
+*/
+
+MooTools.lang.set('ru-RU-unicode', 'Date', {
+
+	months: ['Январь', 'Февраль', 'Март', '�?прель', 'Май', 'Июнь', 'Июль', '�?вгу�?т', 'Сент�?брь', 'Окт�?брь', '�?о�?брь', 'Декабрь'],
+	days: ['Во�?кре�?енье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'П�?тница', 'Суббота'],
+	//culture's date order: MM/DD/YYYY
+	dateOrder: ['date', 'month', 'year'],
+	AM: 'AM',
+	PM: 'PM',
+
+	shortDate: '%d/%m/%Y',
+	shortTime: '%H:%M',
+
+
+  /*
+   *  Russian language pluralization rules, taken from CLDR project, http://unicode.org/cldr/
+   *
+   *  one -> n mod 10 is 1 and n mod 100 is not 11;
+   *  few -> n mod 10 in 2..4 and n mod 100 not in 12..14;
+   *  many -> n mod 10 is 0 or n mod 10 in 5..9 or n mod 100 in 11..14;
+   *  other -> everything else (example 3.14)
+   */
+
+  pluralize: function (n, one, few, many, other) {
+    var modulo10 = n % 10
+    var modulo100 = n % 100
+
+    if (modulo10 == 1 && modulo100 != 11) {
+      return one;
+    } else if ((modulo10 == 2 || modulo10 == 3 || modulo10 == 4) && !(modulo100 == 12 || modulo100 == 13 || modulo100 == 14)) {
+      return few;
+    } else if (modulo10 == 0 || (modulo10 == 5 || modulo10 == 6 || modulo10 == 7 || modulo10 == 8 || modulo10 == 9) || (modulo100 == 11 || modulo100 == 12 || modulo100 == 13 || modulo100 == 14)) {
+      return many;
+    } else {
+      return other;
+    }
+  },
+
+	/* Date.Extras */
+	ordinal: '',
+	lessThanMinuteAgo: 'меньше минуты назад',
+	minuteAgo: 'минута назад',
+	minutesAgo: function (delta) { return  '{delta} ' + this.pluralize(delta, 'минута', 'минуты', 'минут') + ' назад'},
+	hourAgo: 'ча�? назад',
+	hoursAgo: function (delta) { return  '{delta} ' + this.pluralize(delta, 'ча�?', 'ча�?а', 'ча�?ов') + ' назад'},
+	dayAgo: 'вчера',
+	daysAgo: function (delta) { return '{delta} ' + this.pluralize(delta, 'день', 'дн�?', 'дней') + ' назад' },
+	lessThanMinuteUntil: 'меньше минуты назад',
+	minuteUntil: 'через минуту',
+	minutesUntil: function (delta) { return  'через {delta} ' + this.pluralize(delta, 'ча�?', 'ча�?а', 'ча�?ов') + ''},
+	hourUntil: 'через ча�?',
+	hoursUntil: function (delta) { return  'через {delta} ' + this.pluralize(delta, 'ча�?', 'ча�?а', 'ча�?ов') + ''},
+	dayUntil: 'завтра',
+	daysUntil: function (delta) { return 'через {delta} ' + this.pluralize(delta, 'день', 'дн�?', 'дней') + '' }
+
+});/*
 ---
 
 script: Date.Spanish.US.js
@@ -12993,7 +13420,7 @@ provides: [Date.Spanish]
 MooTools.lang.set('es-ES', 'Date', {
 
 	months: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
-	days: ['Domingo', 'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado'],
+	days: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
 	//culture's date order: MM/DD/YYYY
 	dateOrder: ['date', 'month', 'year'],
 	AM: 'AM',
@@ -13010,8 +13437,8 @@ MooTools.lang.set('es-ES', 'Date', {
 	minutesAgo: 'hace {delta} minutos',
 	hourAgo: 'hace una hora',
 	hoursAgo: 'hace unas {delta} horas',
-	dayAgo: 'hace un dia',
-	daysAgo: 'hace {delta} dias',
+	dayAgo: 'hace un día',
+	daysAgo: 'hace {delta} días',
 	weekAgo: 'hace una semana',
 	weeksAgo: 'hace unas {delta} semanas',
 	monthAgo: 'hace un mes',
@@ -13023,8 +13450,8 @@ MooTools.lang.set('es-ES', 'Date', {
 	minutesUntil: '{delta} minutos desde ahora',
 	hourUntil: 'una hora desde ahora',
 	hoursUntil: 'unas {delta} horas desde ahora',
-	dayUntil: 'un dia desde ahora',
-	daysUntil: '{delta} dias desde ahora',
+	dayUntil: 'un día desde ahora',
+	daysUntil: '{delta} días desde ahora',
 	weekUntil: 'una semana desde ahora',
 	weeksUntil: 'unas {delta} semanas desde ahora',
 	monthUntil: 'un mes desde ahora',
@@ -13089,6 +13516,104 @@ MooTools.lang.set('sv-SE', 'Date', {
 });/*
 ---
 
+script: Date.Ukrainian.js
+
+description: Date messages for Ukrainian.
+
+license: MIT-style license
+
+authors:
+- Slik
+
+requires:
+- /Lang
+- /Date
+
+provides: [Date.Ukrainian]
+
+...
+*/
+
+(function(){
+	var pluralize = function(n, one, few, many, other){
+		var d = (n / 10).toInt();
+		var z = n % 10;
+		var s = (n / 100).toInt();
+
+		if(d == 1 && n > 10) return many;
+		if(z == 1) return one;
+		if(z > 0 && z < 5) return few;
+		return many;
+	};
+
+	MooTools.lang.set('uk-UA', 'Date', {
+			months: ['Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень', 'Липень', 'Серпень', 'Вере�?ень', 'Жовтень', 'Ли�?топад', 'Грудень'],
+			days: ['�?еділ�?', 'Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П\'�?тниц�?', 'Субота'],
+			//culture's date order: DD/MM/YYYY
+			dateOrder: ['date', 'month', 'year'],
+			AM: 'до полудн�?',
+			PM: 'по полудню',
+
+			shortDate: '%d/%m/%Y',
+			shortTime: '%H:%M',
+
+			/* Date.Extras */
+			ordinal: '',
+			lessThanMinuteAgo: 'меньше хвилини тому',
+			minuteAgo: 'хвилину тому',
+			minutesAgo: function (delta){
+				return '{delta} ' + pluralize(delta, 'хвилину', 'хвилини', 'хвилин') + ' тому';
+			},
+			hourAgo: 'годину тому',
+			hoursAgo: function (delta){
+				return '{delta} ' + pluralize(delta, 'годину', 'години', 'годин') + ' тому';
+			},
+			dayAgo: 'вчора',
+			daysAgo: function (delta){
+				return '{delta} ' + pluralize(delta, 'день', 'дн�?', 'днів') + ' тому';
+			},
+			weekAgo: 'тиждень тому',
+			weeksAgo: function (delta){
+				return '{delta} ' + pluralize(delta, 'тиждень', 'тижні', 'тижнів') + ' тому';
+			},
+			monthAgo: 'мі�?�?ць тому',
+			monthsAgo: function (delta){
+				return '{delta} ' + pluralize(delta, 'мі�?�?ць', 'мі�?�?ці', 'мі�?�?ців') + ' тому';
+			},
+			yearAgo: 'рік тому',
+			yearsAgo: function (delta){
+				return '{delta} ' + pluralize(delta, 'рік', 'роки', 'років') + ' тому';
+			},
+			lessThanMinuteUntil: 'за мить',
+			minuteUntil: 'через хвилину',
+			minutesUntil: function (delta){
+				return 'через {delta} ' + pluralize(delta, 'хвилину', 'хвилини', 'хвилин');
+			},
+			hourUntil: 'через годину',
+			hoursUntil: function (delta){
+				return 'через {delta} ' + pluralize(delta, 'годину', 'години', 'годин');
+			},
+			dayUntil: 'завтра',
+			daysUntil: function (delta){
+				return 'через {delta} ' + pluralize(delta, 'день', 'дн�?', 'днів');
+			},
+			weekUntil: 'через тиждень',
+			weeksUntil: function (delta){
+				return 'через {delta} ' + pluralize(delta, 'тиждень', 'тижні', 'тижнів');
+			},
+			monthUntil: 'через мі�?�?ць',
+			monthesUntil: function (delta){
+				return 'через {delta} ' + pluralize(delta, 'мі�?�?ць', 'мі�?�?ці', 'мі�?�?ців');
+			},
+			yearUntil: 'через рік',
+			yearsUntil: function (delta){
+				return 'через {delta} ' + pluralize(delta, 'рік', 'роки', 'років');
+			}
+	});
+
+})();/*
+---
+
 script: Form.Validator.Arabic.js
 
 description: Form.Validator messages in Arabic.
@@ -13109,19 +13634,19 @@ provides: [Form.Validator.Arabic]
 
 MooTools.lang.set('ar', 'Form.Validator', {
 	required:'هذا الحقل مطلوب.',
-	minLength:'رجاءً إدخال {minLength}  أحرف على الأقل (تم إدخال {length} أحرف).',
-	maxLength:'الرجاء عدم إدخال أكثر من {maxLength} أحرف (تم إدخال {length} أحرف).',
-	integer:'الرجاء إدخال عدد صحيح في هذا الحقل. أي رقم ذو كسر عشري أو مئوي (مثال 1.25 ) غير مسموح.',
-	numeric:'الرجاء إدخال قيم رقمية في هذا الحقل (مثال "1" أو "1.1" أو "-1" أو "-1.1").',
-	digits:'الرجاء أستخدام قيم رقمية وعلامات ترقيمية فقط في هذا الحقل (مثال, رقم هاتف مع نقطة أو شحطة)',
-	alpha:'الرجاء أستخدام أحرف فقط (ا-ي) في هذا الحقل. أي فراغات أو علامات غير مسموحة.',
-	alphanum:'الرجاء أستخدام أحرف فقط (ا-ي) أو أرقام (0-9) فقط في هذا الحقل. أي فراغات أو علامات غير مسموحة.',
+	minLength:'رجاءً إدخال {minLength}  أحر�? على الأقل (تم إدخال {length} أحر�?).',
+	maxLength:'الرجاء عدم إدخال أكثر من {maxLength} أحر�? (تم إدخال {length} أحر�?).',
+	integer:'الرجاء إدخال عدد صحيح �?ي هذا الحقل. أي رقم ذو كسر عشري أو مئوي (مثال 1.25 ) غير مسموح.',
+	numeric:'الرجاء إدخال قيم رقمية �?ي هذا الحقل (مثال "1" أو "1.1" أو "-1" أو "-1.1").',
+	digits:'الرجاء أستخدام قيم رقمية وعلامات ترقيمية �?قط �?ي هذا الحقل (مثال, رقم هات�? مع نقطة أو شحطة)',
+	alpha:'الرجاء أستخدام أحر�? �?قط (ا-ي) �?ي هذا الحقل. أي �?راغات أو علامات غير مسموحة.',
+	alphanum:'الرجاء أستخدام أحر�? �?قط (ا-ي) أو أرقام (0-9) �?قط �?ي هذا الحقل. أي �?راغات أو علامات غير مسموحة.',
 	dateSuchAs:'الرجاء إدخال تاريخ صحيح كالتالي {date}',
 	dateInFormatMDY:'الرجاء إدخال تاريخ صحيح (مثال, 31-12-1999)',
 	email:'الرجاء إدخال بريد إلكتروني صحيح.',
 	url:'الرجاء إدخال عنوان إلكتروني صحيح مثل http://www.google.com',
 	currencyDollar:'الرجاء إدخال قيمة $ صحيحة.  مثال, 100.00$',
-	oneRequired:'الرجاء إدخال قيمة في أحد هذه الحقول على الأقل.',
+	oneRequired:'الرجاء إدخال قيمة �?ي أحد هذه الحقول على الأقل.',
 	errorPrefix: 'خطأ: ',
 	warningPrefix: 'تحذير: '
 }).set('ar', 'Date', {
@@ -13185,6 +13710,63 @@ MooTools.lang.set('ca-CA', 'Form.Validator', {
 });/*
 ---
 
+script: Form.Validator.Czech.js
+
+description: Form Validator messages for Czech.
+
+license: MIT-style license
+
+authors:
+- Jan Černý chemiX
+
+requires:
+- /Lang
+- /Form.Validator
+
+provides: [Form.Validator.Czech]
+
+...
+*/
+
+MooTools.lang.set('cs-CZ', 'Form.Validator', {
+
+	required:'Tato položka je povinná.',
+	minLength:'Zadejte prosím alespoň {minLength} znaků (napsáno {length} znaků).',
+	maxLength:'Zadejte prosím méně než {maxLength} znaků (nápsáno {length} znaků).',
+	integer:'Zadejte prosím celé �?íslo. Desetinná �?ísla (např. 1.25) nejsou povolena.',
+	numeric:'Zadejte jen �?íselné hodnoty  (tj. "1" nebo "1.1" nebo "-1" nebo "-1.1").',
+	digits:'Zadejte prosím pouze �?ísla a interpunk�?ní znaménka(například telefonní �?íslo s poml�?kami nebo te�?kami je povoleno).',
+	alpha:'Zadejte prosím pouze písmena (a-z). Mezery nebo jiné znaky nejsou povoleny.',
+	alphanum:'Zadejte prosím pouze písmena (a-z) nebo �?íslice (0-9). Mezery nebo jiné znaky nejsou povoleny.',
+	dateSuchAs:'Zadejte prosím platné datum jako {date}',
+	dateInFormatMDY:'Zadejte prosím platné datum jako MM / DD / RRRR (tj. "12/31/1999")',
+	email:'Zadejte prosím platnou e-mailovou adresu. Například "fred@domain.com".',
+	url:'Zadejte prosím platnou URL adresu jako http://www.google.com.',
+	currencyDollar:'Zadejte prosím platnou �?ástku. Například $100.00.',
+	oneRequired:'Zadejte prosím alespoň jednu hodnotu pro tyto položky.',
+	errorPrefix: 'Chyba: ',
+	warningPrefix: 'Upozornění: ',
+
+	//Form.Validator.Extras
+
+	noSpace: 'V této položce nejsou povoleny mezery',
+	reqChkByNode: 'Nejsou vybrány žádné položky.',
+	requiredChk: 'Tato položka je vyžadována.',
+	reqChkByName: 'Prosím vyberte {label}.',
+	match: 'Tato položka se musí shodovat s položkou {matchName}',
+	startDate: 'datum zahájení',
+	endDate: 'datum ukon�?ení',
+	currendDate: 'aktuální datum',
+	afterDate: 'Datum by mělo být stejné nebo větší než {label}.',
+	beforeDate: 'Datum by mělo být stejné nebo menší než {label}.',
+	startMonth: 'Vyberte po�?áte�?ní měsíc.',
+	sameMonth: 'Tyto dva datumy musí být ve stejném měsíci - změňte jeden z nich.',
+    creditcard: 'Zadané �?íslo kreditní karty je neplatné. Prosím opravte ho. Bylo zadáno {length} �?ísel.'
+
+});
+/*
+---
+
 script: Form.Validator.Chinese.js
 
 description: Form.Validator messages in chinese (both simplified and traditional).
@@ -13206,14 +13788,14 @@ provides: [Form.Validator.Chinese]
 /*
 In Chinese:
 ------------
-需要指出的是：
+需�?指出的是：
 简体中文适用于中国大陆，
-繁体中文适用于香港、澳门和台湾省。
-简体中文和繁体中文在字体和语法上有很多的不同之处。
+�?体中文适用于香港�?澳门和�?�湾�?。
+简体中文和�?体中文在字体和语法上有很多的�?�?�之处。
 
-我可以确保简体中文语言包的准确性，
-但对于繁体中文，我可以保证用户可以准确的理解，但无法保证语句符合他们的阅读习惯。
-如果您不能确认的话，可以只使用简体中文语言包，因为它是最通用的。
+我�?�以确�?简体中文语言包的准确性，
+但对于�?体中文，我�?�以�?�?用户�?�以准确的�?�解，但无法�?�?语�?�符�?�他们的阅读习惯。
+如果您�?能确认的�?，�?�以�?�使用简体中文语言包，因为它是最通用的。
 
 In English:
 ------------
@@ -13232,17 +13814,17 @@ If you are unsure, you can only use the simplified Chinese language pack, as it 
 MooTools.lang.set('zhs-CN', 'Form.Validator', {
 	required:'这是必填项。',
 	minLength:'请至少输入 {minLength} 个字符 (已输入 {length} 个)。',
-	maxLength:'最多只能输入 {maxLength} 个字符 (已输入 {length} 个)。',
-	integer:'请输入一个整数，不能包含小数点。例如："1", "200"。',
+	maxLength:'最多�?�能输入 {maxLength} 个字符 (已输入 {length} 个)。',
+	integer:'请输入一个整数，�?能包�?��?数点。例如："1", "200"。',
 	numeric:'请输入一个数字，例如："1", "1.1", "-1", "-1.1"。',
-	digits:'这里只能接受数字和标点的输入，标点可以是："(", ")", ".", ":", "-", "+", "#"和空格。',
-	alpha:'请输入 A-Z 的 26 个字母，不能包含空格或任何其他字符。',
-	alphanum:'请输入 A-Z 的 26 个字母或 0-9 的 10 个数字，不能包含空格或任何其他字符。',
-	dateSuchAs:'请输入合法的日期格式，如：{date}。',
-	dateInFormatMDY:'请输入合法的日期格式，例如：MM/DD/YYYY ("12/31/1999")。',
-	email:'请输入合法的电子信箱地址，例如："fred@domain.com"。',
-	url:'请输入合法的 Url 地址，例如：http://www.google.com。',
-	currencyDollar:'请输入合法的货币符号，例如：￥',
+	digits:'这里�?�能接�?�数字和标点的输入，标点�?�以是："(", ")", ".", ":", "-", "+", "#"和空格。',
+	alpha:'请输入 A-Z 的 26 个字�?，�?能包�?�空格或任何其他字符。',
+	alphanum:'请输入 A-Z 的 26 个字�?或 0-9 的 10 个数字，�?能包�?�空格或任何其他字符。',
+	dateSuchAs:'请输入�?�法的日期格�?，如：{date}。',
+	dateInFormatMDY:'请输入�?�法的日期格�?，例如：MM/DD/YYYY ("12/31/1999")。',
+	email:'请输入�?�法的电�?信箱地�?�，例如："fred@domain.com"。',
+	url:'请输入�?�法的 Url 地�?�，例如：http://www.google.com。',
+	currencyDollar:'请输入�?�法的货�?符�?�，例如：￥',
 	oneRequired:'请至少选择一项。',
 	errorPrefix: '错误：',
 	warningPrefix: '警告：'
@@ -13251,19 +13833,19 @@ MooTools.lang.set('zhs-CN', 'Form.Validator', {
 // Traditional Chinese
 MooTools.lang.set('zht-CN', 'Form.Validator', {
 	required:'這是必填項。',
-	minLength:'請至少鍵入 {minLength} 個字符(已鍵入 {length} 個)。',
-	maxLength:'最多只能鍵入 {maxLength} 個字符(已鍵入 {length} 個)。',
-	integer:'請鍵入一個整數，不能包含小數點。例如："1", "200"。',
-	numeric:'請鍵入一個數字，例如："1", "1.1", "-1", "-1.1"。',
-	digits:'這裡只能接受數字和標點的鍵入，標點可以是："(", ")", ".", ":", "-", "+", "#"和空格。',
-	alpha:'請鍵入 A-Z 的 26 個字母，不能包含空格或任何其他字符。',
-	alphanum:'請鍵入 A-Z 的 26 個字母或 0-9 的 10 個數字，不能包含空格或任何其他字符。',
-	dateSuchAs:'請鍵入合法的日期格式，如：{date}。',
-	dateInFormatMDY:'請鍵入合法的日期格式，例如：MM/DD/YYYY ("12/31/1999")。',
-	email:'請鍵入合法的電子信箱地址，例如："fred@domain.com"。',
-	url:'請鍵入合法的 Url 地址，例如：http://www.google.com。',
-	currencyYuan:'請鍵入合法的貨幣符號，例如：￥',
-	oneRequired:'請至少選擇一項。',
+	minLength:'請至少�?�入 {minLength} 個字符(已�?�入 {length} 個)。',
+	maxLength:'最多�?�能�?�入 {maxLength} 個字符(已�?�入 {length} 個)。',
+	integer:'請�?�入一個整數，�?能包�?��?數點。例如："1", "200"。',
+	numeric:'請�?�入一個數字，例如："1", "1.1", "-1", "-1.1"。',
+	digits:'這裡�?�能接�?�數字和標點的�?�入，標點�?�以是："(", ")", ".", ":", "-", "+", "#"和空格。',
+	alpha:'請�?�入 A-Z 的 26 個字�?，�?能包�?�空格或任何其他字符。',
+	alphanum:'請�?�入 A-Z 的 26 個字�?或 0-9 的 10 個數字，�?能包�?�空格或任何其他字符。',
+	dateSuchAs:'請�?�入�?�法的日期格�?，如：{date}。',
+	dateInFormatMDY:'請�?�入�?�法的日期格�?，例如：MM/DD/YYYY ("12/31/1999")。',
+	email:'請�?�入�?�法的電�?信箱地�?�，例如："fred@domain.com"。',
+	url:'請�?�入�?�法的 Url 地�?�，例如：http://www.google.com。',
+	currencyYuan:'請�?�入�?�法的貨幣符號，例如：￥',
+	oneRequired:'請至少�?�擇一項。',
 	errorPrefix: '錯誤：',
 	warningPrefix: '警告：'
 });
@@ -13373,6 +13955,119 @@ MooTools.lang.set('et-EE', 'Form.Validator', {
 	startMonth: 'Palun valige algkuupäev.',
 	sameMonth: 'Antud kaks kuupäeva peavad olema samas kuus - peate muutma ühte kuupäeva.'
 
+});/*
+---
+
+script: Form.Validator.German.js
+
+description: Date messages for German.
+
+license: MIT-style license
+
+authors: 
+- Frank Rossi
+- Ulrich Petri
+- Fabian Beiner
+
+requires:
+- /Lang
+- /Form.Validator
+
+provides: [Form.Validator.German]
+
+...
+*/
+
+MooTools.lang.set('de-DE', 'Form.Validator', {
+
+	required: 'Dieses Eingabefeld muss ausgef&uuml;llt werden.',
+	minLength: 'Geben Sie bitte mindestens {minLength} Zeichen ein (Sie haben nur {length} Zeichen eingegeben).',
+	maxLength: 'Geben Sie bitte nicht mehr als {maxLength} Zeichen ein (Sie haben {length} Zeichen eingegeben).',
+	integer: 'Geben Sie in diesem Eingabefeld bitte eine ganze Zahl ein. Dezimalzahlen (z.B. &quot;1.25&quot;) sind nicht erlaubt.',
+	numeric: 'Geben Sie in diesem Eingabefeld bitte nur Zahlenwerte (z.B. &quot;1&quot;, &quot;1.1&quot;, &quot;-1&quot; oder &quot;-1.1&quot;) ein.',
+	digits: 'Geben Sie in diesem Eingabefeld bitte nur Zahlen und Satzzeichen ein (z.B. eine Telefonnummer mit Bindestrichen und Punkten ist erlaubt).',
+	alpha: 'Geben Sie in diesem Eingabefeld bitte nur Buchstaben (a-z) ein. Leerzeichen und andere Zeichen sind nicht erlaubt.',
+	alphanum: 'Geben Sie in diesem Eingabefeld bitte nur Buchstaben (a-z) und Zahlen (0-9) ein. Leerzeichen oder andere Zeichen sind nicht erlaubt.',
+	dateSuchAs: 'Geben Sie bitte ein g&uuml;ltiges Datum ein (z.B. &quot;{date}&quot;).',
+	dateInFormatMDY: 'Geben Sie bitte ein g&uuml;ltiges Datum im Format TT.MM.JJJJ ein (z.B. &quot;31.12.1999&quot;).',
+	email: 'Geben Sie bitte eine g&uuml;ltige E-Mail-Adresse ein (z.B. &quot;max@mustermann.de&quot;).',
+	url: 'Geben Sie bitte eine g&uuml;ltige URL ein (z.B. &quot;http://www.google.de&quot;).',
+	currencyDollar: 'Geben Sie bitte einen g&uuml;ltigen Betrag in EURO ein (z.B. 100.00&#8364;).',
+	oneRequired: 'Bitte f&uuml;llen Sie mindestens ein Eingabefeld aus.',
+	errorPrefix: 'Fehler: ',
+	warningPrefix: 'Warnung: ',
+
+	//Form.Validator.Extras
+
+	noSpace: 'Es darf kein Leerzeichen in diesem Eingabefeld sein.',
+	reqChkByNode: 'Es wurden keine Elemente gew&auml;hlt.',
+	requiredChk: 'Dieses Feld muss ausgef&uuml;llt werden.',
+	reqChkByName: 'Bitte w&auml;hlen Sie ein {label}.',
+	match: 'Dieses Eingabefeld muss mit dem {matchName} Eingabefeld &uuml;bereinstimmen.',
+	startDate: 'Das Anfangsdatum',
+	endDate: 'Das Enddatum',
+	currendDate: 'Das aktuelle Datum',
+	afterDate: 'Das Datum sollte zur gleichen Zeit oder sp&auml;ter sein als {label}.',
+	beforeDate: 'Das Datum sollte zur gleichen Zeit oder fr&uuml;her sein als {label}.',
+	startMonth: 'W&auml;hlen Sie bitte einen Anfangsmonat',
+	sameMonth: 'Diese zwei Datumsangaben m&uuml;ssen im selben Monat sein - Sie m&uuml;ssen eines von beiden ver&auml;ndern.',
+	creditcard: 'Die eingegebene Kreditkartennummer ist ung&uuml;ltig. Bitte &uuml;berpr&uuml;fen Sie diese und versuchen Sie es erneut. {length} Zahlen eingegeben.'
+});
+/*
+---
+
+script: Form.Validator.German.CH.js
+
+description: Date messages for German (Switzerland).
+ 
+license: MIT-style license
+ 
+authors:
+- Michael van der Weg
+
+requires:
+- /Lang
+- /Form.Validator.German
+
+provides: [Form.Validator.German.CH]
+
+...
+*/
+ 
+MooTools.lang.set('de-CH', 'Form.Validator', {
+ 
+  required:'Dieses Feld ist obligatorisch.',
+  minLength:'Geben Sie bitte mindestens {minLength} Zeichen ein (Sie haben {length} Zeichen eingegeben).',
+  maxLength:'Bitte geben Sie nicht mehr als {maxLength} Zeichen ein (Sie haben {length} Zeichen eingegeben).',
+  integer:'Geben Sie bitte eine ganze Zahl ein. Dezimalzahlen (z.B. 1.25) sind nicht erlaubt.',
+  numeric:'Geben Sie bitte nur Zahlenwerte in dieses Eingabefeld ein (z.B. &quot;1&quot;, &quot;1.1&quot;, &quot;-1&quot; oder &quot;-1.1&quot;).',
+  digits:'Benutzen Sie bitte nur Zahlen und Satzzeichen in diesem Eingabefeld (erlaubt ist z.B. eine Telefonnummer mit Bindestrichen und Punkten).',
+  alpha:'Benutzen Sie bitte nur Buchstaben (a-z) in diesem Feld. Leerzeichen und andere Zeichen sind nicht erlaubt.',
+  alphanum:'Benutzen Sie bitte nur Buchstaben (a-z) und Zahlen (0-9) in diesem Eingabefeld. Leerzeichen und andere Zeichen sind nicht erlaubt.',
+  dateSuchAs:'Geben Sie bitte ein g&uuml;ltiges Datum ein. Wie zum Beispiel {date}',
+  dateInFormatMDY:'Geben Sie bitte ein g&uuml;ltiges Datum ein. Wie zum Beispiel TT.MM.JJJJ (z.B. &quot;31.12.1999&quot;)',
+  email:'Geben Sie bitte eine g&uuml;ltige E-Mail Adresse ein. Wie zum Beispiel &quot;maria@bernasconi.ch&quot;.',
+  url:'Geben Sie bitte eine g&uuml;ltige URL ein. Wie zum Beispiel http://www.google.ch.',
+  currencyDollar:'Geben Sie bitte einen g&uuml;ltigen Betrag in Schweizer Franken ein. Wie zum Beispiel 100.00 CHF .',
+  oneRequired:'Machen Sie f&uuml;r mindestens eines der Eingabefelder einen Eintrag.',
+  errorPrefix: 'Fehler: ',
+  warningPrefix: 'Warnung: ',
+ 
+  //Form.Validator.Extras
+ 
+  noSpace: 'In diesem Eingabefeld darf kein Leerzeichen sein.',
+  reqChkByNode: 'Es wurden keine Elemente gew&auml;hlt.',
+  requiredChk: 'Dieses Feld ist obligatorisch.',
+  reqChkByName: 'Bitte w&auml;hlen Sie ein {label}.',
+  match: 'Dieses Eingabefeld muss mit dem Feld {matchName} &uuml;bereinstimmen.',
+  startDate: 'Das Anfangsdatum',
+  endDate: 'Das Enddatum',
+  currendDate: 'Das aktuelle Datum',
+  afterDate: 'Das Datum sollte zur gleichen Zeit oder sp&auml;ter sein {label}.',
+  beforeDate: 'Das Datum sollte zur gleichen Zeit oder fr&uuml;her sein {label}.',
+  startMonth: 'W&auml;hlen Sie bitte einen Anfangsmonat',
+  sameMonth: 'Diese zwei Datumsangaben m&uuml;ssen im selben Monat sein - Sie m&uuml;ssen eine von beiden ver&auml;ndern.'
+ 
 });/*
 ---
 
@@ -13546,8 +14241,8 @@ provides: [Form.Validator.Polish]
 MooTools.lang.set('pl-PL', 'Form.Validator', {
 
 	required:'To pole jest wymagane.',
-	minLength:'Wymagane jest przynajmniej {minLenght} znaków (wpisanych zostało tylko {length}).',
-	maxLength:'Dozwolone jest nie więcej niż {maxLenght} znaków (wpisanych zostało {length})',
+	minLength:'Wymagane jest przynajmniej {minLength} znaków (wpisanych zostało tylko {length}).',
+	maxLength:'Dozwolone jest nie więcej niż {maxLength} znaków (wpisanych zostało {length})',
 	integer:'To pole wymaga liczb całych. Liczby dziesiętne (np. 1.25) są niedozwolone.',
 	numeric:'Prosimy używać tylko numerycznych wartości w tym polu (np. "1", "1.1", "-1" lub "-1.1").',
 	digits:'Prosimy używać liczb oraz zankow punktuacyjnych w typ polu (dla przykładu, przy numerze telefonu myślniki i kropki są dozwolone).',
@@ -13696,40 +14391,40 @@ provides: [Form.Validator.Russian]
 */
 
 MooTools.lang.set('ru-RU-unicode', 'Form.Validator', {
-	required:'Это поле обязательно к заполнению.',
-	minLength:'Пожалуйста, введите хотя бы {minLength} символов (Вы ввели {length}).',
-	maxLength:'Пожалуйста, введите не больше {maxLength} символов (Вы ввели {length}).',
-	integer:'Пожалуйста, введите в это поле число. Дробные числа (например 1.25) тут не разрешены.',
-	numeric:'Пожалуйста, введите в это поле число (например "1" или "1.1", или "-1", или "-1.1").',
-	digits:'В этом поле Вы можете использовать только цифры и знаки пунктуации (например, телефонный номер со знаками дефиса или с точками).',
-	alpha:'В этом поле можно использовать только латинские буквы (a-z). Пробелы и другие символы запрещены.',
-	alphanum:'В этом поле можно использовать только латинские буквы (a-z) и цифры (0-9). Пробелы и другие символы запрещены.',
-	dateSuchAs:'Пожалуйста, введите корректную дату {date}',
-	dateInFormatMDY:'Пожалуйста, введите дату в формате ММ/ДД/ГГГГ (например "12/31/1999")',
-	email:'Пожалуйста, введите корректный емейл-адрес. Для примера "fred@domain.com".',
-	url:'Пожалуйста, введите правильную ссылку вида http://www.google.com.',
-	currencyDollar:'Пожалуйста, введите сумму в долларах. Например: $100.00 .',
-	oneRequired:'Пожалуйста, выберите хоть что-нибудь в одном из этих полей.',
+	required:'Это поле об�?зательно к заполнению.',
+	minLength:'Пожалуй�?та, введите хот�? бы {minLength} �?имволов (Вы ввели {length}).',
+	maxLength:'Пожалуй�?та, введите не больше {maxLength} �?имволов (Вы ввели {length}).',
+	integer:'Пожалуй�?та, введите в �?то поле чи�?ло. Дробные чи�?ла (например 1.25) тут не разрешены.',
+	numeric:'Пожалуй�?та, введите в �?то поле чи�?ло (например "1" или "1.1", или "-1", или "-1.1").',
+	digits:'В �?том поле Вы можете и�?пользовать только цифры и знаки пунктуации (например, телефонный номер �?о знаками дефи�?а или �? точками).',
+	alpha:'В �?том поле можно и�?пользовать только латин�?кие буквы (a-z). Пробелы и другие �?имволы запрещены.',
+	alphanum:'В �?том поле можно и�?пользовать только латин�?кие буквы (a-z) и цифры (0-9). Пробелы и другие �?имволы запрещены.',
+	dateSuchAs:'Пожалуй�?та, введите корректную дату {date}',
+	dateInFormatMDY:'Пожалуй�?та, введите дату в формате ММ/ДД/ГГГГ (например "12/31/1999")',
+	email:'Пожалуй�?та, введите корректный емейл-адре�?. Дл�? примера "fred@domain.com".',
+	url:'Пожалуй�?та, введите правильную �?�?ылку вида http://www.google.com.',
+	currencyDollar:'Пожалуй�?та, введите �?умму в долларах. �?апример: $100.00 .',
+	oneRequired:'Пожалуй�?та, выберите хоть что-нибудь в одном из �?тих полей.',
 	errorPrefix: 'Ошибка: ',
 	warningPrefix: 'Внимание: '
 });
 
 //translation in windows-1251 codepage
 MooTools.lang.set('ru-RU', 'Form.Validator', {
-	required:'Ýòî ïîëå îáÿçàòåëüíî ê çàïîëíåíèþ.',
-	minLength:'Ïîæàëóéñòà, ââåäèòå õîòÿ áû {minLength} ñèìâîëîâ (Âû ââåëè {length}).',
-	maxLength:'Ïîæàëóéñòà, ââåäèòå íå áîëüøå {maxLength} ñèìâîëîâ (Âû ââåëè {length}).',
-	integer:'Ïîæàëóéñòà, ââåäèòå â ýòî ïîëå ÷èñëî. Äðîáíûå ÷èñëà (íàïðèìåð 1.25) òóò íå ðàçðåøåíû.',
-	numeric:'Ïîæàëóéñòà, ââåäèòå â ýòî ïîëå ÷èñëî (íàïðèìåð "1" èëè "1.1", èëè "-1", èëè "-1.1").',
+	required:'�?òî ïîëå îáÿçàòåëüíî ê çàïîëíåíèþ.',
+	minLength:'�?îæàëóéñòà, ââåäèòå õîòÿ áû {minLength} ñèìâîëîâ (Âû ââåëè {length}).',
+	maxLength:'�?îæàëóéñòà, ââåäèòå íå áîëüøå {maxLength} ñèìâîëîâ (Âû ââåëè {length}).',
+	integer:'�?îæàëóéñòà, ââåäèòå â ýòî ïîëå ÷èñëî. Äðîáíûå ÷èñëà (íàïðèìåð 1.25) òóò íå ðàçðåøåíû.',
+	numeric:'�?îæàëóéñòà, ââåäèòå â ýòî ïîëå ÷èñëî (íàïðèìåð "1" èëè "1.1", èëè "-1", èëè "-1.1").',
 	digits:'Â ýòîì ïîëå Âû ìîæåòå èñïîëüçîâàòü òîëüêî öèôðû è çíàêè ïóíêòóàöèè (íàïðèìåð, òåëåôîííûé íîìåð ñî çíàêàìè äåôèñà èëè ñ òî÷êàìè).',
-	alpha:'Â ýòîì ïîëå ìîæíî èñïîëüçîâàòü òîëüêî ëàòèíñêèå áóêâû (a-z). Ïðîáåëû è äðóãèå ñèìâîëû çàïðåùåíû.',
-	alphanum:'Â ýòîì ïîëå ìîæíî èñïîëüçîâàòü òîëüêî ëàòèíñêèå áóêâû (a-z) è öèôðû (0-9). Ïðîáåëû è äðóãèå ñèìâîëû çàïðåùåíû.',
-	dateSuchAs:'Ïîæàëóéñòà, ââåäèòå êîððåêòíóþ äàòó {date}',
-	dateInFormatMDY:'Ïîæàëóéñòà, ââåäèòå äàòó â ôîðìàòå ÌÌ/ÄÄ/ÃÃÃÃ (íàïðèìåð "12/31/1999")',
-	email:'Ïîæàëóéñòà, ââåäèòå êîððåêòíûé åìåéë-àäðåñ. Äëÿ ïðèìåðà "fred@domain.com".',
-	url:'Ïîæàëóéñòà, ââåäèòå ïðàâèëüíóþ ññûëêó âèäà http://www.google.com.',
-	currencyDollar:'Ïîæàëóéñòà, ââåäèòå ñóììó â äîëëàðàõ. Íàïðèìåð: $100.00 .',
-	oneRequired:'Ïîæàëóéñòà, âûáåðèòå õîòü ÷òî-íèáóäü â îäíîì èç ýòèõ ïîëåé.',
+	alpha:'Â ýòîì ïîëå ìîæíî èñïîëüçîâàòü òîëüêî ëàòèíñêèå áóêâû (a-z). �?ðîáåëû è äðóãèå ñèìâîëû çàïðåùåíû.',
+	alphanum:'Â ýòîì ïîëå ìîæíî èñïîëüçîâàòü òîëüêî ëàòèíñêèå áóêâû (a-z) è öèôðû (0-9). �?ðîáåëû è äðóãèå ñèìâîëû çàïðåùåíû.',
+	dateSuchAs:'�?îæàëóéñòà, ââåäèòå êîððåêòíóþ äàòó {date}',
+	dateInFormatMDY:'�?îæàëóéñòà, ââåäèòå äàòó â ôîðìàòå ÌÌ/ÄÄ/ÃÃÃÃ (íàïðèìåð "12/31/1999")',
+	email:'�?îæàëóéñòà, ââåäèòå êîððåêòíûé åìåéë-àäðåñ. Äëÿ ïðèìåðà "fred@domain.com".',
+	url:'�?îæàëóéñòà, ââåäèòå ïðàâèëüíóþ ññûëêó âèäà http://www.google.com.',
+	currencyDollar:'�?îæàëóéñòà, ââåäèòå ñóììó â äîëëàðàõ. �?àïðèìåð: $100.00 .',
+	oneRequired:'�?îæàëóéñòà, âûáåðèòå õîòü ÷òî-íèáóäü â îäíîì èç ýòèõ ïîëåé.',
 	errorPrefix: 'Îøèáêà: ',
 	warningPrefix: 'Âíèìàíèå: '
 });/*
@@ -13757,17 +14452,17 @@ MooTools.lang.set('es-ES', 'Form.Validator', {
 
 	required:'Este campo es obligatorio.',
 	minLength:'Por favor introduce al menos {minLength} caracteres (has introducido {length} caracteres).',
-	maxLength:'Por favor introduce no mas de {maxLength} caracteres (has introducido {length} caracteres).',
-	integer:'Por favor introduce un numero entero en este campo. Numeros con decimales (p.e. 1,25) no se permiten.',
-	numeric:'Por favor introduce solo valores numericos en este campo (p.e. "1" o "1,1" o "-1" o "-1,1").',
-	digits:'Por favor usa solo numeros y puntuacion en este campo (por ejemplo, un numero de telefono con guines y puntos no esta permitido).',
+	maxLength:'Por favor introduce no m&aacute;s de {maxLength} caracteres (has introducido {length} caracteres).',
+	integer:'Por favor introduce un n&uacute;mero entero en este campo. N&uacute;meros con decimales (p.e. 1,25) no se permiten.',
+	numeric:'Por favor introduce solo valores num&eacute;ricos en este campo (p.e. "1" o "1,1" o "-1" o "-1,1").',
+	digits:'Por favor usa solo n&uacute;meros y puntuaci&oacute;n en este campo (por ejemplo, un n&uacute;mero de tel&eacute;fono con guiones y puntos no esta permitido).',
 	alpha:'Por favor usa letras solo (a-z) en este campo. No se admiten espacios ni otros caracteres.',
-	alphanum:'Por favor, usa solo letras (a-z) o numeros (0-9) en este campo. No se admiten espacios ni otros caracteres.',
-	dateSuchAs:'Por favor introduce una fecha valida como {date}',
-	dateInFormatMDY:'Por favor introduce una fecha valida como DD/MM/YYYY (p.e. "31/12/1999")',
-	email:'Por favor, introduce una direccione de email valida. Por ejemplo,  "fred@domain.com".',
-	url:'Por favor introduce una URL valida como http://www.google.com.',
-	currencyDollar:'Por favor introduce una cantidad valida de €. Por ejemplo €100,00 .',
+	alphanum:'Por favor, usa solo letras (a-z) o n&uacute;meros (0-9) en este campo. No se admiten espacios ni otros caracteres.',
+	dateSuchAs:'Por favor introduce una fecha v&aacute;lida como {date}',
+	dateInFormatMDY:'Por favor introduce una fecha v&aacute;lida como DD/MM/YYYY (p.e. "31/12/1999")',
+	email:'Por favor, introduce una direcci&oacute;n de email v&aacute;lida. Por ejemplo,  "fred@domain.com".',
+	url:'Por favor introduce una URL v&aacute;lida como http://www.google.com.',
+	currencyDollar:'Por favor introduce una cantidad v&aacute;lida de €. Por ejemplo €100,00 .',
 	oneRequired:'Por favor introduce algo para por lo menos una de estas entradas.',
 	errorPrefix: 'Error: ',
 	warningPrefix: 'Aviso: ',
@@ -13787,7 +14482,8 @@ MooTools.lang.set('es-ES', 'Form.Validator', {
 	startMonth: 'Por favor selecciona un mes de origen',
 	sameMonth: 'Estas dos fechas deben estar en el mismo mes - debes cambiar una u otra.'
 
-});/*
+});
+/*
 ---
 
 script: Form.Validator.Swedish.js
@@ -13842,7 +14538,64 @@ MooTools.lang.set('sv-SE', 'Form.Validator', {
 	startMonth: 'Välj en start månad',
 	sameMonth: 'Dessa två datum måste vara i samma månad - du måste ändra det ena eller det andra.'
 
-});// $Id: common.js 648 2009-11-30 21:26:44Z pagameba $
+});/*
+---
+
+script: Form.Validator.Ukrainian.js
+
+description: Form.Validator messages in Ukrainian (utf-8).
+
+license: MIT-style license
+
+authors:
+- Slik
+
+requires:
+- /Lang
+- /Form.Validator
+
+provides: [Form.Validator.Ukrainian]
+
+...
+*/
+
+MooTools.lang.set('uk-UA', 'Form.Validator', {
+	required:'Це поле повинне бути заповненим.',
+	minLength:'Введіть хоча б {minLength} �?имволів (Ви ввели {length}).',
+	maxLength:'Кількі�?ть �?имволів не може бути більше {maxLength} (Ви ввели {length}).',
+	integer:'Введіть в це поле чи�?ло. Дробові чи�?ла (наприклад 1.25) не дозволені.',
+	numeric:'Введіть в це поле чи�?ло (наприклад "1" або "1.1", або "-1", або "-1.1").',
+	digits:'В цьому полі ви можете викори�?товувати лише цифри і знаки пунктіації (наприклад, телефонний номер з знаками дефізу або з крапками).',
+	alpha:'В цьому полі можна викори�?товувати лише латин�?ькі літери (a-z). Пробіли і інші �?имволи заборонені.',
+	alphanum:'В цьому полі можна викори�?товувати лише латин�?ькі літери (a-z) і цифри (0-9). Пробіли і інші �?имволи заборонені.',
+	dateSuchAs:'Введіть коректну дату {date}.',
+	dateInFormatMDY:'Введіть дату в форматі ММ/ДД/РРРР (наприклад "12/31/2009").',
+	email:'Введіть коректну адре�?у електронної пошти (наприклад "name@domain.com").',
+	url:'Введіть коректне інтернет-по�?иланн�? (наприклад http://www.google.com).',
+	currencyDollar:'Введіть �?уму в доларах (наприклад "$100.00").',
+	oneRequired:'Заповніть одне з полів.',
+	errorPrefix: 'Помилка: ',
+	warningPrefix: 'Увага: '
+});
+// $Id: common.js 845 2010-04-15 18:47:08Z pagameba $
+/**
+ * Function: $jx
+ * dereferences a DOM Element to a JxLib object if possible and returns
+ * a reference to the object, or null if not defined.
+ */
+function $jx(id) {
+  id = document.id(id);
+  if (id) {
+    var widget = id.retrieve('jxWidget');
+    if (!widget && id != document.body) {
+      return $jx(id.getParent());
+    } else {
+      return widget;
+    }
+  }
+  return null;
+}
+
 /**
  * Class: Jx
  * Jx is a global singleton object that contains the entire Jx library
@@ -13860,7 +14613,7 @@ MooTools.lang.set('sv-SE', 'Form.Validator', {
 /* firebug console supressor for IE/Safari/Opera */
 window.addEvent('load',
 function() {
-    if (! ("console" in window) || !("firebug" in window.console)) {
+    if (! ("console" in window)) {
         var names = ["log", "debug", "info", "warn", "error", "assert", "dir", "dirxml",
         "group", "groupEnd", "time", "timeEnd", "count", "trace", "profile", "profileEnd"];
 
@@ -13910,65 +14663,138 @@ function $unlink(object) {
     return unlinked;
 }
 
-/* Setup global namespace
- * If jxcore is loaded by jx.js, then the namespace and baseURL are
- * already established
+/* Setup global namespace.  It is possible to set the global namespace
+ * prior to including jxlib.  This would typically be required only if
+ * the auto-detection of the jxlib base URL would fail.  For instance,
+ * if you combine jxlib with other javascript libraries into a single file
+ * build and call it something without jxlib in the file name, then the
+ * detection of baseURL would fail.  If this happens to you, try adding
+ * Jx = { baseURL: '/path/to/jxlib/'; }
+ * where the path to jxlib contains a file called a_pixel.png (it doesn't
+ * have to include jxlib, just the a_pixel.png file).
  */
 if (typeof Jx === 'undefined') {
-    var Jx = {};
-    (function() {
-        var aScripts = document.getElementsByTagName('SCRIPT');
-        for (var i = 0; i < aScripts.length; i++) {
-            var s = aScripts[i].src;
-            var matches = /(.*[jx|js|lib])\/jxlib(.*)/.exec(s);
-            if (matches && matches[0]) {
-                /**
-                 * APIProperty: {String} baseURL
-                 * This is the URL that Jx was loaded from, it is 
-                 * automatically calculated from the script tag
-                 * src property that included Jx.
-                 *
-                 * Note that this assumes that you are loading Jx
-                 * from a js/ or lib/ folder in parallel to the
-                 * images/ folder that contains the various images
-                 * needed by Jx components.  If you have a different
-                 * folder structure, you can define Jx's base
-                 * by including the following before including
-                 * the jxlib javascript file:
-                 *
-                 * (code)
-                 * Jx = {
-                 *    baseURL: 'some/path'
-                 * }
-                 * (end)
-                 */
-                Jx.aPixel = document.createElement('img', {
-                    alt: '',
-                    title: ''
-                });
-                Jx.aPixel.src = matches[1] + '/a_pixel.png';
-                Jx.baseURL = Jx.aPixel.src.substring(0,
-                Jx.aPixel.src.indexOf('a_pixel.png'));
-
-            }
-        }
-
-    })();
+  var Jx = {};
 }
 
- (function() {
-    /**
-     * Determine if we're running in Adobe AIR. Run this regardless of whether
-     * the above runs or not.
-     */
+/**
+ * APIProperty: {String} baseURL
+ * This is the URL that Jx was loaded from, it is 
+ * automatically calculated from the script tag
+ * src property that included Jx.
+ *
+ * Note that this assumes that you are loading Jx
+ * from a js/ or lib/ folder in parallel to the
+ * images/ folder that contains the various images
+ * needed by Jx components.  If you have a different
+ * folder structure, you can define Jx's base
+ * by including the following before including
+ * the jxlib javascript file:
+ *
+ * (code)
+ * Jx = {
+ *    baseURL: 'some/path'
+ * }
+ * (end)
+ */
+if (!$defined(Jx.baseURL)) {
+  (function() {
     var aScripts = document.getElementsByTagName('SCRIPT');
-    var src = aScripts[0].src;
-    if (src.contains('app:')) {
-        Jx.isAir = true;
-    } else {
-        Jx.isAir = false;
+    for (var i = 0; i < aScripts.length; i++) {
+      var s = aScripts[i].src;
+      var n = s.lastIndexOf('/');
+      var file = s.slice(n+1,s.length-1);
+      if (file.contains('jxlib')) {
+        Jx.baseURL = s.slice(0,n);
+        break;
+      }
     }
-})();
+  })();
+}
+/** 
+ * APIProperty: {Image} aPixel
+ * aPixel is a single transparent pixel and is the only image we actually
+ * use directly in JxLib code.  If you want to use your own transparent pixel
+ * image or use it from a different location than the install of jxlib
+ * javascript files, you can manually declare it before including jxlib code
+ * (code)
+ * Jx = {
+ *   aPixel: new Element('img', {
+ *     alt: '',
+ *     title: '',
+ *     width: 1,
+ *     height: 1,
+ *     src: 'path/to/a/transparent.png'
+ *   });
+ * }
+ * (end)
+ */
+if (!$defined(Jx.aPixel)) {
+  Jx.aPixel = new Element('img', {
+    alt:'',
+    title:'',
+    src: Jx.baseURL +'/a_pixel.png'
+  });
+}
+
+/** 
+ * APIProperty: {Boolean} isAir
+ * indicates if JxLib is running in an Adobe Air environment.  This is
+ * normally auto-detected but you can manually set it by declaring the Jx
+ * namespace before including jxlib:
+ * (code)
+ * Jx = {
+ *   isAir: true
+ * }
+ * (end)
+ */
+if (!$defined(Jx.isAir)) {
+	(function() {
+		/**
+		 * Determine if we're running in Adobe AIR.
+		 */
+		var aScripts = document.getElementsByTagName('SCRIPT');
+		var src = aScripts[0].src;
+		if (src.contains('app:')) {
+			Jx.isAir = true;
+		} else {
+			Jx.isAir = false;
+		}
+	})();
+}
+
+/**
+ * APIMethod: setLanguage
+ * set the current language to be used by Jx widgets.  This uses the MooTools
+ * lang module.  If an invalid or missing language is requested, the default
+ * rules of MooTools.lang will be used (revert to en-US at time of writing).
+ *
+ * Parameters:
+ * {String} language identifier, the language to set.
+ */
+Jx.setLanguage = function(lang) {
+	Jx.lang = lang;
+	MooTools.lang.setLanguage(Jx.lang);
+};
+
+/**
+ * APIProperty: {String} lang
+ * Checks to see if Jx.lang is already set. If not, it sets it to the default
+ * 'en-US'. We will then set the Motools.lang language to this setting 
+ * automatically.
+ * 
+ * The language can be changed on the fly at anytime by calling
+ * Jx.setLanguage().
+ * By default all Jx.Widget subclasses will listen for the langChange event of
+ * the Mootools.lang class. It will then call a method, changeText(), if it
+ * exists on the particular widget. You will be able to disable listening for
+ * these changes by setting the Jx.Widget option useLang to false.
+ */
+if (!$defined(Jx.lang)) {
+	Jx.lang = 'en-US';
+}
+
+Jx.setLanguage(Jx.lang);
 
 /**
  * APIMethod: applyPNGFilter
@@ -14062,26 +14888,6 @@ Jx.loadNextImg = function() {
 };
 
 /**
- * APIMethod: createIframeShim
- * Creates a new iframe element that is intended to fill a container
- * to mask out other operating system controls (scrollbars, inputs, 
- * buttons, etc) when HTML elements are supposed to be above them.
- *
- * Returns:
- * an HTML iframe element that can be inserted into the DOM.
- */
-/**
- * NOTE: This could be replaced by Mootools-more's IFrameShim class.
- */
-Jx.createIframeShim = function() {
-    return new Element('iframe', {
-        'class': 'jxIframeShim',
-        'scrolling': 'no',
-        'frameborder': 0,
-        'src': Jx.baseURL + '/empty.html'
-    });
-};
-/**
  * APIMethod: getNumber
  * safely parse a number and return its integer value.  A NaN value 
  * returns 0.  CSS size values are also parsed correctly.
@@ -14113,7 +14919,7 @@ Jx.getPageDimensions = function() {
 };
 
 /**
- * APIMethod: Jx.type
+ * APIMethod: type
  * safely return the type of an object using the mootools type system
  *
  * Returns:
@@ -14127,27 +14933,26 @@ Jx.type = function(obj) {
     return obj.jxFamily || $type(obj);
 };
 
-/**
- * Class: Element
- *
- * Element is a global object provided by the mootools library.  The
- * functions documented here are extensions to the Element object provided
- * by Jx to make cross-browser compatibility easier to achieve.  Most of the
- * methods are measurement related.
- *
- * While the code in these methods has been converted to use MooTools methods,
- * there may be better MooTools methods to use to accomplish these things.
- * Ultimately, it would be nice to eliminate most or all of these and find the
- * MooTools equivalent or convince MooTools to add them.
- * 
- * NOTE: Many of these methods can be replaced with mootools-more's 
- * Element.Measure
- */
-
-
 (function($) {
     // Wrapper for document.id
 
+    /**
+     * Class: Element
+     *
+     * Element is a global object provided by the mootools library.  The
+     * functions documented here are extensions to the Element object provided
+     * by Jx to make cross-browser compatibility easier to achieve.  Most of
+     * the methods are measurement related.
+     *
+     * While the code in these methods has been converted to use MooTools
+     * methods, there may be better MooTools methods to use to accomplish
+     * these things.
+     * Ultimately, it would be nice to eliminate most or all of these and find
+     * the MooTools equivalent or convince MooTools to add them.
+     * 
+     * NOTE: Many of these methods can be replaced with mootools-more's 
+     * Element.Measure
+     */
     Element.implement({
         /**
          * APIMethod: getBoxSizing
@@ -14403,9 +15208,11 @@ Jx.type = function(obj) {
             return o.tagName == type ? o: false;
         }
     });
-
+    /**
+     * Class: Array
+     * Extensions to the javascript array object
+     */
     Array.implement({
-
         /**
          * APIMethod: swap
          * swaps 2 elements of an array
@@ -14415,14 +15222,11 @@ Jx.type = function(obj) {
          * b - the second position to swap
          */
         'swap': function(a, b) {
-            var temp;
-            temp = this[a];
+            var temp = this[a];
             this[a] = this[b];
             this[b] = temp;
         }
-
     });
-
 })(document.id || $);
 // End Wrapper for document.id
 /**
@@ -14454,14 +15258,14 @@ Jx.type = function(obj) {
  */
 Jx.Styles = new(new Class({
     /**
-     * dynamicStyleMap - <Hash> used to keep a reference to dynamically created
-     * style sheets for quick access
+     * dynamicStyleMap - <Hash> used to keep a reference to dynamically
+     * created style sheets for quick access
      */
     dynamicStyleMap: new Hash(),
     /**
-     * Method: getCssRule
-     * retrieve a reference to a CSS rule in a specific style sheet based on its
-     * selector.  If the rule does not exist, create it.
+     * APIMethod: getCssRule
+     * retrieve a reference to a CSS rule in a specific style sheet based on
+     * its selector.  If the rule does not exist, create it.
      *
      * Parameters:
      * selector - <String> the CSS selector for the rule
@@ -14488,30 +15292,36 @@ Jx.Styles = new(new Class({
         return rule;
     },
     /**
-     * Method: insertCssRule
+     * APIMethod: insertCssRule
      * insert a new dynamic rule into the given stylesheet.  If no name is
      * given for the stylesheet then the default stylesheet is used.
      *
      * Parameters:
      * selector - <String> the CSS selector for the rule
-     * declaration - <String> CSS-formatted rules to include.  May be empty, in
-     * which case you may want to use the returned rule object to manipulate
-     * styles
+     * declaration - <String> CSS-formatted rules to include.  May be empty,
+     * in which case you may want to use the returned rule object to
+     * manipulate styles
      * styleSheetName - <String> the name of the sheet to place the rules in, 
      * or empty to put them in a default sheet.
      *
      * Returns:
      * <CSSRule> - a CSS Rule object with properties that are browser
-     * dependent.  In general, you can use rule.styles to set any CSS properties
-     * in the same way that you would set them on a DOM object.
+     * dependent.  In general, you can use rule.styles to set any CSS
+     * properties in the same way that you would set them on a DOM object.
      */
     insertCssRule: function (selector, declaration, styleSheetName) {
         var ss = this.getDynamicStyleSheet(styleSheetName);
+
         var rule;
         var text = selector + " {" + declaration + "}";
         if (Browser.Engine.name === 'trident') {
-            ss.styleSheet.cssText += text;
-            rule = ss.sheet.rules[ss.insertRule.length];
+            if (declaration == '') {
+                //IE requires SOME text for the declaration. Passing '{}' will
+                //create an empty rule.
+                declaration = '{}';
+            }
+            var index = ss.styleSheet.addRule(selector,declaration);
+            rule = ss.styleSheet.rules[index];
         } else {
             ss.sheet.insertRule(text, ss.indicies.length);
             rule = ss.sheet.cssRules[ss.indicies.length];
@@ -14520,13 +15330,13 @@ Jx.Styles = new(new Class({
         return rule;
     },
     /**
-     * Method: removeCssRule
+     * APIMethod: removeCssRule
      * removes a CSS rule from the named stylesheet.
      *
      * Parameters:
      * selector - <String> the CSS selector for the rule
-     * styleSheetName - <String> the name of the sheet to remove the rule from, 
-     * or empty to remove them from the default sheet.
+     * styleSheetName - <String> the name of the sheet to remove the rule
+     * from,  or empty to remove them from the default sheet.
      *
      * Returns:
      * <Boolean> true if the rule was removed, false if it was not.
@@ -14545,7 +15355,7 @@ Jx.Styles = new(new Class({
         return false;
     },
     /**
-     * Method: getDynamicStyleSheet
+     * APIMethod: getDynamicStyleSheet
      * return a reference to a styleSheet based on its title.  If the sheet
      * does not already exist, it is created.
      *
@@ -14558,13 +15368,14 @@ Jx.Styles = new(new Class({
     getDynamicStyleSheet: function (name) {
         name = (name) ? name : 'default';
         if (!this.dynamicStyleMap.has(name)) {
-            var sheet = new Element('style').set('type', 'text/css').set('title', name).inject(document.head);
+            var sheet = new Element('style').set('type', 'text/css').inject(document.head);
             sheet.indicies = [];
             this.dynamicStyleMap.set(name, sheet);
         }
         return this.dynamicStyleMap.get(name);
     },
-    /* Method: enableStyleSheet
+    /**
+     * APIMethod: enableStyleSheet
      * enable a style sheet
      *
      * Parameters:
@@ -14573,7 +15384,8 @@ Jx.Styles = new(new Class({
     enableStyleSheet: function (name) {
         this.getDynamicStyleSheet(name).disabled = false;
     },
-    /* Method: disableStyleSheet
+    /**
+     * APIMethod: disableStyleSheet
      * enable a style sheet
      *
      * Parameters:
@@ -14581,8 +15393,30 @@ Jx.Styles = new(new Class({
      */
     disableStyleSheet: function (name) {
         this.getDynamicStyleSheet(name).disabled = true;
+    },
+    /**
+     * APIMethod: removeStyleSheet
+     * Removes a style sheet
+     * 
+     * Parameters:
+     * name = <String> the title of the stylesheet to remove
+     */
+    removeStyleSheet: function (name) {
+      this.disableStyleSheet(name);
+      this.getDynamicStyleSheet(name).dispose();
+      this.dynamicStyleMap.erase(name);
+    },
+    /**
+     * APIMethod: isStyleSheetDefined
+     * Determined if the passed in name is a defined dynamic style sheet.
+     * 
+     * Parameters:
+     * name = <String> the title of the stylesheet to remove
+     */
+    isStyleSheetDefined: function (name) {
+      return this.dynamicStyleMap.has(name);
     }
-}))();// $Id: object.js 681 2010-01-15 05:45:28Z jonlb@comcast.net $
+}))();// $Id: object.js 837 2010-04-12 18:45:17Z conrad.barthelmes $
 /**
  * Class: Jx.Object
  * Base class for all other object in the JxLib framework. This class
@@ -14621,9 +15455,9 @@ Jx.Styles = new(new Class({
  * method.  A sub-class may hook preInit and postInit events to perform tasks
  * in one of two ways. 
  * 
- * First, simply send onPreInit and onPostInit functions via the options object
- * as follows (they could be standalone functions or functions of another object
- * setup using .bind())
+ * First, simply send onPreInit and onPostInit functions via the options
+ * object as follows (they could be standalone functions or functions of
+ * another object setup using .bind())
  * 
  * (code)
  * var preInit = function () {}
@@ -14661,18 +15495,19 @@ Jx.Styles = new(new Class({
  * });
  * (end)
  * 
- * When the object finishes initializing itself (including the plugin initialization)
- * it will fire off the initializeDone event. You can hook into this event in the same 
- * way as the events mentioned above.
+ * When the object finishes initializing itself (including the plugin
+ * initialization) it will fire off the initializeDone event. You can hook
+ * into this event in the same way as the events mentioned above.
  *
  * Plugins:
  * Plugins provide pieces of additional, optional, functionality. They are not 
- * necessary for the proper function of an object. All plugins should be located 
- * in the Jx.Plugin namespace and they should be further segregated by applicable 
- * object. While all objects can support plugins not all of them have the automatic
- * instantiation of applicaple plugins turned on. In order to turn this feature on 
- * for an object you need to set the pluginNamespace property of the object. The 
- * following is an example of setting the property:
+ * necessary for the proper function of an object. All plugins should be
+ * located in the Jx.Plugin namespace and they should be further segregated by
+ * applicable object. While all objects can support plugins, not all of them
+ * have the automatic instantiation of applicable plugins turned on. In order
+ * to turn this feature on for an object you need to set the pluginNamespace
+ * property of the object. The following is an example of setting the
+ * property:
  * 
  * (code)
  * var MyClass = new Class({
@@ -14685,9 +15520,9 @@ Jx.Styles = new(new Class({
  * object. It simply means that you can't have Jx.Object create the
  * plugin for you.
  * 
- * There are four ways to attach a plugin to an object. First, simply instantiate 
- * the plugin yourself and call its attach() method (other class options left out 
- * for the sake of simplicity):
+ * There are four ways to attach a plugin to an object. First, simply
+ * instantiate the plugin yourself and call its attach() method (other class
+ * options left out for the sake of simplicity):
  * 
  * (code)
  * var MyGrid = new Jx.Grid();
@@ -14695,16 +15530,16 @@ Jx.Styles = new(new Class({
  * APlugin.attach(MyGrid);
  * (end)
  * 
- * Second, you can instantiate the plugin first and pass it to the object through the
- * plugins array in the options object.
+ * Second, you can instantiate the plugin first and pass it to the object
+ * through the plugins array in the options object.
  * 
  * (code)
  * var APlugin = new Jx.Plugin.Grid.Selector();
  * var MyGrid = new Jx.Grid({plugins: [APlugin]});
  * (end)
  * 
- * The third way is to pass the information needed to instantiate the plugin in 
- * the plugins array of the options object:
+ * The third way is to pass the information needed to instantiate the plugin
+ * in the plugins array of the options object:
  * 
  * (code)
  * var MyGrid = new Jx.Grid({
@@ -14718,8 +15553,8 @@ Jx.Styles = new(new Class({
  * });
  * (end)
  * 
- * The final way, if the plugin has no options, is to pass the name of the plugin
- * as a simple string in the plugins array.
+ * The final way, if the plugin has no options, is to pass the name of the
+ * plugin as a simple string in the plugins array.
  * 
  * (code)
  * var MyGrid = new Jx.Grid({
@@ -14730,16 +15565,17 @@ Jx.Styles = new(new Class({
  * Part of the process of initializing plugins is to call prePluginInit() and
  * postPluginInit(). These events provide you access to the object just before 
  * and after the plugins are initialized and/or attached to the object using
- * methods 2 and 3 above. You can hook into these in the same way that you hook into
- * the preInit() and postInit() events.  
+ * methods 2 and 3 above. You can hook into these in the same way that you
+ * hook into the preInit() and postInit() events.  
  * 
  * Destroying Jx.Object Instances:
  * Jx.Object provides a destroy method that cleans up potential memory leaks
  * when you no longer need an object.  Sub-classes are expected to implement
  * a cleanup() method that provides specific cleanup code for each
  * sub-class.  Remember to call this.parent() when providing a cleanup()
- * method. Destroy will also fire off 2 events: preDestroy and postDestroy. You 
- * can hook into these methods in the same way as the init or plugin events. 
+ * method. Destroy will also fire off 2 events: preDestroy and postDestroy.
+ * You can hook into these methods in the same way as the init or plugin
+ * events. 
  *
  * The Family Attribute:
  * the Family attribute of a class is used internally by JxLib to identify Jx
@@ -14749,13 +15585,15 @@ Jx.Styles = new(new Class({
  * identify the family in the firebug inspector, but is not as useful for
  * coding purposes as it does not allow for inheritance.
  *
- * Parameters:
- * 
- * 
- * 
- * Example:
- * (code)
- * (end)
+ * Events:
+ *
+ * preInit
+ * postInit
+ * prePluginInit
+ * postPluginInit
+ * initializeDone
+ * preDestroy
+ * postDestroy
  *
  * License:
  * Copyright (c) 2009, Jon Bomgardner.
@@ -14765,9 +15603,33 @@ Jx.Styles = new(new Class({
 Jx.Object = new Class({
     Family: "Jx.Object",
     Implements: [Options, Events],
+    Binds: ['changeText'],
     plugins: new Hash(),
     pluginNamespace: 'Other',
+    /**
+     * Constructor: Jx.Object
+     * create a new instance of Jx.Object
+     *
+     * Parameters:
+     * options - {Object} optional parameters for creating an object.
+     */
     parameters: ['options'],
+    
+    options: {
+      /**
+       * Option: useLang
+       * Turns on this widget's ability to react to changes in
+       * the default language. Handy for changing text out on the fly.
+       * 
+       * TODO: Should this be enabled or disabled by default? 
+       */
+      useLang: true,
+      /**
+       * Option: plugins
+       * {Array} an array of plugins to add to the object.
+       */
+      plugins: null
+    },
 
     initialize: function(){
         //normalize arguments
@@ -14800,6 +15662,13 @@ Jx.Object = new Class({
         }
 
         this.setOptions(options);
+        if (this.options.useLang) {
+            //MooTools.lang.addEvent('langChange', this.changeText)
+            var self = this;
+            MooTools.lang.addEvent('langChange', function(ev) {
+              self.changeText();
+            });
+        }
         this.fireEvent('preInit');
         this.init();
         this.fireEvent('postInit');
@@ -14809,8 +15678,13 @@ Jx.Object = new Class({
         this.fireEvent('initializeDone');
     },
 
+    /**
+     * Method: initPlugins
+     * internal function to initialize plugins on object creation
+     */
     initPlugins: function () {
-        //pluginNamespace must be defined in order to pass plugins to the object
+        // pluginNamespace must be defined in order to pass plugins to the
+        // object
         if ($defined(this.pluginNamespace)) {
             if ($defined(this.options.plugins)
                     && Jx.type(this.options.plugins) === 'array') {
@@ -14819,28 +15693,52 @@ Jx.Object = new Class({
                         plugin.attach(this);
                         this.plugins.set(plugin.name, plugin);
                     } else if (Jx.type(plugin) === 'object') {
-                        //All plugin-enabled objects should define a pluginNamespace member variable
-                        //that is used for locating the plugins. The default namespace is 'Other' for
-                        //now until we come up with a better idea
-                        var p = new Jx.Plugin[this.pluginNamespace][plugin.name.capitalize()](plugin.options);
+                        // All plugin-enabled objects should define a
+                        // pluginNamespace member variable
+                        // that is used for locating the plugins. The default
+                        // namespace is 'Other' for
+                        // now until we come up with a better idea
+                    	var p;
+                    	if ($defined(Jx.Plugin[this.pluginNamespace][plugin.name.capitalize()])) {
+                    		p = new Jx.Plugin[this.pluginNamespace][plugin.name.capitalize()](plugin.options);
+                    	} else {
+                    		p = new Jx.Adaptor[this.pluginNamespace][plugin.name.capitalize()](plugin.options);
+                    	}
                         p.attach(this);
                     } else if (Jx.type(plugin) === 'string') {
                         //this is a name for a plugin.
-                        var p = new Jx.Plugin[this.pluginNamespace][plugin.capitalize()]();
+                    	var p;
+                    	if ($defined(Jx.Plugin[this.pluginNamespace][plugin.capitalize()])) {
+                    		p = new Jx.Plugin[this.pluginNamespace][plugin.capitalize()]();
+                    	} else {
+                    		p = new Jx.Adaptor[this.pluginNamespace][plugin.capitalize()]();
+                    	}
                         p.attach(this);
                     }
-                        
                 }, this);
             }
         }
     },
 
+    /**
+     * APIMethod: destroy
+     * destroy a Jx.Object, safely cleaning up any potential memory
+     * leaks along the way.  Uses the cleanup method of an object to
+     * actually do the cleanup.
+     * Emits the preDestroy event before cleanup and the postDestroy event
+     * after cleanup.
+     */
     destroy: function () {
         this.fireEvent('preDestroy');
         this.cleanup();
         this.fireEvent('postDestroy');
     },
 
+    /**
+     * Method: cleanup
+     * to be implemented by subclasses to do the actual work of destroying
+     * an object. 
+     */
     cleanup: function () {
         //detach plugins
         if (this.plugins.getLength > 0) {
@@ -14851,7 +15749,12 @@ Jx.Object = new Class({
         }
     },
 
+    /**
+     * Method: init
+     * virtual initialization method to be implemented by sub-classes
+     */
     init: $empty,
+    
     /**
      * APIMethod: registerPlugin
      * This method is called by a plugin that has its attach method
@@ -14887,14 +15790,123 @@ Jx.Object = new Class({
      * Parameters:
      * name - the name of the plugin as defined in the plugin's name property
      */
-    gePlugin: function (name) {
+    getPlugin: function (name) {
         if (this.plugins.has(name)) {
             return this.plugins.get(name);
         }
-    }
+    },
 
+    /**
+     * APIMethod: getText
+     * 
+     * returns the text for a jx.widget used in a label. 
+     * 
+     * Parameters:
+     * val - <String> || <Function> || <Object> = { set: '', key: ''[, value: ''] } for a MooTools.lang object
+     */
+    getText: function(val) {
+      if (Jx.type(val) == 'string') {
+        return val;
+      } else if (Jx.type(val) == 'function') {
+        return val();
+      } else if (Jx.type(val) == 'object' && $defined(val.set) && $defined(val.key)) {
+        // COMMENT: just an idea how a localization object could be stored to the instance if needed somewhere else and options change?
+        this.i18n = val;
+        if($defined(val.value)) {
+          return MooTools.lang.get(val.set, val.key)[val.value];
+        }else{
+          return MooTools.lang.get(val.set, val.key);
+        }
+      }
+      return '';
+    },
+
+    /**
+     * APIMethod: changeText
+     * This method should be overridden by subclasses. It should be used
+     * to change any language specific default text that is used by the widget.
+     *
+     * Parameters:
+     * lang - the language being changed to or that had it's data set of
+     *    translations changed.
+     */
+    changeText : $empty
 });
-// $Id: widget.js 685 2010-01-29 20:17:31Z zak4ms $
+
+MooTools.lang.set('en-US', 'Jx', {
+	
+	'widget': {
+		busyMessage: 'Working ...'
+	},
+	'colorpalette': {
+		alphaLabel: 'alpha (%)'
+	},
+	notice: {
+		closeTip: 'close this notice'
+	},
+	progressbar: {
+		messageText: 'Loading...',
+		progressText: '{progress} of {total}'
+	},
+	field: {
+		requiredText: '*'
+	},
+	file: {
+		browseLabel: 'Browse...'
+	},
+	'formatter.boolean': {
+		'true': 'Yes',
+		'false': 'No'
+	},
+	'formatter.currency': {
+		sign: '$'
+	},
+	'formatter.number': {
+		decimalSeparator: '.',
+    thousandsSeparator: ','
+	},
+	splitter: {
+		barToolTip: 'drag this bar to resize'
+	},
+	panel: {
+		collapseTooltip: 'Collapse/Expand Panel',
+    collapseLabel: 'Collapse',
+    expandLabel: 'Expand',
+    maximizeTooltip: 'Maximize Panel',
+    maximizeLabel: 'Maximize',
+    restoreTooltip: 'Restore Panel',
+    restoreLabel: 'Restore',
+    closeTooltip: 'Close Panel',
+    closeLabel: 'Close'
+	},
+	confirm: {
+		affirmitiveLabel: 'Yes',
+    negativeLabel: 'No'
+	},
+	dialog: {
+		resizeToolTip: 'Resize dialog'
+	},
+	message: {
+		okButton: 'Ok'
+	},
+	panelset: {
+		barTooltip: 'drag this bar to resize'
+	},
+	prompt: {
+		okButton: 'Ok',
+		cancelButton: 'Cancel'
+	},
+	upload: {
+		buttonText: 'Upload Files'
+	},
+	'plugin.resize': {
+	  tooltip: 'Drag to resize, double click to auto-size.'
+	},
+  'plugin.editor': {
+    submitButton: 'Save',
+    cancelButton: 'Cancel'
+  }
+});// $Id: widget.js 855 2010-04-20 06:04:53Z jonlb@comcast.net $
 /**
  * Class: Jx.Widget
  * Base class for all widgets (visual classes) in the JxLib Framework. This
@@ -14917,10 +15929,10 @@ Jx.Object = new Class({
  *
  * Chrome:
  *
- * Chrome is the extraneous visual element that provides the look and feel to some elements
- * i.e. dialogs.  Chrome is added inside the element specified but may
- * bleed outside the element to provide drop shadows etc.  This is done by
- * absolutely positioning the chrome objects in the container based on
+ * Chrome is the extraneous visual element that provides the look and feel to
+ * some elements i.e. dialogs.  Chrome is added inside the element specified
+ * but may bleed outside the element to provide drop shadows etc.  This is
+ * done by absolutely positioning the chrome objects in the container based on
  * calculations using the margins, borders, and padding of the jxChrome
  * class and the element it is added to.
  *
@@ -14932,18 +15944,41 @@ Jx.Object = new Class({
  * and height.  The images are positioned and clipped such that the
  * appropriate corners of the chrome image are displayed in those locations.
  *
+ * Busy States:
+ * 
+ * Any widget can be set as temporarily busy by calling the setBusy(true)
+ * method and then as idle by calling setBusy(false).  By default, busy 
+ * widgets display an event mask that prevents them from being clicked and
+ * a spinner image with a message.  By default, there are two configurations
+ * for the spinner image and message, one for 'small' widgets like buttons
+ * and inputs, and one for larger widgets like panels and dialogs.  The
+ * framework automatically chooses the most appropriate configuration so you
+ * don't need to worry about it unless you want to customize it.
  *
+ * You can disable this behaviour entirely by setting busyMask: false in the
+ * widget options when creating the widget.
+ *
+ * The mask and spinner functionality is provided by the MooTools Spinner
+ * class.  You can use any options documented for Spinner or Mask by setting
+ * the maskOptions option when creating a widget.
+ * 
+ * MooTools.Lang Keys:
+ * widget.busyMessage - sets the message of the waiter component when used
  */
 Jx.Widget = new Class({
     Family: "Jx.Widget",
     Extends: Jx.Object,
-
+    
     options: {
+        /* Option: id
+         * (optional) {String} an HTML ID to assign to the widget
+         */
+        id: null,
         /**
          * Option: content
          * content may be an HTML element reference, the id of an HTML element
-         *      already in the DOM, or an HTML string that becomes the inner HTML of
-         *      the element.
+         * already in the DOM, or an HTML string that becomes the inner HTML
+         * of the element.
          */
         content: null,
         /**
@@ -14951,12 +15986,66 @@ Jx.Widget = new Class({
          * the URL to load content from
          */
         contentURL: null,
-        template: '<div class="jxWidget"></div>'
+        /**
+         * Option: loadOnDemand
+         * {boolean} ajax content will only be loaded if the action is requested
+         * (like loading the content into a tab when activated)
+         */
+        loadOnDemand : false,
+        /**
+         * Option: cacheContent
+         * {boolean} determine whether the content should be loaded everytime or being cached
+         */
+        cacheContent : true,
+        /**
+         * Option: template
+         * the default HTML structure of this widget.  The default template
+         * is just a div with a class of jxWidget in the base class
+         */
+        template: '<div class="jxWidget"></div>',
+        /**
+         * Option: busyClass
+         * {String} a CSS class name to apply to busy mask when a widget is
+         * set as busy.  The default is 'jxBusy'.
+         */
+        busyClass: 'jxBusy',
+        /**
+         * Option: busyMask
+         * {Object} an object of options to pass to the MooTools Spinner
+         * when masking a busy object.  Set to false if you do not want
+         * to use the busy mask.
+         */
+        busyMask: {
+          'class': 'jxSpinner jxSpinnerLarge',
+          img: {'class':'jxSpinnerImage'},
+          content: {'class':'jxSpinnerContent'},
+          messageContainer: {'class':'jxSpinnerMessage'},
+          useIframeShim: true,
+          iframeShimOptions: {
+            className: 'jxIframeShim'
+          },
+          fx: true
+        }
     },
 
+    /**
+     * Property: classes
+     * {<Hash>} a hash of object properties to CSS class names used to
+     * automatically extract references to important DOM elements when
+     * processing a widget template.  This allows developers to provide custom
+     * HTML structures without affecting the functionality of widgets.
+     */
     classes: new Hash({
         domObj: 'jxWidget'
     }),
+    
+    /**
+     * Property: busy
+     * {Boolean} is the widget currently busy?  This should be considered
+     * an internal property, use the API methods <Jx.Widget::setBusy> and
+     * <Jx.Widget::isBusy> to manage the busy state of a widget.
+     */
+    busy: false,
 
     /**
      * Property: domObj
@@ -14966,8 +16055,7 @@ Jx.Widget = new Class({
 
     /**
      * Property: contentIsLoaded
-     *
-     * tracks the load state of the content, specifically useful
+     * {Boolean} tracks the load state of the content, specifically useful
      * in the case of remote content.
      */
     contentIsLoaded: false,
@@ -14978,10 +16066,11 @@ Jx.Widget = new Class({
      */
     chrome: null,
 
-
     /**
-     * APIMethod: init
-     * sets up the base widget code and runs the render function.
+     * Method: init
+     * sets up the base widget code and runs the render function.  Called
+     * by the Jx.Object framework for object initialization, should not be
+     * called directly.
      */
     init: function(){
         if (!this.options.deferRender) {
@@ -14993,9 +16082,8 @@ Jx.Widget = new Class({
         }
     },
 
-
     /**
-     * Method: loadContent
+     * APIMethod: loadContent
      *
      * triggers loading of content based on options set for the current
      * object.
@@ -15042,12 +16130,18 @@ Jx.Widget = new Class({
                 url: this.options.contentURL,
                 method:'get',
                 evalScripts:true,
+                onRequest:(function() {
+                  if(this.options.loadOnDemand) {
+                      this.setBusy(true);
+                  }
+                }).bind(this),
                 onSuccess:(function(html) {
                     element.innerHTML = html;
                     this.contentIsLoaded = true;
                     if (Jx.isAir){
                         $clear(this.reqTimeout);
                     }
+                    this.setBusy(false);
                     this.fireEvent('contentLoaded', this);
                 }).bind(this),
                 onFailure: (function(){
@@ -15072,28 +16166,8 @@ Jx.Widget = new Class({
         }
     },
 
-    processContent: function(element) {
-        $A(element.childNodes).each(function(node){
-            if (node.tagName == 'INPUT' || node.tagName == 'SELECT' || node.tagName == 'TEXTAREA') {
-                if (node.type == 'button') {
-                    node.addEvent('click', function(){
-                        this.fireEvent('click', this, node);
-                    });
-                } else {
-                    node.addEvent('change', function(){
-                        this.fireEvent('change',node);
-                    });
-                }
-            } else {
-                if (node.childNodes) {
-                    this.processContent(node);
-                }
-            }
-        }, this);
-    },
-
     /**
-     * Method: position
+     * APIMethod: position
      * positions an element relative to another element
      * based on the provided options.  Positioning rules are
      * a string with two space-separated values.  The first value
@@ -15144,8 +16218,8 @@ Jx.Widget = new Class({
      * vertical - the vertical positioning rule to use to position the
      *    element.  Valid values are 'top', 'center', 'bottom', and a numeric
      *    value.  The default value is 'center center'.
-     * offsets - an object containing numeric pixel offset values for the object
-     *    being positioned as top, right, bottom and left properties.
+     * offsets - an object containing numeric pixel offset values for the
+     *    object being positioned as top, right, bottom and left properties.
      */
     position: function(element, relative, options) {
         element = document.id(element);
@@ -15155,8 +16229,7 @@ Jx.Widget = new Class({
         var offsets = $merge({top:0,right:0,bottom:0,left:0}, options.offsets || {});
 
         var coords = relative.getCoordinates(); //top, left, width, height
-        var page;
-        var scroll;
+        var page, scroll;
         if (!document.id(element.parentNode) || element.parentNode ==  document.body) {
             page = Jx.getPageDimensions();
             scroll = document.id(document.body).getScroll();
@@ -15177,11 +16250,7 @@ Jx.Widget = new Class({
             coords.top = 0;
         }
         var size = element.getMarginBoxSize(); //width, height
-        var left;
-        var right;
-        var top;
-        var bottom;
-        var n;
+        var left, right, top, bottom, n;
         if (!hor.some(function(opt) {
             var parts = opt.split(' ');
             if (parts.length != 2) {
@@ -15252,73 +16321,73 @@ Jx.Widget = new Class({
         element.setStyle('left', left);
 
         if (!ver.some(function(opt) {
-                var parts = opt.split(' ');
-                if (parts.length != 2) {
-                    return false;
-                }
-                if (!isNaN(parseInt(parts[0],10))) {
-                    top = parseInt(parts[0],10);
-                } else {
-                    switch(parts[0]) {
-                        case 'bottom':
-                            top = coords.top + coords.height;
-                            break;
-                        case 'center':
-                            top = coords.top + Math.round(coords.height/2);
-                            break;
-                        case 'top':
-                        default:
-                            top = coords.top;
-                            break;
-                    }
-                }
-                if (!isNaN(parseInt(parts[1],10))) {
-                    var n = parseInt(parts[1],10);
-                    if (n>=0) {
-                        top += n;
-                        bottom = top + size.height;
-                    } else {
-                        bottom = top + n;
-                        top = bottom - size.height;
-                    }
-                } else {
-                    switch(parts[1]) {
-                        case 'top':
-                            top -= offsets.top;
-                            bottom = top + size.height;
-                            break;
-                        case 'bottom':
-                            top += offsets.bottom;
-                            bottom = top;
-                            top = top - size.height;
-                            break;
-                        case 'center':
-                        default:
-                            top = top - Math.round(size.height/2);
-                            bottom = top + size.height;
-                            break;
-                    }
-                }
-                return (top >= scroll.y && bottom <= scroll.y + page.height);
-            })) {
-                // all failed, snap the last position onto the page as best
-                // we can - can't do anything if the element is higher than the
-                // space available.
-                if (bottom > page.height) {
-                    top = scroll.y + page.height - size.height;
-                }
-                if (top < 0) {
-                    top = 0;
-                }
+          var parts = opt.split(' ');
+          if (parts.length != 2) {
+            return false;
+          }
+          if (!isNaN(parseInt(parts[0],10))) {
+            top = parseInt(parts[0],10);
+          } else {
+            switch(parts[0]) {
+              case 'bottom':
+                top = coords.top + coords.height;
+                break;
+              case 'center':
+                top = coords.top + Math.round(coords.height/2);
+                break;
+              case 'top':
+              default:
+                top = coords.top;
+                break;
             }
-            element.setStyle('top', top);
+          }
+          if (!isNaN(parseInt(parts[1],10))) {
+              var n = parseInt(parts[1],10);
+              if (n>=0) {
+                  top += n;
+                  bottom = top + size.height;
+              } else {
+                  bottom = top + n;
+                  top = bottom - size.height;
+              }
+          } else {
+              switch(parts[1]) {
+                  case 'top':
+                      top -= offsets.top;
+                      bottom = top + size.height;
+                      break;
+                  case 'bottom':
+                      top += offsets.bottom;
+                      bottom = top;
+                      top = top - size.height;
+                      break;
+                  case 'center':
+                  default:
+                      top = top - Math.round(size.height/2);
+                      bottom = top + size.height;
+                      break;
+              }
+          }
+          return (top >= scroll.y && bottom <= scroll.y + page.height);
+      })) {
+          // all failed, snap the last position onto the page as best
+          // we can - can't do anything if the element is higher than the
+          // space available.
+          if (bottom > page.height) {
+              top = scroll.y + page.height - size.height;
+          }
+          if (top < 0) {
+              top = 0;
+          }
+      }
+      element.setStyle('top', top);
 
-            /* update the jx layout if necessary */
-            var jxl = element.retrieve('jxLayout');
-            if (jxl) {
-                jxl.options.left = left;
-                jxl.options.top = top;
-            }
+      /* update the jx layout if necessary */
+      var jxl = element.retrieve('jxLayout');
+      if (jxl) {
+          jxl.options.left = left;
+          jxl.options.top = top;
+      }
     },
 
     /**
@@ -15381,8 +16450,9 @@ Jx.Widget = new Class({
               }, this);
           }
         }
-        if (!window.opera) {
-            c.adopt(Jx.createIframeShim());
+        /* create a shim so selects don't show through the chrome */
+        if ($defined(window.IframeShim)) {
+          this.shim = new IframeShim(c, {className: 'jxIframeShim'});
         }
 
         /* remove from DOM so the other resizing logic works as expected */
@@ -15391,7 +16461,7 @@ Jx.Widget = new Class({
     },
 
     /**
-     * Method: showChrome
+     * APIMethod: showChrome
      * show the chrome on an element.  This creates the chrome if necessary.
      * If the chrome has been previously created and not removed, you can
      * call this without an element and it will just resize the chrome within
@@ -15410,32 +16480,49 @@ Jx.Widget = new Class({
                 element.addClass('jxHasChrome');
             }
             this.resizeChrome(element);
+            if (this.shim) {
+              this.shim.show();
+            }
             if (element && this.chrome.parentNode !== element) {
                 element.adopt(this.chrome);
+                this.chrome.setStyle('z-index',-1);
             }
         }
     },
 
     /**
-     * Method: hideChrome
+     * APIMethod: hideChrome
      * removes the chrome from the DOM.  If you do this, you can't
      * call showChrome with no arguments.
      */
     hideChrome: function() {
         if (this.chrome) {
+            if (this.shim) { 
+              this.shim.hide(); 
+            }
             this.chrome.parentNode.removeClass('jxHasChrome');
             this.chrome.dispose();
         }
     },
 
+    /**
+     * APIMethod: resizeChrome
+     * manually resize the chrome on an element.
+     *
+     * Parameters:
+     * element: {DOMElement} the element to resize the chrome for
+     */
     resizeChrome: function(o) {
         if (this.chrome && Browser.Engine.trident4) {
             this.chrome.setContentBoxSize(document.id(o).getBorderBoxSize());
+            if (this.shim) {
+              this.shim.position();
+            }
         }
     },
 
     /**
-     * Method: addTo
+     * APIMethod: addTo
      * adds the object to the DOM relative to another element.  If you use
      * 'top' or 'bottom' then the element is added to the relative
      * element (becomes a child node).  If you use 'before' or 'after'
@@ -15465,6 +16552,18 @@ Jx.Widget = new Class({
         return this;
     },
 
+    /**
+     * APIMethod: toElement
+     * return a DOM element reference for this widget, by default this
+     * returns the local domObj reference.  This is used by the mootools
+     * framework with the document.id() or $() methods allowing you to
+     * manipulate a Jx.Widget sub class as if it were a DOM element.
+     *
+     * (code)
+     * var button = new Jx.Button({label: 'test'});
+     * $(button).inject('someElement');
+     * (end)
+     */
     toElement: function() {
         return this.domObj;
     },
@@ -15479,10 +16578,10 @@ Jx.Widget = new Class({
      * container - the container to add the template into
      *
      * Returns:
-     * a hash object containing the requested Elements keyed by the class names
+     * a hash object containing the requested Elements keyed by the class
+     * names
      */
     processTemplate: function(template,classes,container){
-
         var h = new Hash();
         var element;
         if ($defined(container)){
@@ -15496,9 +16595,7 @@ Jx.Widget = new Class({
                 h.set(klass,el);
             }
         });
-
         return h;
-
     },
 
     /**
@@ -15512,6 +16609,10 @@ Jx.Widget = new Class({
         return prefix + uid;
     },
 
+    /**
+     * APIMethod: dispose
+     * remove the widget from the DOM
+     */
     dispose: function(){
         var el = document.id(this.addable) || document.id(this.domObj);
         if (el) {
@@ -15519,8 +16620,13 @@ Jx.Widget = new Class({
         }
     },
 
+    /**
+     * Method: cleanup
+     * destroy the widget and clean up any potential memory leaks
+     */
     cleanup: function(){
         if ($defined(this.domObj)) {
+            this.domObj.eliminate('jxWidget');
             this.domObj.destroy();
         }
         if ($defined(this.addable)) {
@@ -15532,13 +16638,35 @@ Jx.Widget = new Class({
         this.parent();
     },
 
+    /**
+     * Method: render
+     * render the widget, internal function called by the framework.
+     */
     render: function() {
         this.elements = this.processElements(this.options.template,
             this.classes);
+        if ($defined(this.domObj)) {
+          if ( $defined(this.options.id)) {
+            this.domObj.set('id', this.options.id);
+          }
+          //TODO: Should we autogenerate an id when one is not provided? like so...
+          // this.domObj.set('id',this.generateId());
+          this.domObj.store('jxWidget', this);
+        }
     },
 
+    /**
+     * Property: elements
+     * a hash of elements extracted by processing the widget template
+     */
     elements: null,
 
+    /**
+     * Method: processElements
+     * process the template of the widget and populate the elements hash
+     * with any objects.  Also set any object references based on the classes
+     * hash.
+     */
     processElements: function(template, classes) {
         var keys = classes.getValues();
         elements = this.processTemplate(template, keys);
@@ -15548,6 +16676,118 @@ Jx.Widget = new Class({
             }
         }, this);
         return elements;
+    },
+    
+    /**
+     * APIMethod: isBusy
+     * indicate if the widget is currently busy or not
+     *
+     * Returns:
+     * {Boolean} true if busy, false otherwise.
+     */
+    isBusy: function() {
+      return this.busy;
+    },
+    
+    /**
+     * APIMethod: setBusy
+     * set the busy state of the widget
+     *
+     * Parameters:
+     * busy - {Boolean} true to set the widget as busy, false to set it as
+     *    idle.
+     */
+    setBusy: function(state) {
+      if (this.busy == state) {
+        return;
+      }
+      this.busy = state;
+      this.fireEvent('busy', this.busy);
+      if (this.busy) {
+        if (this.options.busyClass) {
+          this.domObj.addClass(this.options.busyClass);
+        }
+        if (this.options.busyMask && this.domObj.spin) {
+          /* put the spinner above the element in the z-index */
+          var z = Jx.getNumber(this.domObj.getStyle('z-index'));
+          var opts = {
+            style: {
+              'z-index': z+1
+            }
+          };
+          /* switch to the small size if the element is less than
+           * 60 pixels high
+           */
+          var size = this.domObj.getBorderBoxSize();
+          if (size.height < 60) {
+            opts['class'] = 'jxSpinner jxSpinnerSmall';
+            opts.img = null;
+            opts.message = new Element('p',{
+              'class':'jxSpinnerMessage',
+              html: '<span class="jxSpinnerImage"></span>'+MooTools.lang.get('Jx','widget').busyMessage
+            });
+          }
+          opts = $merge(this.options.busyMask, opts);
+          
+          this.domObj.get('spinner', opts).show(!this.options.busyMask.fx);
+  		
+        }
+      } else {
+        if (this.options.busyClass) {
+          this.domObj.removeClass(this.options.busyClass);
+        }
+        if (this.options.busyMask && this.domObj.unspin) {
+          this.domObj.get('spinner').hide(!this.options.busyMask.fx);
+    	
+        }
+      }
+    },
+    
+    /**
+     * APIMethod: changeText
+     * This method should be overridden by subclasses. It should be used
+     * to change any language specific default text that is used by the widget.
+     * 
+     * Parameters:
+     * lang - {string} the language being changed to or that had it's data set of 
+     *    translations changed.
+     */
+    changeText: function (lang) {
+        //if the mask is being used then recreate it. The code will pull
+        //the new text automatically
+        if (this.busy) {
+            this.setBusy(false);
+            this.setBusy(true);
+        }
+    },
+    
+    /**
+     * APIMethod: stack
+     * stack this widget in the z-index of the DOM relative to other stacked
+     * objects.
+     *
+     * Parameters:
+     * el - {DOMElement} optional, the element to stack.  By default, the
+     * element to stack is the one returned by the toElement method which
+     * is typically this.domObj unless the method has been overloaded.
+     */
+    stack: function(el) {
+      el = el || document.id(this);
+      Jx.Stack.stack(el);
+    },
+    
+    /**
+     * APIMethod: unstack
+     * remove this widget from the stack.
+     *
+     * Parameters:
+     * el - {DOMElement} optional, the element to unstack.  By default, the
+     * element to unstack is the one returned by the toElement method which
+     * is typically this.domObj unless the method has been overloaded.
+     */
+    unstack: function(el) {
+      el = el || document.id(this);
+      Jx.Stack.unstack(el);
     }
 });
 
@@ -15581,7 +16821,31 @@ if (Jx.isAir){
             }
         }
     });
-}
+}// $Id: selection.js 840 2010-04-13 19:57:25Z pagameba $
+/**
+ * Class: Jx.Selection
+ * 
+ * Manage selection of objects.
+ *
+ * Example:
+ * (code)
+ * var selection = new Jx.Selection();
+ * (end)
+ *
+ * Events:
+ * select - fired when an item is added to the selection.  This event may be
+ *    changed by passing the eventToFire option when creating the selection 
+ *    object.
+ * unselect - fired when an item is removed from the selection.  This event
+ *    may be changed by passing the eventToFire option when creating the
+ *    selection object.
+ *
+ * License: 
+ * Copyright (c) 2008, DM Solutions Group Inc.
+ * 
+ * This file is licensed under an MIT style license
+ */
+
 
 Jx.Selection = new Class({
     Family: 'Jx.Selection',
@@ -15590,7 +16854,17 @@ Jx.Selection = new Class({
         /**
          * Option: eventToFire
          * Allows the developer to change the event that is fired in case one
-         * object is using multiple selectionManager instances.
+         * object is using multiple selectionManager instances.  The default
+         * is to use 'select' and 'unselect'.  To modify the event names,
+         * pass different values:
+         * (code)
+         * new Jx.Selection({
+         *   eventToFire: {
+         *     select: 'newSelect',
+         *     unselect: 'newUnselect'
+         *   }
+         * });
+         * (end)
          */
         eventToFire: { 
             select: 'select',
@@ -15598,14 +16872,15 @@ Jx.Selection = new Class({
         },
         /**
          * APIProperty: selectClass
-         * the CSS class name to add to the wrapper element when it is selected
+         * the CSS class name to add to the wrapper element when it is
+         * selected
          */
         selectClass: 'jxSelected',
         /**
          * Option: selectMode
-         * {string} default single.  May be single or multiple.  In single mode
-         * only one item may be selected.  Selecting a new item will implicitly
-         * unselect the currently selected item.
+         * {string} default single.  May be single or multiple.  In single
+         * mode only one item may be selected.  Selecting a new item will
+         * implicitly unselect the currently selected item.
          */
         selectMode: 'single',
         /**
@@ -15619,24 +16894,49 @@ Jx.Selection = new Class({
          * {Integer} Default 0.  The minimum number of items that must be
          * selected.  If set to a number higher than 0, items added to a list
          * are automatically selected until this minimum is met.  The user may
-         * not unselect items if unselecting them will drop the total number of
-         * items selected below the minimum.
+         * not unselect items if unselecting them will drop the total number
+         * of items selected below the minimum.
          */
         minimumSelection: 0
     },
     
+    /**
+     * Property: selection
+     * {Array} an array holding the current selection
+     */
     selection: null,
     
+    /**
+     * Constructor: Jx.Selection
+     * create a new instance of Jx.Selection
+     * 
+     * Parameters:
+     * options - {Object} options for the new instance
+     */
     init: function () {
         this.selection = [];
     },
     
+    /**
+     * APIMethod: defaultSelect
+     * select an item if the selection does not yet contain the minimum
+     * number of selected items.  Uses <Jx.Selection::select> to select
+     * the item, so the same criteria is applied to the item if it is
+     * to be selected.
+     */
     defaultSelect: function(item) {
         if (this.selection.length < this.options.minimumSelection) {
             this.select(item);
         }
     },
     
+    /**
+     * APIMethod: select
+     * select an item.
+     *
+     * Parameters:
+     * item - {DOMElement} a DOM element or an element ID.
+     */
     select: function (item) {
         item = document.id(item);
         if (this.options.selectMode === 'multiple') {
@@ -15654,31 +16954,56 @@ Jx.Selection = new Class({
                 if (this.selection.length > 1) {
                     this.unselect(this.selection[0]);
                 }
+                this.fireEvent(this.options.eventToFire.select, item);
             } else {
                 this.unselect(item);
             }
-            this.fireEvent(this.options.eventToFire.select, item);
         }
     },
     
+    /**
+     * APIMethod: unselect
+     * remove an item from the selection.  The item must already be in the
+     * selection.
+     *
+     * Parameters:
+     * item - {DOMElement} a DOM element or an element ID.
+     */
     unselect: function (item) {
         if (this.selection.contains(item) && 
             this.selection.length > this.options.minimumSelection) {
             document.id(item).removeClass(this.options.selectClass);
             this.selection.erase(item);
-            this.fireEvent(this.options.eventToFire.unselect, item, this);
+            this.fireEvent(this.options.eventToFire.unselect, [item, this]);
         }
     },
     
+    /**
+     * APIMethod: selected
+     * returns the items in the current selection.
+     *
+     * Returns:
+     * {Array} an array of DOM elements in the current selection
+     */
     selected: function () {
         return this.selection;
     },
     
+    /**
+     * APIMethod: isSelected
+     * test if an item is in the current selection.
+     *
+     * Parameters:
+     * item - {DOMElement} a DOM element or an element ID.
+     *
+     * Returns:
+     * {Boolean} true if the current selection contains the item, false
+     * otherwise
+     */
     isSelected: function(item) {
         return this.selection.contains(item);
     }
-
-});// $Id: list.js 681 2010-01-15 05:45:28Z jonlb@comcast.net $
+});// $Id: list.js 841 2010-04-15 14:16:06Z pagameba $
 /**
  * Class: Jx.List
  * 
@@ -15693,6 +17018,17 @@ Jx.Selection = new Class({
  *
  * Example:
  * (code)
+ * var list = new Jx.List('container',{
+ *   hover: true,
+ *   select: true,
+ *   onSelect: function(el) {
+ *     alert(el.get('html'));
+ *   }
+ * });
+ * list.add(new Element('li', {html:'1'}));
+ * list.add(new Element('li', {html:'2'}));
+ * list.add(new Element('li', {html:'3'}));
+ *
  * (end)
  *
  * Events:
@@ -15711,6 +17047,19 @@ Jx.Selection = new Class({
 Jx.List = new Class({
     Family: 'Jx.List',
     Extends: Jx.Object,
+    /**
+     * Constructor: Jx.List
+     * create a new instance of Jx.List
+     *
+     * Parameters:
+     * container - {Mixed} an element reference or id of an element that will
+     * contain the items in the list
+     * options - {Object} an object containing optional parameters
+     * selection - {<Jx.Selection>} null or a Jx.Selection object. If the
+     * select option is set to true, then list will use this selection object
+     * to track selections or create its own if no selection object is 
+     * supplied.
+     */
     parameters: ['container', 'options', 'selection'],
     /* does this object own the selection object (and should clean it up) */
     ownsSelection: false,
@@ -15732,7 +17081,7 @@ Jx.List = new Class({
         items: null,
         /**
          * Option: hover
-         * {Boolean} default true.  If set to true, the wrapper element will
+         * {Boolean} default false.  If set to true, the wrapper element will
          * obtain the defined hoverClass if set and mouseenter/mouseleave
          * events will be emitted when the user hovers over and out of elements
          */
@@ -15746,7 +17095,7 @@ Jx.List = new Class({
 
         /**
          * Option: press
-         * {Boolean} default true.  If set to true, the wrapper element will
+         * {Boolean} default false.  If set to true, the wrapper element will
          * obtain the defined pressClass if set and mousedown/mouseup
          * events will be emitted when the user clicks on elements
          */
@@ -15820,7 +17169,7 @@ Jx.List = new Class({
                     this.removeClass('jxPressed');
                 }
             },
-            click: function () {
+            click: function (e) {
                 if (target.selection && 
                     isEnabled(this) && 
                     isSelectable(this)) {
@@ -15838,6 +17187,14 @@ Jx.List = new Class({
                     var itemTarget = item.retrieve('jxListTargetItem') || item;
                     target.fireEvent('unselect', itemTarget);
                 }
+            },
+            contextmenu: function(e) {
+              var cm = this.retrieve('jxContextMenu');
+              if (cm) {
+                cm.show(e);
+                this.removeClass(target.options.pressClass);
+              } 
+              e.stop();
             }
         };
         
@@ -15892,6 +17249,9 @@ Jx.List = new Class({
         var target = el.retrieve('jxListTarget') || el;
         if (target) {
             target.store('jxListTargetItem', el);
+            target.addEvents({
+              contextmenu: this.bound.contextmenu
+            });
             if (this.options.press && this.options.pressClass) {
                 target.addEvents({
                     mousedown: this.bound.mousedown,
@@ -16008,9 +17368,11 @@ Jx.List = new Class({
      * Parameters:
      * func - {function} the function to apply, it will receive the item and
      * index of the item as parameters
+     * context - {object} the context to execute the function in, null by
+     * default.
      */
-    each: function(f) {
-        $A(this.container.childNodes).each(f);
+    each: function(f, context) {
+        $A(this.container.childNodes).each(f, context);
     },
     /**
      * APIMethod: select
@@ -16087,9 +17449,90 @@ Jx.List = new Class({
         }
     }
 
-});// $Id: record.js 686 2010-02-01 05:45:28Z jonlb@comcast.net $
+});/**
+ * Class: Jx.Stack
+ * Manage the zIndex of widgets
+ *
+ * This is a singleton and should be called directly, like so:
+ *
+ * (code)
+ * (end)
+ *
+ * License:
+ * Copyright (c) 2010 Paul Spencer
+ * 
+ * This file is licensed under an MIT style license
+ */
+Jx.Stack = new(new Class({
+  /**
+   * Property: els
+   * {Array} the elements in the stack
+   */
+  els: [],
+  
+  /**
+   * Property: base
+   * {Integer} the base z-index value of the first element in the stack
+   */
+  base: 1000,
+  
+  /**
+   * Property: increment
+   * {Integer} the amount to increment the z-index between elements of the
+   * stack
+   */
+  increment: 100,
+  
+  /**
+   * APIMethod: stack
+   * push an element onto the stack and set its z-index appropriately
+   *
+   * Parameters:
+   * el - {DOMElement} a DOM element to push on the stack
+   */
+  stack: function(el) {
+    this.unstack(el);
+    this.els.push(el);
+    this.setZIndex(el, this.els.length-1);
+  },
+
+  /**
+   * APIMethod: unstack
+   * pull an element off the stack and reflow the z-index of the remaining
+   * elements in the stack if necessary
+   *
+   * Parameters:
+   * el - {DOMElement} the DOM element to pull off the stack
+   */
+  unstack: function(el) {
+    if (this.els.contains(el)) {
+      el.setStyle('z-index', '');
+      var idx = this.els.indexOf(el);
+      this.els.erase(el);
+      for (var i=idx; i<this.els.length; i++) {
+        this.setZIndex(this.els[i], i);
+      }
+    }
+  },
+
+  /**
+   * Method: setZIndex
+   * set the z-index of an element based on its position in the stack
+   *
+   * Parameters:
+   * el - {DOMElement} the element to set the z-index for
+   * idx - {Integer} optional, the index to assume for this object
+   */
+  setZIndex: function(obj, idx) {
+    idx = idx || this.els.indexOf(obj);
+    if (idx !== false) {
+      document.id(obj).setStyle('z-index', this.base + (idx*this.increment));
+    }
+  }
+  
+}))();// $Id: record.js 834 2010-04-05 18:17:01Z jonlb@comcast.net $
 /**
- * Class: Jx.record
+ * Class: Jx.Record
  * 
  * Extends: <Jx.Object>
  * 
@@ -16127,9 +17570,9 @@ Jx.Record = new Class({
      * used to determine the state of this record. When not null (meaning no 
      * changes were made) this should be one of
      * 
-     * - Jx.Store.Record.UPDATE
-     * - Jx.Store.Record.DELETE
-     * - Jx.Store.Record.INSERT
+     * - Jx.Record.UPDATE
+     * - Jx.Record.DELETE
+     * - Jx.Record.INSERT
      */
     state: null,
     /**
@@ -16296,7 +17739,7 @@ Jx.Record = new Class({
 
 Jx.Record.UPDATE = 1;
 Jx.Record.DELETE = 2;
-Jx.Record.INSERT = 3;// $Id: store.js 686 2010-02-01 05:45:28Z jonlb@comcast.net $
+Jx.Record.INSERT = 3;// $Id: store.js 855 2010-04-20 06:04:53Z jonlb@comcast.net $
 /**
  * Class: Jx.Store 
  * 
@@ -16308,8 +17751,7 @@ Jx.Record.INSERT = 3;// $Id: store.js 686 2010-02-01 05:45:28Z jonlb@comcast.net
  * For the most part the store is pretty "dumb" meaning it 
  * starts with very limited functionality. Actually, it can't
  * even load data by itself. Instead, it needs to have protocols,
- * strategies, and a record class passed to it that it knows how to use
- * and can use it.  
+ * strategies, and a record class passed to it that it can use.
  * 
  * Example:
  * (code)
@@ -16344,7 +17786,8 @@ Jx.Store = new Class({
          * Option: protocol
          * The protocol to use for communication in this store. The store 
          * itself doesn't actually use it but it is accessed by the strategies
-         * to do their work. This option is required and the store won't work without it.
+         * to do their work. This option is required and the store won't work
+         * without it.
          */
         protocol: null,
         /**
@@ -16358,10 +17801,10 @@ Jx.Store = new Class({
         strategies: null,
         /**
          * Option: record
-         * This is a Jx.Store.Record instance or one of its subclasses. This is the 
-         * class that will be used to hold each individual record in the store.
-         * Don't pass in a instance of the class but rather the class name 
-         * itself. If none is passed in it will default to Jx.Store.Record
+         * This is a Jx.Store.Record instance or one of its subclasses. This is
+         * the class that will be used to hold each individual record in the
+         * store. Don't pass in a instance of the class but rather the class
+         * name itself. If none is passed in it will default to Jx.Record
          */
         record: null,
         /**
@@ -16385,7 +17828,7 @@ Jx.Store = new Class({
      */
     index : 0,
     /**
-     * Property: id
+     * APIProperty: id
      * The id of this store.
      */
     id : null,
@@ -16400,6 +17843,10 @@ Jx.Store = new Class({
      */
     ready: false,
     
+    /**
+     * Method: init
+     * initialize the store, should be called by sub-classes
+     */
     init: function () {
         this.parent();
         
@@ -16434,6 +17881,11 @@ Jx.Store = new Class({
         
     },
     
+    /**
+     * Method: cleanup
+     * avoid memory leaks when a store is destroyed, should be called
+     * by sub-classes if overridden
+     */
     cleanup: function () {
         this.strategies.each(function(strategy){
             strategy.destroy();
@@ -16471,12 +17923,12 @@ Jx.Store = new Class({
     },
     /**
      * APIMethod: load
-     * used to load the store. It simply fires an event that the strategies are
-     * listening for.
+     * used to load the store. It simply fires an event that the strategies
+     * are listening for.
      * 
      * Parameters:
-     * params - a hash of parameters passed to the strategy for determining what records
-     *          to load.
+     * params - a hash of parameters passed to the strategy for determining
+     *     what records to load.
      */
     load: function (params) {
         this.fireEvent('storeLoad', params);
@@ -16500,14 +17952,9 @@ Jx.Store = new Class({
      */
     hasNext : function () {
         if ($defined(this.data)) {
-            if (this.index < this.data.length - 1) {
-                return true;
-            } else {
-                return false;
-            }
-        } else {
-            return null;
+            return this.index < this.data.length - 1;
         }
+        return null;
     },
 
     /**
@@ -16519,14 +17966,9 @@ Jx.Store = new Class({
      */
     hasPrevious : function () {
         if ($defined(this.data)) {
-            if (this.index > 0) {
-                return true;
-            } else {
-                return false;
-            }
-        } else {
-            return null;
+            return this.index > 0;
         }
+        return null;
     },
 
     /**
@@ -16622,9 +18064,8 @@ Jx.Store = new Class({
     count : function () {
         if ($defined(this.data)) {
             return this.data.length;
-        } else {
-            return null;
         }
+        return null;
     },
 
     /**
@@ -16637,9 +18078,8 @@ Jx.Store = new Class({
     getPosition : function () {
         if ($defined(this.data)) {
             return this.index;
-        } else {
-            return null;
         }
+        return null;
     },
 
     /**
@@ -16682,9 +18122,7 @@ Jx.Store = new Class({
         } else {
             data = this.data;
         }
-        for (var i = 0, l = data.length; i < l; i++) {
-            fn.call(bind, data[i], i, data);
-        }
+        data.each(fn, bind);
     },
     /**
      * APIMethod: get
@@ -16777,15 +18215,16 @@ Jx.Store = new Class({
      * 
      * Parameters:
      * data - an array of data to add.
-     * position - 'top' or 'bottom'. Indicates whether to add at the top or the
-     *          bottom of the store
+     * position - 'top' or 'bottom'. Indicates whether to add at the top or
+     * the bottom of the store
      */
     addRecords: function (data, position) {
         var def = $defined(data);
         var type = Jx.type(data);
         if (def && type === 'array') {
             this.fireEvent('storeBeginAddRecords', this);
-            //if position is top, reverse the array or we'll add them in the wrong order.
+            //if position is top, reverse the array or we'll add them in the
+            // wrong order.
             if (position === 'top') {
                 data.reverse();
             }
@@ -16803,8 +18242,8 @@ Jx.Store = new Class({
      * Returns the record at the given index or the current store index
      * 
      * Parameters:
-     * index - the index from which to return the record. Optional. Defaults to
-     *          the current store index
+     * index - the index from which to return the record. Optional. Defaults
+     * to the current store index
      */
     getRecord: function (index) {
         if (!$defined(index)) {
@@ -16869,7 +18308,8 @@ Jx.Store = new Class({
         var record = this.data[index];
         record.state = Jx.Record.DELETE;
         // Set to Null or slice it out and compact the array???
-        this.data[index] = null;
+        //this.data[index] = null;
+        this.data.splice(index,1);
         if (!$defined(this.deleted)) {
             this.deleted = [];
         }
@@ -16880,10 +18320,11 @@ Jx.Store = new Class({
      * APIMethod: insertRecord
      * Shortcut to addRecord which facilitates marking a record as inserted.
      * 
-     * Paremeters:
+     * Parameters:
      * data - the data to use in creating this inserted record. Should be in
      *          whatever form the current implementation of Jx.Record needs
-     * position - where to place the record. Should be either 'top' or 'bottom'.
+     * position - where to place the record. Should be either 'top' or
+     *    'bottom'.
      */
     insertRecord: function (data, position) {
         this.addRecord(data, position, true);
@@ -16900,8 +18341,8 @@ Jx.Store = new Class({
     /**
      * APIMethod: findByColumn
      * Used to find a specific record by the value in a specific column. This
-     * is particularly useful for finding records by a unique id column. The search
-     * will stop on the first instance of the value
+     * is particularly useful for finding records by a unique id column. The
+     * search will stop on the first instance of the value
      * 
      * Parameters:
      * column - the name (or index) of the column to search by
@@ -16956,15 +18397,69 @@ Jx.Store = new Class({
             this.removeRecord(first);
         }
         this.fireEvent('storeMultipleRecordsRemoved', [this, first, last]);
-    }
-});// $Id: compare.js 649 2009-11-30 22:19:48Z pagameba $
+    },
+    
+    /**
+	 * APIMethod: parseTemplate
+	 * parses the provided template to determine which store columns are
+	 * required to complete it.
+	 *
+	 * Parameters:
+	 * template - the template to parse
+	 */
+	parseTemplate: function (template) {
+	    //we parse the template based on the columns in the data store looking
+	    //for the pattern {column-name}. If it's in there we add it to the
+	    //array of ones to look fo
+	    var arr = [];
+	    this.options.columns.each(function (col) {
+	        var s = '{' + col.name + '}';
+	        if (template.contains(s)) {
+	            arr.push(col.name);
+	        }
+	    }, this);
+	    return arr;
+	},
+	
+	/**
+	 * APIMethod: fillTemplate
+	 * Actually does the work of getting the data from the store
+	 * and creating a single item based on the provided template
+	 * 
+	 * Parameters: 
+	 * index - the index of the data in the store to use in populating the
+	 *          template.
+	 * template - the template to fill
+	 * columnsNeeded - the array of columns needed by this template. should be 
+	 * 			obtained by calling parseTemplate().
+	 */
+	fillTemplate: function (index, template, columnsNeeded) {
+        var record = null;
+		if ($defined(index)) {
+            if (index instanceof Jx.Record) {
+                record = index;
+            } else {
+                record = this.getRecord(index);
+            }
+        } else {
+            record = this.getRecord(this.index);
+        }
+		
+	    //create the item
+	    var itemObj = {};
+	    columnsNeeded.each(function (col) {
+	        itemObj[col] = record.get(col);
+	    }, this);
+	    return template.substitute(itemObj);
+	}
+});// $Id: compare.js 855 2010-04-20 06:04:53Z jonlb@comcast.net $
 /**
  * Class: Jx.Compare
  *
  * Extends: <Jx.Object>
  *
  * Class that holds functions for doing comparison operations.
- * This class requires the clientside Date() extensions (deps/date.js).
+ * This class requires the mootools-more Date() extensions.
  *
  * notes:
  * Each function that does a comparison returns
@@ -17025,7 +18520,14 @@ Jx.Compare = new Class({
      */
     convert: function (val) {
         if (Jx.type(val) === 'string') {
+            var neg = false;
+            if (val.substr(0,1) == '-') {
+                neg = true;
+            }
             val = parseFloat(val.replace(/^[^\d\.]*([\d., ]+).*/g, "$1").replace(new RegExp("[^\\\d" + this.options.separator + "]", "g"), '').replace(/,/, '.')) || 0;
+            if (neg) {
+                val = val * -1;
+            }
         }
         return val || 0;
     },
@@ -17760,14 +19262,14 @@ Jx.Store.Protocol = new Class({
      * that subclasses should implement.
      */
     abort: $empty
-});// $Id: protocol.local.js 649 2009-11-30 22:19:48Z pagameba $
+});// $Id: protocol.local.js 834 2010-04-05 18:17:01Z jonlb@comcast.net $
 /**
  * Class: Jx.Store.Protocol.Local
  * 
  * Extends: Jx.Store.Protocol
  * 
- * Based on the Protocol base class, the local protocol uses data that it is handed
- * upon instantiation to process requests.
+ * Based on the Protocol base class, the local protocol uses data that it is
+ * handed upon instantiation to process requests.
  * 
  * Constructor Parameters:
  * data - The data to use 
@@ -17838,14 +19340,15 @@ Jx.Store.Protocol.Local = new Class({
     }
     
     /**
-     * The following methods are not implemented as they make no sense for a local protocol:
+     * The following methods are not implemented as they make no sense for a
+     * local protocol:
      * - create
      * - update 
      * - delete
      * - commit
      * - abort
      */
-});// $Id: protocol.ajax.js 649 2009-11-30 22:19:48Z pagameba $
+});// $Id: protocol.ajax.js 860 2010-04-21 16:31:52Z jonlb@comcast.net $
 /**
  * Class: Jx.Store.Protocol.Ajax
  * 
@@ -17880,9 +19383,9 @@ Jx.Store.Protocol.Ajax = new Class({
         /**
          * Option: urls
          * This is a hash of the urls to use for each method. If the rest 
-         * option is set to true the only one needed will be the urls.rest. These
-         * can be overridden if needed by passing an options object into the
-         * various methods with the appropriate urls.
+         * option is set to true the only one needed will be the urls.rest.
+         * These can be overridden if needed by passing an options object into
+         * the various methods with the appropriate urls.
          */
         urls: {
             rest: null,
@@ -17901,8 +19404,6 @@ Jx.Store.Protocol.Ajax = new Class({
      * Send a read request via AJAX
      * 
      * Parameters:
-     * page - the page requested
-     * itemsPerPage - the number of items on the page
      * options - the options to pass to the request.
      */
     read: function (options) {
@@ -18034,7 +19535,9 @@ Jx.Store.Protocol.Ajax = new Class({
      */
     run: function (record, options, method) {
         
-        this.options.requestOptions.data = this.parser.encode(record);
+        this.options.requestOptions.data = {
+            data: this.parser.encode(record)
+        };
         
         var resp = new Jx.Store.Response();
         resp.requestType = method;
@@ -18055,7 +19558,7 @@ Jx.Store.Protocol.Ajax = new Class({
         return resp;
     }
     
-});// $Id: strategy.js 649 2009-11-30 22:19:48Z pagameba $
+});// $Id: strategy.js 776 2010-03-22 14:35:16Z pagameba $
 /**
  * Class: Jx.Store.Strategy
  * 
@@ -18083,6 +19586,10 @@ Jx.Store.Strategy = new Class({
      */
     active: null,
     
+    /**
+     * Method: init
+     * initialize the strategy, should be called by subclasses
+     */
     init: function () {
         this.parent();
         this.active = false;
@@ -18121,10 +19628,7 @@ Jx.Store.Strategy = new Class({
         }
         return false;
     }
-    
-    
-    
-});// $Id: strategy.full.js 649 2009-11-30 22:19:48Z pagameba $
+});// $Id: strategy.full.js 776 2010-03-22 14:35:16Z pagameba $
 /**
  * Class: Jx.Store.Strategy.Full
  * 
@@ -18145,7 +19649,10 @@ Jx.Store.Strategy.Full = new Class({
     name: 'full',
     
     options:{},
-    
+    /**
+     * Method: init
+     * initialize this strategy
+     */
     init: function () {
         this.parent();
         this.bound = {
@@ -18154,19 +19661,27 @@ Jx.Store.Strategy.Full = new Class({
         }
     },
     
+    /**
+     * APIMethod: activate
+     * activates the strategy if it isn't already active.
+     */
     activate: function () {
         this.parent();
         this.store.addEvent('storeLoad', this.bound.load);
         
     },
     
+    /**
+     * APIMethod: deactivate
+     * deactivates the strategy if it is already active.
+     */
     deactivate: function () {
         this.parent();
         this.store.removeEvent('storeLoad', this.bound.load);
         
     },
     /**
-     * Method: load
+     * APIMethod: load
      * Called as the eventhandler for the store load method. Can also
      * be called independently to load data into the current store.
      * 
@@ -18186,6 +19701,7 @@ Jx.Store.Strategy.Full = new Class({
         opts.data.itemsPerPage = -1;
         this.store.protocol.read(opts);
     },
+    
     /**
      * Method: loadStore
      * Called as the event hanlder for the protocol's dataLoaded event. Checks 
@@ -18225,7 +19741,7 @@ Jx.Store.Strategy.Full = new Class({
             this.store.options.recordOptions.primaryKey = meta.primaryKey;
         }
     }
-});// $Id: strategy.paginate.js 669 2009-12-18 06:02:59Z jonlb@comcast.net $
+});// $Id: strategy.paginate.js 776 2010-03-22 14:35:16Z pagameba $
 /**
  * Class: Jx.Store.Strategy.Paginate
  * 
@@ -18254,7 +19770,7 @@ Jx.Store.Strategy.Paginate = new Class({
             return {
                 page: this.page,
                 itemsPerPage: this.itemsPerPage
-            }
+            };
         },
         /**
          * Option: startingItemsPerPage
@@ -18270,15 +19786,16 @@ Jx.Store.Strategy.Paginate = new Class({
         startingPage: 1,
         /**
          * Option: expirationInterval
-         * The interval, in milliseconds (1000 = 1 sec), to hold a page of data
-         * before it expires. If the page is expired, the next time the page
-         * is accessed it must be retrieved again. Default is 5 minutes (1000 * 60 * 5)
+         * The interval, in milliseconds (1000 = 1 sec), to hold a page of
+         * data before it expires. If the page is expired, the next time the
+         * page is accessed it must be retrieved again. Default is 5 minutes
+         * (1000 * 60 * 5)
          */
         expirationInterval: (1000 * 60 * 5),
         /**
          * Option: ignoreExpiration
-         * Set to TRUE to ignore the expirationInterval setting and never expire
-         * pages.
+         * Set to TRUE to ignore the expirationInterval setting and never
+         * expire pages.
          */
         ignoreExpiration: false
     },
@@ -18304,6 +19821,10 @@ Jx.Store.Strategy.Paginate = new Class({
      */
     itemsPerPage: null,
     
+    /**
+     * Method: init
+     * initialize this strategy
+     */
     init: function () {
         this.parent();
         //set up bindings that we need here
@@ -18315,11 +19836,19 @@ Jx.Store.Strategy.Paginate = new Class({
         this.page = this.options.startingPage;
     },
     
+    /**
+     * APIMethod: activate
+     * activates the strategy if it isn't already active.
+     */
     activate: function () {
         this.parent();
         this.store.addEvent('storeLoad', this.bound.load);
     },
     
+    /**
+     * APIMethod: deactivate
+     * deactivates the strategy if it is already active.
+     */
     deactivate: function () {
         this.parent();
         this.store.removeEvent('storeLoad', this.bound.load);
@@ -18362,9 +19891,9 @@ Jx.Store.Strategy.Paginate = new Class({
     },
     /**
      * Method: loadData
-     * This method does the actual work of loading data to the store. It is called
-     * when either the protocol finishes or setPage() has the data and it's not
-     * expired.
+     * This method does the actual work of loading data to the store. It is
+     * called when either the protocol finishes or setPage() has the data and
+     * it's not expired.
      * 
      * Parameters:
      * data - the data to load into the store.
@@ -18382,8 +19911,8 @@ Jx.Store.Strategy.Paginate = new Class({
     },
     /**
      * Method: parseMetaData
-     * Takes the metadata returned from the protocol and places it in the appropriate
-     * places.
+     * Takes the metadata returned from the protocol and places it in the
+     * appropriate Vplaces.
      * 
      * Parameters:
      * meta - the meta data object returned from the protocol.
@@ -18501,9 +20030,21 @@ Jx.Store.Strategy.Paginate = new Class({
     getTotalCount: function () {
         return this.totalItems;
     }
-    
-    
-});
+});/**
+ * Class: Jx.Store.Strategy.Progressive
+ *
+ * Extends: <Jx.Store.Strategy.Paginate>
+ *
+ * Store strategy for progressively obtaining results in a store. You can
+ * continually call nextPage() to get the next page and the store will retain
+ * all current data. You can set a maximum number of records the store should
+ * hold and whether it should dropRecords when that max is hit.
+ *
+ * License:
+ * Copyright (c) 2010, Jon Bomgardner.
+ *
+ * This file is licensed under an MIT style license
+ */
 Jx.Store.Strategy.Progressive = new Class({
     
     Extends: Jx.Store.Strategy.Paginate,
@@ -18524,12 +20065,28 @@ Jx.Store.Strategy.Progressive = new Class({
          */
         dropRecords: true
     },
-    
+    /**
+     * Property: startingPage
+     */
     startingPage: 0,
+    /**
+     * Property: maxPages
+     */
     maxPages: null,
+    /**
+     * Property: loadedPages
+     */
     loadedPages: 0,
+    /**
+     * Property: loadAt
+     * Options are 'top' or 'bottom'. Defaults to 'bottom'.
+     */
     loadAt: 'bottom',
     
+    /**
+     * Method: init
+     * initialize this strategy
+     */
     init: function () {
         this.parent();
         if (this.options.dropPages) {
@@ -18559,9 +20116,9 @@ Jx.Store.Strategy.Progressive = new Class({
     
     /**
      * Method: loadData
-     * This method does the actual work of loading data to the store. It is called
-     * when either the protocol finishes or setPage() has the data and it's not
-     * expired.
+     * This method does the actual work of loading data to the store. It is
+     * called when either the protocol finishes or setPage() has the data and
+     * it's not expired.
      * 
      * Parameters:
      * data - the data to load into the store.
@@ -18580,13 +20137,13 @@ Jx.Store.Strategy.Progressive = new Class({
      * the store
      * 
      * Parameters:
-     * end - which end to load to. Either 'top' or 'bottom'.
+     * params - a hash of parameters to pass to the request if needed.
      */
     nextPage: function (params) {
         if (!$defined(params)) {
             params = {};
         }
-        if (this.options.dropPages && this.totalPages > this.startingPage + this.loadedPages) {
+        if (this.options.dropRecords && this.totalPages > this.startingPage + this.loadedPages) {
             this.loadAt = 'bottom';
             if (this.loadedPages >= this.maxPages) {
                 //drop records before getting more
@@ -18598,10 +20155,16 @@ Jx.Store.Strategy.Progressive = new Class({
         this.page = this.startingPage + this.loadedPages + 1;
         this.load($merge(this.params, params));
     },
-    
+    /**
+     * APIMethod: previousPage
+     * Allows a caller to move back to the previous page.
+     *
+     * Parameters:
+     * params - a hash of parameters to pass to the request if needed.
+     */
     previousPage: function (params) {
-        //if we're not dropping pages there's nothing todo
-        if (!this.options.dropPages) {
+        //if we're not dropping pages there's nothing to do
+        if (!this.options.dropRecords) {
             return;
         }
         
@@ -18620,7 +20183,7 @@ Jx.Store.Strategy.Progressive = new Class({
             this.load($merge(this.params, params));
         }
     }
-});// $Id: strategy.save.js 670 2009-12-18 06:04:44Z jonlb@comcast.net $
+});// $Id: strategy.save.js 834 2010-04-05 18:17:01Z jonlb@comcast.net $
 /**
  * Class: Jx.Store.Strategy.Save 
  * 
@@ -18642,7 +20205,7 @@ Jx.Store.Strategy.Save = new Class({
     options: {
         /**
          * Option: autoSave
-         * Whether the strateggy should be watching the store to save changes
+         * Whether the strategy should be watching the store to save changes
          * automatically. Set to True to watch events, set it to a number of 
          * milliseconds to have the strategy save every so many seconds
          */
@@ -18665,6 +20228,10 @@ Jx.Store.Strategy.Save = new Class({
      */
     totalChanges: 0,
     
+    /**
+     * Method: init
+     * initialize this strategy
+     */
     init: function () {
         this.parent();
         this.bound = {
@@ -18673,6 +20240,10 @@ Jx.Store.Strategy.Save = new Class({
         };
     },
     
+    /**
+     * APIMethod: activate
+     * activates the strategy if it isn't already active.
+     */
     activate: function () {
         this.parent();
         if (Jx.type(this.options.autoSave) === 'number') {
@@ -18685,6 +20256,10 @@ Jx.Store.Strategy.Save = new Class({
         
     },
     
+    /**
+     * APIMethod: deactivate
+     * deactivates the strategy if it is already active.
+     */
     deactivate: function () {
         this.parent();
         if ($defined(this.periodicalId)) {
@@ -18699,8 +20274,8 @@ Jx.Store.Strategy.Save = new Class({
     
     /**
      * APIMethod: saveRecord
-     * Called by event handlers when store data is changed, updated, or deleted.
-     * If deleted, the record will be removed from the deleted array.
+     * Called by event handlers when store data is changed, updated, or
+     * deleted. If deleted, the record will be removed from the deleted array.
      * 
      * Parameters:
      * record - The Jx.Record instance that was changed
@@ -18761,9 +20336,9 @@ Jx.Store.Strategy.Save = new Class({
      * come back failed we will hold that response and send it to the caller
      * via the fired event. This method is responsible for updating the status
      * of each record as it returns and on inserts, it updates the primary key
-     * of the record. If it was a delete it will remove it permanently from the
-     * store's deleted array (provided it returns successful - based on the 
-     * success attribute of the meta object). When all changes have been 
+     * of the record. If it was a delete it will remove it permanently from
+     * the store's deleted array (provided it returns successful - based on
+     * the success attribute of the meta object). When all changes have been 
      * accounted for the method fires a finished event and passes all of the 
      * failed responses to the caller so they can be handled appropriately.
      * 
@@ -18800,10 +20375,8 @@ Jx.Store.Strategy.Save = new Class({
                 failed: this.failedChanges
             });
         }
-            
     }
-    
-});// $Id: strategy.sort.js 649 2009-11-30 22:19:48Z pagameba $
+});// $Id: strategy.sort.js 776 2010-03-22 14:35:16Z pagameba $
 /**
  * Class: Jx.Store.Strategy.Sort
  * 
@@ -18832,8 +20405,8 @@ Jx.Store.Strategy.Sort = new Class({
         sortOnStoreEvents: ['storeColumnChanged','storeDataLoaded'],
         /**
          * Option: defaultSort
-         * The default sorting type, currently set to merge but can be any of the
-         * sorters available
+         * The default sorting type, currently set to merge but can be any of
+         * the sorters available
          */
         defaultSort : 'merge',
         /**
@@ -18861,6 +20434,10 @@ Jx.Store.Strategy.Sort = new Class({
         'native' : "Nativesort"
     },
     
+    /**
+     * Method: init
+     * initialize this strategy
+     */
     init: function () {
         this.parent();
         this.bound = {
@@ -18868,6 +20445,10 @@ Jx.Store.Strategy.Sort = new Class({
         };
     },
     
+    /**
+     * APIMethod: activate
+     * activates the strategy if it isn't already active.
+     */
     activate: function () {
         if ($defined(this.options.sortOnStoreEvents)) {
             this.options.sortOnStoreEvents.each(function (ev) {
@@ -18876,6 +20457,10 @@ Jx.Store.Strategy.Sort = new Class({
         }
     },
     
+    /**
+     * APIMethod: deactivate
+     * deactivates the strategy if it is already active.
+     */
     deactivate: function () {
         if ($defined(this.options.sortOnStoreEvents)) {
             this.options.sortOnStoreEvents.each(function (ev) {
@@ -18890,16 +20475,14 @@ Jx.Store.Strategy.Sort = new Class({
      * 
      * Parameters: 
      * cols - Optional. An array of columns to sort/group by 
-     * sort - the sort type (quick,heap,merge,native),defaults to options.defaultSort
+     * sort - the sort type (quick,heap,merge,native),defaults to
+     *     options.defaultSort
      * dir - the direction to sort. Set to "desc" for descending,
      * anything else implies ascending (even null). 
      */
     sort : function (cols, sort, dir) {
-        
         if (this.store.count()) {
-        
             this.store.fireEvent('sortStart', this);
-            
             var c;
             if ($defined(cols) && Jx.type(cols) === 'array') {
                 c = this.options.sortCols = cols;
@@ -19155,7 +20738,7 @@ Jx.Store.Parser.JSON = new Class({
             
         return JSON.encode(data);
     }
-});// $Id: button.js 674 2009-12-29 06:47:59Z jonlb@comcast.net $
+});// $Id: button.js 837 2010-04-12 18:45:17Z conrad.barthelmes $
 /**
  * Class: Jx.Button
  *
@@ -19164,41 +20747,11 @@ Jx.Store.Parser.JSON = new Class({
  * Jx.Button creates a clickable element that can be added to a web page.
  * When the button is clicked, it fires a 'click' event.
  *
- * The CSS styling for a button is controlled by several classes related
- * to the various objects in the button's HTML structure:
- *
- * (code)
- * <div class="jxButtonContainer">
- *  <a class="jxButton">
- *   <span class="jxButtonContent">
- *    <img class="jxButtonIcon" src="image_url">
- *    <span class="jxButtonLabel">button label</span>
- *   </span>
- *  </a>
- * </div>
- * (end)
- *
- * The CSS classes will change depending on the type option passed to the
- * constructor of the button.  The default type is Button.  Passing another
- * value such as Tab will cause all the CSS classes to change from jxButton
- * to jxTab.  For example:
- *
- * (code)
- * <div class="jxTabContainer">
- *  <a class="jxTab">
- *   <span class="jxTabContent">
- *    <img class="jxTabIcon" src="image_url">
- *    <span class="jxTabLabel">tab label</span>
- *   </span>
- *  </a>
- * </div>
- * (end)
- *
  * When you construct a new instance of Jx.Button, the button does not
  * automatically get inserted into the web page.  Typically a button
  * is used as part of building another capability such as a Jx.Toolbar.
  * However, if you want to manually insert the button into your application,
- * you may use the addTo method to append or insert the button into the
+ * you may use the <Jx.Button::addTo> method to append or insert the button into the
  * page.
  *
  * There are two modes for a button, normal and toggle.  A toggle button
@@ -19252,19 +20805,7 @@ Jx.Button = new Class({
     Family: 'Jx.Button',
     Extends: Jx.Widget,
 
-    /**
-     * the HTML element that is inserted into the DOM for this button.  You
-     * may reference this object to append it to the DOM or remove it from
-     * the DOM if necessary.
-     */
-    domObj: null,
-
     options: {
-        /* Option: id
-         * optional.  A string value to use as the ID of the button
-         * container.
-         */
-        id: '',
         /* Option: image
          * optional.  A string value that is the url to load the image to
          * display in this button.  The default styles size this image to 16 x
@@ -19280,16 +20821,28 @@ Jx.Button = new Class({
         tooltip: '',
         /* Option: label
          * optional, default is no label.  A string value that is used as a
-         * label on the button.
+         * label on the button. - use an object for localization: { set: 'Examples', key: 'lanKey', value: 'langValue' }
+         * see widget.js for details
          */
         label: '',
         /* Option: toggle
          * default true, whether the button is a toggle button or not.
          */
         toggle: false,
-
+        /* Option: toggleClass
+         * A class to apply to the button if it is a toggle button,
+         * 'jxButtonToggle' by default.
+         */
         toggleClass: 'jxButtonToggle',
+        /* Option: pressedClass
+         * A class to apply to the button when it is pressed,
+         * 'jxButtonPressed' by default.
+         */
         pressedClass: 'jxButtonPressed',
+        /* Option: activeClass
+         * A class to apply to the buttonwhen it is active,
+         * 'jxButtonActive' by default.
+         */
         activeClass: 'jxButtonActive',
 
         /* Option: active
@@ -19301,15 +20854,26 @@ Jx.Button = new Class({
          * whether the button is enabled or not.
          */
         enabled: true,
+        /* Option: href
+         * set an href on the button's action object, typically an <a> tag.
+         * Default is javascript:void(0) and use onClick.
+         */
+        href: 'javascript:void(0);',
         /* Option: template
          * the HTML structure of the button.  As a minimum, there must be a
-         * containing element with a class of jxButtonContainer and an internal
-         * element with a class of jxButton.  jxButtonIcon and jxButtonLabel are
-         * used if present to put the image and label into the button.
+         * containing element with a class of jxButtonContainer and an
+         * internal element with a class of jxButton.  jxButtonIcon and
+         * jxButtonLabel are used if present to put the image and label into
+         * the button.
          */
         template: '<span class="jxButtonContainer"><a class="jxButton"><span class="jxButtonContent"><img class="jxButtonIcon" src="'+Jx.aPixel.src+'"><span class="jxButtonLabel"></span></span></a></span>'
     },
 
+    /**
+     * Property: classes
+     * used to auto-populate this object with element references when
+     * processing templates
+     */
     classes: new Hash({
         domObj: 'jxButtonContainer',
         domA: 'jxButton',
@@ -19318,7 +20882,7 @@ Jx.Button = new Class({
     }),
 
     /**
-     * APIMethod: render
+     * Method: render
      * create a new button.
      */
     render: function() {
@@ -19334,7 +20898,7 @@ Jx.Button = new Class({
             var hasFocus;
             var mouseDown;
             this.domA.set({
-                href: 'javascript:void(0)',
+                href: this.options.href,
                 title: this.options.tooltip,
                 alt: this.options.tooltip
             });
@@ -19399,7 +20963,7 @@ Jx.Button = new Class({
 
         if (this.domLabel) {
             if (this.options.label || this.domA.hasClass('jxDiscloser')) {
-                this.domLabel.set('html',this.options.label);
+                this.setLabel(this.options.label);
             } else {
                 //this.domLabel.removeClass('jx'+this.type+'Label');
                 this.domLabel.setStyle('display','none');
@@ -19421,7 +20985,7 @@ Jx.Button = new Class({
 
     },
     /**
-     * Method: clicked
+     * APIMethod: clicked
      * triggered when the user clicks the button, processes the
      * actionPerformed event
      *
@@ -19429,7 +20993,7 @@ Jx.Button = new Class({
      * evt - {Event} the user click event
      */
     clicked : function(evt) {
-        if (this.options.enabled) {
+        if (this.options.enabled && !this.isBusy()) {
             if (this.options.toggle) {
                 this.setActive(!this.options.active);
             } else {
@@ -19439,7 +21003,7 @@ Jx.Button = new Class({
         //return false;
     },
     /**
-     * Method: isEnabled
+     * APIMethod: isEnabled
      * This returns true if the button is enabled, false otherwise
      *
      * Returns:
@@ -19450,7 +21014,7 @@ Jx.Button = new Class({
     },
 
     /**
-     * Method: setEnabled
+     * APIMethod: setEnabled
      * enable or disable the button.
      *
      * Parameters:
@@ -19465,7 +21029,7 @@ Jx.Button = new Class({
         }
     },
     /**
-     * Method: isActive
+     * APIMethod: isActive
      * For toggle buttons, this returns true if the toggle button is
      * currently active and false otherwise.
      *
@@ -19476,28 +21040,30 @@ Jx.Button = new Class({
         return this.options.active;
     },
     /**
-     * Method: setActive
+     * APIMethod: setActive
      * Set the active state of the button
      *
      * Parameters:
      * active - {Boolean} the new active state of the button
      */
     setActive: function(active) {
-        if (this.options.active == active) {
-            return;
+        if (this.options.enabled && !this.isBusy()) {
+          if (this.options.active == active) {
+              return;
+          }
+          this.options.active = active;
+          if (this.domA) {
+              if (this.options.active) {
+                  this.domA.addClass(this.options.activeClass);
+              } else {
+                  this.domA.removeClass(this.options.activeClass);
+              }
+          }
+          this.fireEvent(active ? 'down':'up', this);
         }
-        this.options.active = active;
-        if (this.domA) {
-            if (this.options.active) {
-                this.domA.addClass(this.options.activeClass);
-            } else {
-                this.domA.removeClass(this.options.activeClass);
-            }
-        }
-        this.fireEvent(active ? 'down':'up', this);
     },
     /**
-     * Method: setImage
+     * APIMethod: setImage
      * set the image of this button to a new image URL
      *
      * Parameters:
@@ -19512,31 +21078,28 @@ Jx.Button = new Class({
         }
     },
     /**
-     * Method: setLabel
-     *
+     * APIMethod: setLabel
      * sets the text of the button.
      *
      * Parameters:
-     *
      * label - {String} the new label for the button
      */
     setLabel: function(label) {
         this.options.label = label;
         if (this.domLabel) {
-            this.domLabel.set('html', label);
+            this.domLabel.set('html', this.getText(label));
             this.domLabel.setStyle('display', label || this.domA.hasClass('jxDiscloser') ? null : 'none');
         }
     },
     /**
-     * Method: getLabel
-     *
+     * APIMethod: getLabel
      * returns the text of the button.
      */
     getLabel: function() {
         return this.options.label;
     },
     /**
-     * Method: setTooltip
+     * APIMethod: setTooltip
      * sets the tooltip displayed by the button
      *
      * Parameters:
@@ -19563,7 +21126,7 @@ Jx.Button = new Class({
         }
     },
     /**
-     * Method: focus
+     * APIMethod: focus
      * capture the keyboard focus on this button
      */
     focus: function() {
@@ -19572,22 +21135,31 @@ Jx.Button = new Class({
         }
     },
     /**
-     * Method: blur
+     * APIMethod: blur
      * remove the keyboard focus from this button
      */
     blur: function() {
         if (this.domA) {
             this.domA.blur();
         }
+    },
+
+    /**
+     * APIMethod: changeText
+     *
+     * updates the label of the button on langChange Event for
+     * Internationalization
+     */
+    changeText : function(lang) {
+        this.parent();
+        this.setLabel(this.options.label);
     }
 });
-// $Id: flyout.js 602 2009-11-10 19:41:36Z pagameba $
+// $Id: flyout.js 768 2010-03-18 16:22:50Z fred.warnock $
 /**
  * Class: Jx.Button.Flyout
  *
  * Extends: <Jx.Button>
- *
- * Implements: <Jx.ContentLoader>, <Jx.AutoPosition>, <Jx.Chrome>
  *
  * Flyout buttons expose a panel when the user clicks the button.  The
  * panel can have arbitrary content.  You must provide any necessary 
@@ -19615,9 +21187,6 @@ Jx.Button = new Class({
  * flyout buttons inside the content area of another flyout button.  In this
  * case, opening the inner flyout will not close the outer flyout but it will
  * close any other flyouts that are siblings.
- * 
- * The options argument takes a combination of options that apply to <Jx.Button>,
- * <Jx.ContentLoader>, and <Jx.AutoPosition>.
  *
  * Example:
  * (code)
@@ -19645,12 +21214,22 @@ Jx.Button = new Class({
 Jx.Button.Flyout = new Class({
     Family: 'Jx.Button.Flyout',
     Extends: Jx.Button,
-    
+    Binds: ['keypressHandler', 'clickHandler'],
     options: {
+        /* Option: template
+         * the HTML structure of the flyout button
+         */
         template: '<span class="jxButtonContainer"><a class="jxButton jxButtonFlyout jxDiscloser"><span class="jxButtonContent"><img class="jxButtonIcon" src="'+Jx.aPixel.src+'"><span class="jxButtonLabel "></span></a></span>',
+        /* Option: contentTemplate
+         * the HTML structure of the flyout content area
+         */
         contentTemplate: '<div class="jxFlyout"><div class="jxFlyoutContent"></div></div>'
     },
     
+    /**
+     * Property: contentClasses
+     * the classes array for processing the contentTemplate
+     */
     contentClasses: new Hash({
         contentContainer: 'jxFlyout',
         content: 'jxFlyoutContent'
@@ -19662,7 +21241,7 @@ Jx.Button.Flyout = new Class({
      */
     content: null,
     /**
-     * APIMethod: render
+     * Method: render
      * construct a new instance of a flyout button.  
      */
     render: function() {
@@ -19678,11 +21257,9 @@ Jx.Button.Flyout = new Class({
         
         this.content.store('jxFlyout', this);
         this.loadContent(this.content);
-        this.keypressWatcher = this.keypressHandler.bindWithEvent(this);
-        this.hideWatcher = this.clickHandler.bindWithEvent(this);
     },
     /**
-     * Method: clicked
+     * APIMethod: clicked
      * Override <Jx.Button::clicked> to hide/show the content area of the
      * flyout.
      *
@@ -19733,6 +21310,7 @@ Jx.Button.Flyout = new Class({
         }
         // now we go on the stack.
         Jx.Button.Flyout.Stack.push(this);
+        this.fireEvent('beforeOpen');
 
         this.options.active = true;
         this.domA.addClass(this.options.activeClass);
@@ -19756,14 +21334,15 @@ Jx.Button.Flyout = new Class({
          */
         this.contentContainer.setContentBoxSize(document.id(this.content).getMarginBoxSize());
         
+        this.stack(this.contentContainer);
         this.contentContainer.setStyle('visibility','');
 
-        document.addEvent('keydown', this.keypressWatcher);
-        document.addEvent('click', this.hideWatcher);
+        document.addEvent('keydown', this.keypressHandler);
+        document.addEvent('click', this.clickHandler);
         this.fireEvent('open', this);
     },
     /**
-     * Method: hide
+     * APIMethod: hide
      * Closes the flyout if open
      */
     hide: function() {
@@ -19773,11 +21352,15 @@ Jx.Button.Flyout = new Class({
         Jx.Button.Flyout.Stack.pop();
         this.setActive(false);
         this.contentContainer.dispose();
-        document.removeEvent('keydown', this.keypressWatcher);    
-        document.removeEvent('click', this.hideWatcher);
+        this.unstack(this.contentContainer);
+        document.removeEvent('keydown', this.keypressHandler);    
+        document.removeEvent('click', this.clickHandler);
         this.fireEvent('close', this);
     },
-    /* hide flyout if the user clicks outside of the flyout */
+    /**
+     * Method: clickHandler
+     * hide flyout if the user clicks outside of the flyout 
+     */
     clickHandler: function(e) {
         e = new Event(e);
         var elm = document.id(e.target);
@@ -19787,14 +21370,1568 @@ Jx.Button.Flyout = new Class({
             flyout.hide();
         }
     },
-    /* hide flyout if the user presses the ESC key */
+    /**
+     * Method: keypressHandler
+     * hide flyout if the user presses the ESC key 
+     */
     keypressHandler: function(e) {
         e = new Event(e);
         if (e.key == 'esc') {
             Jx.Button.Flyout.Stack[Jx.Button.Flyout.Stack.length - 1].hide();
         }
     }
-});// $Id: layout.js 626 2009-11-20 13:22:22Z pagameba $
+});// $Id: colorpalette.js 776 2010-03-22 14:35:16Z pagameba $
+/**
+ * Class: Jx.ColorPalette
+ *
+ * Extends: <Jx.Widget>
+ *
+ * A Jx.ColorPalette presents a user interface for selecting colors.
+ * Currently, the user can either enter a HEX colour value or select from a
+ * palette of web-safe colours.  The user can also enter an opacity value.
+ *
+ * A Jx.ColorPalette can be embedded anywhere in a web page using its addTo
+ * method.  However, a <Jx.Button> suJx.Tooltipbclass is provided
+ * (<Jx.Button.Color>) that embeds a colour panel inside a button for easy use
+ * in toolbars.
+ *
+ * Colour changes are propogated via a change event.  To be notified
+ * of changes in a Jx.ColorPalette, use the addEvent method.
+ *
+ * Example:
+ * (code)
+ * (end)
+ *
+ * Events:
+ * change - triggered when the color changes.
+ * click - the user clicked on a color swatch (emitted after a change event)
+ *
+ * MooTools.lang keys:
+ * - colorpalette.alphaLabel
+ * 
+ * 
+ * License:
+ * Copyright (c) 2008, DM Solutions Group Inc.
+ *
+ * This file is licensed under an MIT style license
+ */
+Jx.ColorPalette = new Class({
+    Family: 'Jx.ColorPalette',
+    Extends: Jx.Widget,
+    /**
+     * Property: {HTMLElement} domObj
+     * the HTML element representing the color panel
+     */
+    domObj: null,
+    options: {
+        /* Option: parent
+         * default null, the DOM element to add the palette to.
+         */
+        parent: null,
+        /* Option: color
+         * default #000000, the initially selected color
+         */
+        color: '#000000',
+        /* Option: alpha
+         * default 100, the initial alpha value
+         */
+        alpha: 1,
+        /* Option: hexColors
+         * an array of hex colors for creating the palette, defaults to a
+         * set of web safe colors.
+         */
+        hexColors: ['00', '33', '66', '99', 'CC', 'FF']
+    },
+    /**
+     * Method: render
+     * initialize a new instance of Jx.ColorPalette
+     */
+    render: function() {
+        this.domObj = new Element('div', {
+            id: this.options.id,
+            'class':'jxColorPalette'
+        });
+
+        var top = new Element('div', {'class':'jxColorBar'});
+        var d = new Element('div', {'class':'jxColorPreview'});
+
+        this.selectedSwatch = new Element('div', {'class':'jxColorSelected'});
+        this.previewSwatch = new Element('div', {'class':'jxColorHover'});
+        d.adopt(this.selectedSwatch);
+        d.adopt(this.previewSwatch);
+
+        top.adopt(d);
+
+        this.colorInputLabel = new Element('label', {
+          'class':'jxColorLabel', 
+          html:'#'
+        });
+        top.adopt(this.colorInputLabel);
+
+        var cc = this.changed.bind(this);
+        this.colorInput = new Element('input', {
+            'class':'jxHexInput',
+            'type':'text',
+            'maxLength':6,
+            events: {
+                'keyup':cc,
+                'blur':cc,
+                'change':cc
+            }
+        });
+
+        top.adopt(this.colorInput);
+
+        this.alphaLabel = new Element('label', {'class':'jxAlphaLabel', 'html':MooTools.lang.get('Jx','colorpalette').alphaLabel});
+        top.adopt(this.alphaLabel);
+
+        this.alphaInput = new Element('input', {
+            'class':'jxAlphaInput',
+            'type':'text',
+            'maxLength':3,
+            events: {
+                'keyup': this.alphaChanged.bind(this)
+            }
+        });
+        top.adopt(this.alphaInput);
+
+        this.domObj.adopt(top);
+
+        var swatchClick = this.swatchClick.bindWithEvent(this);
+        var swatchOver = this.swatchOver.bindWithEvent(this);
+
+        var table = new Element('table', {'class':'jxColorGrid'});
+        var tbody = new Element('tbody');
+        table.adopt(tbody);
+        for (var i=0; i<12; i++) {
+            var tr = new Element('tr');
+            for (var j=-3; j<18; j++) {
+                var bSkip = false;
+                var r, g, b;
+                /* hacky approach to building first three columns
+                 * because I couldn't find a good way to do it
+                 * programmatically
+                 */
+
+                if (j < 0) {
+                    if (j == -3 || j == -1) {
+                        r = g = b = 0;
+                        bSkip = true;
+                    } else {
+                        if (i<6) {
+                            r = g = b = i;
+                        } else {
+                            if (i == 6) {
+                                r = 5; g = 0; b = 0;
+                            } else if (i == 7) {
+                                r = 0; g = 5; b = 0;
+                            } else if (i == 8) {
+                                r = 0; g = 0; b = 5;
+                            } else if (i == 9) {
+                                r = 5; g = 5; b = 0;
+                            } else if (i == 10) {
+                                r = 0; g = 5; b = 5;
+                            } else if (i == 11) {
+                                r = 5; g = 0; b = 5;
+                            }
+                        }
+                    }
+                } else {
+                    /* remainder of the columns are built
+                     * based on the current row/column
+                     */
+                    r = parseInt(i/6,10)*3 + parseInt(j/6,10);
+                    g = j%6;
+                    b = i%6;
+                }
+                var bgColor = '#'+this.options.hexColors[r]+
+                                  this.options.hexColors[g]+
+                                  this.options.hexColors[b];
+
+                var td = new Element('td');
+                if (!bSkip) {
+                    td.setStyle('backgroundColor', bgColor);
+
+                    var a = new Element('a', {
+                        'class': 'colorSwatch ' + (((r > 2 && g > 2) || (r > 2 && b > 2) || (g > 2 && b > 2)) ? 'borderBlack': 'borderWhite'),
+                        'href':'javascript:void(0)',
+                        'title':bgColor,
+                        'alt':bgColor,
+                        events: {
+                            'mouseover': swatchOver,
+                            'click': swatchClick
+                        }
+                    });
+                    a.store('swatchColor', bgColor);
+                    td.adopt(a);
+                } else {
+                    var span = new Element('span', {'class':'emptyCell'});
+                    td.adopt(span);
+                }
+                tr.adopt(td);
+            }
+            tbody.adopt(tr);
+        }
+        this.domObj.adopt(table);
+        this.updateSelected();
+        if (this.options.parent) {
+            this.addTo(this.options.parent);
+        }
+    },
+
+    /**
+     * Method: swatchOver
+     * handle the mouse moving over a colour swatch by updating the preview
+     *
+     * Parameters:
+     * e - {Event} the mousemove event object
+     */
+    swatchOver: function(e) {
+        var a = e.target;
+
+        this.previewSwatch.setStyle('backgroundColor', a.retrieve('swatchColor'));
+    },
+
+    /**
+     * Method: swatchClick
+     * handle mouse click on a swatch by updating the color and hiding the
+     * panel.
+     *
+     * Parameters:
+     * e - {Event} the mouseclick event object
+     */
+    swatchClick: function(e) {
+        var a = e.target;
+
+        this.options.color = a.retrieve('swatchColor');
+        this.updateSelected();
+        this.fireEvent('click', this);
+    },
+
+    /**
+     * Method: changed
+     * handle the user entering a new colour value manually by updating the
+     * selected colour if the entered value is valid HEX.
+     */
+    changed: function() {
+        var color = this.colorInput.value;
+        if (color.substring(0,1) == '#') {
+            color = color.substring(1);
+        }
+        if (color.toLowerCase().match(/^[0-9a-f]{6}$/)) {
+            this.options.color = '#' +color.toUpperCase();
+            this.updateSelected();
+        }
+    },
+
+    /**
+     * Method: alphaChanged
+     * handle the user entering a new alpha value manually by updating the
+     * selected alpha if the entered value is valid alpha (0-100).
+     */
+    alphaChanged: function() {
+        var alpha = this.alphaInput.value;
+        if (alpha.match(/^[0-9]{1,3}$/)) {
+            this.options.alpha = parseFloat(alpha/100);
+            this.updateSelected();
+        }
+    },
+
+    /**
+     * APIMethod: setColor
+     * set the colour represented by this colour panel
+     *
+     * Parameters:
+     * color - {String} the new hex color value
+     */
+    setColor: function( color ) {
+        this.colorInput.value = color;
+        this.changed();
+    },
+
+    /**
+     * APIMethod: setAlpha
+     * set the alpha represented by this colour panel
+     *
+     * Parameters:
+     * alpha - {Integer} the new alpha value (between 0 and 100)
+     */
+    setAlpha: function( alpha ) {
+        this.alphaInput.value = alpha;
+        this.alphaChanged();
+    },
+
+    /**
+     * Method: updateSelected
+     * update the colour panel user interface based on the current
+     * colour and alpha values
+     */
+    updateSelected: function() {
+        var styles = {'backgroundColor':this.options.color};
+
+        this.colorInput.value = this.options.color.substring(1);
+
+        this.alphaInput.value = parseInt(this.options.alpha*100,10);
+        if (this.options.alpha < 1) {
+            styles.opacity = this.options.alpha;
+            styles.filter = 'Alpha(opacity='+(this.options.alpha*100)+')';
+            
+        } else {
+            styles.opacity = 1;
+            //not sure what the proper way to remove the filter would be since
+            // I don't have IE to test against.
+            styles.filter = '';  
+        }
+        this.selectedSwatch.setStyles(styles);
+        this.previewSwatch.setStyles(styles);
+        
+        this.fireEvent('change', this);
+    },
+    
+    /**
+     * APIMethod: changeText
+     * This method should be overridden by subclasses. It should be used
+     * to change any language specific default text that is used by the
+     * widget.
+     * 
+     * Parameters:
+     * lang - the language being changed to or that had it's data set of 
+     *    translations changed.
+     */
+    changeText: function (lang) {
+    	this.parent();
+    	
+    	if ($defined(this.alphaLabel)) {
+    		this.alphaLabel.set('html', MooTools.lang.get('Jx','colorpalette').alphaLabel);
+    	}
+    }
+});
+
+// $Id: color.js 762 2010-03-16 13:48:29Z pagameba $
+/**
+ * Class: Jx.Button.Color
+ *
+ * Extends: <Jx.Button.Flyout>
+ *
+ * A <Jx.ColorPalette> wrapped up in a Jx.Button.  The button includes a
+ * preview of the currently selected color.  Clicking the button opens
+ * the color panel.
+ *
+ * A color button is essentially a <Jx.Button.Flyout> where the content
+ * of the flyout is a <Jx.ColorPalette>.  For performance, all color buttons
+ * share an instance of <Jx.ColorPalette> which means only one button can be
+ * open at a time.  This isn't a huge restriction as flyouts already close
+ * each other when opened.
+ *
+ * Example:
+ * (code)
+ * var colorButton = new Jx.Button.Color({
+ *     onChange: function(button) {
+ *         console.log('color:' + button.options.color + ' alpha: ' +
+ *                     button.options.alpha);
+ *     }
+ * });
+ * (end)
+ *
+ * Events:
+ * change - fired when the color is changed.
+ *
+ * License:
+ * Copyright (c) 2008, DM Solutions Group Inc.
+ *
+ * This file is licensed under an MIT style license
+ */
+Jx.Button.Color = new Class({
+    Family: 'Jx.Button.Color',
+    Extends: Jx.Button.Flyout,
+
+    /**
+     * Property: swatch
+     * the color swatch element used to portray the currently selected
+     * color
+     */
+    swatch: null,
+
+    options: {
+        /**
+         * Option: color
+         * a color to initialize the panel with, defaults to #000000
+         * (black) if not specified.
+         */
+        color: '#000000',
+        /**
+         * Option: alpha
+         * an alpha value to initialize the panel with, defaults to 1
+         *  (opaque) if not specified.
+         *
+         */
+        alpha: 100,
+        /*
+         * Option: template
+         * the HTML template for the color button
+         */
+        template: '<span class="jxButtonContainer"><a class="jxButton jxButtonFlyout jxDiscloser"><span class="jxButtonContent"><span class="jxButtonSwatch"><span class="jxButtonSwatchColor"></span></span><span class="jxButtonLabel"></span></span></a></span>'
+    },
+
+    /**
+     * Property: classes
+     * {<Hash>} a hash of object properties to CSS class names used to
+     * automatically extract references to important DOM elements when
+     * processing a widget template.  This allows developers to provide custom
+     * HTML structures without affecting the functionality of widgets.
+     */
+    classes: new Hash({
+        domObj: 'jxButtonContainer',
+        domA: 'jxButton',
+        swatch: 'jxButtonSwatchColor',
+        domLabel: 'jxButtonLabel'
+    }),
+
+    /**
+     * Method: render
+     * creates a new color button.
+     */
+    render: function() {
+        if (!Jx.Button.Color.ColorPalette) {
+            Jx.Button.Color.ColorPalette = new Jx.ColorPalette(this.options);
+        }
+
+        /* we need to have an image to replace, but if a label is
+           requested, there wouldn't normally be an image. */
+        this.options.image = Jx.aPixel.src;
+
+        /* now we can safely initialize */
+        this.parent();
+        this.updateSwatch();
+
+        this.bound = {
+            changed: this.changed.bind(this),
+            hide: this.hide.bind(this)
+        };
+    },
+
+    /**
+     * APIMethod: clicked
+     * override <Jx.Button.Flyout> to use a singleton color palette.
+     */
+    clicked: function() {
+        if (Jx.Button.Color.ColorPalette.currentButton) {
+            Jx.Button.Color.ColorPalette.currentButton.hide();
+        }
+        Jx.Button.Color.ColorPalette.currentButton = this;
+        Jx.Button.Color.ColorPalette.addEvent('change', this.bound.changed);
+        Jx.Button.Color.ColorPalette.addEvent('click', this.bound.hide);
+        this.content.appendChild(Jx.Button.Color.ColorPalette.domObj);
+        Jx.Button.Color.ColorPalette.domObj.setStyle('display', 'block');
+        Jx.Button.Flyout.prototype.clicked.apply(this, arguments);
+        /* setting these before causes an update problem when clicking on
+         * a second color button when another one is open - the color
+         * wasn't updating properly
+         */
+
+        Jx.Button.Color.ColorPalette.options.color = this.options.color;
+        Jx.Button.Color.ColorPalette.options.alpha = this.options.alpha/100;
+        Jx.Button.Color.ColorPalette.updateSelected();
+},
+
+    /**
+     * APIMethod: hide
+     * hide the color panel
+     */
+    hide: function() {
+        this.setActive(false);
+        Jx.Button.Color.ColorPalette.removeEvent('change', this.bound.changed);
+        Jx.Button.Color.ColorPalette.removeEvent('click', this.bound.hide);
+        Jx.Button.Flyout.prototype.hide.apply(this, arguments);
+        Jx.Button.Color.ColorPalette.currentButton = null;
+    },
+
+    /**
+     * APIMethod: setColor
+     * set the color represented by this color panel
+     *
+     * Parameters:
+     * color - {String} the new hex color value
+     */
+    setColor: function(color) {
+        this.options.color = color;
+        this.updateSwatch();
+    },
+
+    /**
+     * APIMethod: setAlpha
+     * set the alpha represented by this color panel
+     *
+     * Parameters:
+     * alpha - {Integer} the new alpha value (between 0 and 100)
+     */
+    setAlpha: function(alpha) {
+        this.options.alpha = alpha;
+        this.updateSwatch();
+    },
+
+    /**
+     * Method: changed
+     * handle the color changing in the palette by updating the preview swatch
+     * in the button and firing the change event.
+     *
+     * Parameters:
+     * panel - <Jx.ColorPalette> the palette that changed.
+     */
+    changed: function(panel) {
+        var changed = false;
+        if (this.options.color != panel.options.color) {
+            this.options.color = panel.options.color;
+            changed = true;
+        }
+        if (this.options.alpha != panel.options.alpha * 100) {
+            this.options.alpha = panel.options.alpha * 100;
+            changed = true;
+        }
+        if (changed) {
+            this.updateSwatch();
+            this.fireEvent('change',this);
+        }
+    },
+
+    /**
+     * Method: updateSwatch
+     * Update the swatch color for the current color
+     */
+    updateSwatch: function() {
+        var styles = {'backgroundColor':this.options.color};
+        if (this.options.alpha < 100) {
+            styles.filter = 'Alpha(opacity='+(this.options.alpha)+')';
+            styles.opacity = this.options.alpha / 100;
+
+        } else {
+            styles.opacity = 1;
+            styles.filter = '';
+        }
+        this.swatch.setStyles(styles);
+    }
+});
+// $Id: menu.js 833 2010-04-05 17:15:28Z pagameba $
+/**
+ * Class: Jx.Menu
+ *
+ * Extends: <Jx.Widget>
+ *
+ * A main menu as opposed to a sub menu that lives inside the menu.
+ *
+ * TODO: Jx.Menu
+ * revisit this to see if Jx.Menu and Jx.SubMenu can be merged into
+ * a single implementation.
+ *
+ * Example:
+ * (code)
+ * (end)
+ *
+ * License:
+ * Copyright (c) 2008, DM Solutions Group Inc.
+ *
+ * This file is licensed under an MIT style license
+ */
+Jx.Menu = new Class({
+    Family: 'Jx.Menu',
+    Extends: Jx.Widget,
+    Binds: ['onMouseEnter','onMouseLeave','hide','keypressHandler'],
+    /**
+     * Property: button
+     * {<Jx.Button>} The button that represents this menu in a toolbar and
+     * opens the menu.
+     */
+    button : null,
+    /**
+     * Property: subDomObj
+     * {HTMLElement} the HTML element that contains the menu items
+     * within the menu.
+     */
+    subDomObj : null,
+    /**
+     * Property: list
+     * {<Jx.List>} the list of items in the menu
+     */
+    list: null,
+
+    parameters: ['buttonOptions', 'options'],
+
+    options: {
+        /**
+         * Option: exposeOnHover
+         * {Boolean} default false, if set to true the menu will show
+         * when the mouse hovers over it rather than when it is clicked.
+         */
+        exposeOnHover: false,
+        /**
+         * Option: hideDelay
+         * {Integer} default 0, if greater than 0, this is the number of
+         * milliseconds to delay before hiding a menu when the mouse leaves
+         * the menu button or list.
+         */
+        hideDelay: 0,
+        template: "<div class='jxMenuContainer'><ul class='jxMenu'></ul></div>",
+        buttonTemplate: '<span class="jxButtonContainer"><a class="jxButton jxButtonMenu jxDiscloser"><span class="jxButtonContent"><img class="jxButtonIcon" src="'+Jx.aPixel.src+'"><span class="jxButtonLabel"></span></span></a></span>',
+        position: {
+            horizontal: ['left left'],
+            vertical: ['bottom top', 'top bottom']
+        }
+    },
+
+    classes: new Hash({
+        contentContainer: 'jxMenuContainer',
+        subDomObj: 'jxMenu'
+    }),
+
+    /**
+     * APIMethod: render
+     * Create a new instance of Jx.Menu.
+     */
+    render : function() {
+        this.parent();
+        if (!Jx.Menu.Menus) {
+            Jx.Menu.Menus = [];
+        }
+
+        this.contentContainer.addEvent('onContextmenu', function(e){e.stop();});
+
+        this.list = new Jx.List(this.subDomObj, {
+            onRemove: function(item) {
+                item.setOwner(null);
+            }.bind(this)
+        });
+
+        /* if options are passed, make a button inside an LI so the
+           menu can be embedded inside a toolbar */
+        if (this.options.buttonOptions) {
+            this.button = new Jx.Button($merge(this.options.buttonOptions,{
+                template: this.options.buttonTemplate,
+                onClick:this.show.bind(this)
+            }));
+
+            this.button.domA.addEvent('mouseenter', this.onMouseEnter);
+            this.button.domA.addEvent('mouseleave', this.onMouseLeave);
+
+            this.domObj = this.button.domObj;
+            this.domObj.store('jxMenu', this);
+        }
+        
+        this.subDomObj.addEvent('mouseenter', this.onMouseEnter);
+        this.subDomObj.addEvent('mouseleave', this.onMouseLeave);
+
+        if (this.options.parent) {
+            this.addTo(this.options.parent);
+        }
+    },
+    /**
+     * APIMethod: add
+     * Add menu items to the sub menu.
+     *
+     * Parameters:
+     * item - {<Jx.MenuItem>} the menu item to add.  Multiple menu items
+     *     can be added by passing an array of menu items.
+     * position - the index to add the item at, defaults to the end of the
+     *     menu
+     */
+    add: function(item, position, owner) {
+        if (Jx.type(item) == 'array') {
+            item.each(function(i){
+                i.setOwner(owner||this);
+            }, this);
+        } else {
+            item.setOwner(owner||this);
+        }
+        this.list.add(item, position);
+        return this;
+    },
+    /**
+     * APIMethod: remove
+     * Remove a menu item from the menu
+     *
+     * Parameters:
+     * item - {<Jx.MenuItem>} the menu item to remove
+     */
+    remove: function(item) {
+        this.list.remove(item);
+        return this;
+    },
+    /**
+     * APIMethod: replace
+     * Replace a menu item with another menu item
+     *
+     * Parameters:
+     * what - {<Jx.MenuItem>} the menu item to replace
+     * withWhat - {<Jx.MenuItem>} the menu item to replace it with
+     */
+    replace: function(item, withItem) {
+        this.list.replace(item, withItem);
+        return this;
+    },
+    /**
+     * APIMethod: empty
+     * Empty the menu of items
+     */
+    empty: function() {
+      this.list.each(function(item){
+        if (item.empty) {
+          item.empty();
+        }
+      }, this);
+      this.list.empty();
+    },
+    /**
+     * Method: deactivate
+     * Deactivate the menu by hiding it.
+     */
+    deactivate: function() {this.hide();},
+    /**
+     * Method: onMouseOver
+     * Handle the user moving the mouse over the button for this menu
+     * by showing this menu and hiding the other menu.
+     *
+     * Parameters:
+     * e - {Event} the mouse event
+     */
+    onMouseEnter: function(e) {
+        if (this.hideTimer) {
+          $clear(this.hideTimer);
+          this.hideTimer = null;
+        }
+        if (Jx.Menu.Menus[0] && Jx.Menu.Menus[0] != this) {
+            this.show({event:e});
+        } else if (this.options.exposeOnHover) {
+          if (Jx.Menu.Menus[0] && Jx.Menu.Menus[0] == this) {
+            Jx.Menu.Menus[0] = null;
+          }
+          this.show({event:e});
+        }
+    },
+    /**
+     * Method: onMouseLeave
+     * Handle the user moving the mouse off this button or menu by
+     * starting the hide process if so configured.
+     *
+     * Parameters:
+     * e - {Event} the mouse event
+     */
+    onMouseLeave: function(e) {
+      if (this.options.hideDelay > 0) {
+        this.hideTimer = (function(){
+          this.deactivate();
+        }).delay(this.options.hideDelay, this);
+      }
+    },
+    
+    /**
+     * Method: eventInMenu
+     * determine if an event happened inside this menu or a sub menu
+     * of this menu.
+     *
+     * Parameters:
+     * e - {Event} the mouse event
+     *
+     * Returns:
+     * {Boolean} true if the event happened in the menu or
+     * a sub menu of this menu, false otherwise
+     */
+    eventInMenu: function(e) {
+        var target = document.id(e.target);
+        if (!target) {
+            return false;
+        }
+        if (target.descendantOf(this.domObj) ||
+            target.descendantOf(this.subDomObj)) {
+            return true;
+        } else {
+            var ul = target.findElement('ul');
+            if (ul) {
+                var sm = ul.retrieve('jxSubMenu');
+                if (sm) {
+                    var owner = sm.owner;
+                    while (owner) {
+                        if (owner == this) {
+                            return true;
+                        }
+                        owner = owner.owner;
+                    }
+                }
+            }
+            return false;
+        }
+
+        /*
+        this.list.items().some(
+            function(item) {
+                var menuItem = item.retrieve('jxMenuItem');
+                return menuItem instanceof Jx.Menu.SubMenu &&
+                       menuItem.eventInMenu(e);
+            }
+        );
+        */
+    },
+
+    /**
+     * APIMethod: hide
+     * Hide the menu.
+     *
+     * Parameters:
+     * e - {Event} the mouse event
+     */
+    hide: function(e) {
+        if (e) {
+            if (this.visibleItem && this.visibleItem.eventInMenu) {
+                if (this.visibleItem.eventInMenu(e)) {
+                    return;
+                }
+            } else if (this.eventInMenu(e)) {
+                return;
+            }
+        }
+        if (Jx.Menu.Menus[0] && Jx.Menu.Menus[0] == this) {
+            Jx.Menu.Menus[0] = null;
+        }
+        if (this.button && this.button.domA) {
+            this.button.domA.removeClass(this.button.options.activeClass);
+        }
+        this.list.each(function(item){item.retrieve('jxMenuItem').hide(e);});
+        document.removeEvent('mousedown', this.hide);
+        document.removeEvent('keydown', this.keypressHandler);
+        this.unstack(this.contentContainer);
+        this.contentContainer.dispose();
+        this.visibleItem = null;
+        this.fireEvent('hide', this);
+    },
+    /**
+     * APIMethod: show
+     * Show the menu
+     */
+    show : function() {
+        if (this.button) {
+            if (Jx.Menu.Menus[0]) {
+                if (Jx.Menu.Menus[0] != this) {
+                    Jx.Menu.Menus[0].button.blur();
+                    Jx.Menu.Menus[0].hide();
+                } else {
+                    this.hide();
+                    return;
+                }
+            }
+            Jx.Menu.Menus[0] = this;
+            this.button.focus();
+            if (this.list.count() == 0) {
+                return;
+            }
+        }
+        this.contentContainer.setStyle('display','none');
+        document.id(document.body).adopt(this.contentContainer);
+        this.contentContainer.setStyles({
+            visibility: 'hidden',
+            display: 'block'
+        });
+
+        /* we have to size the container for IE to render the chrome correctly
+         * but just in the menu/sub menu case - there is some horrible 
+         * peekaboo bug in IE related to ULs that we just couldn't figure out
+         */
+        this.contentContainer.setContentBoxSize(this.subDomObj.getMarginBoxSize());
+        this.showChrome(this.contentContainer);
+
+        this.position(this.contentContainer, this.domObj, $merge({
+            offsets: this.chromeOffsets
+        }, this.options.position));
+        this.stack(this.contentContainer);
+        this.contentContainer.setStyle('visibility','visible');
+
+        if (this.button && this.button.domA) {
+            this.button.domA.addClass(this.button.options.activeClass);
+        }
+
+        /* fix bug in IE that closes the menu as it opens because of bubbling */
+        document.addEvent('mousedown', this.hide);
+        document.addEvent('keydown', this.keypressHandler);
+        this.fireEvent('show', this);
+    },
+    /**
+     * APIMethod: setVisibleItem
+     * Set the sub menu that is currently open
+     *
+     * Parameters:
+     * obj- {<Jx.SubMenu>} the sub menu that just became visible
+     */
+    setVisibleItem: function(obj) {
+        if (this.visibleItem != obj) {
+            if (this.visibleItem && this.visibleItem.hide) {
+                this.visibleItem.hide();
+            }
+            this.visibleItem = obj;
+            this.visibleItem.show();
+        }
+    },
+
+    /* hide flyout if the user presses the ESC key */
+    keypressHandler: function(e) {
+        e = new Event(e);
+        if (e.key == 'esc') {
+            this.hide();
+        }
+    },
+    /**
+     * APIMethod: isEnabled
+     * This returns true if the menu is enabled, false otherwise
+     *
+     * Returns:
+     * {Boolean} whether the menu is enabled or not
+     */
+    isEnabled: function() {
+        return this.button.isEnabled;
+    },
+
+    /**
+     * APIMethod: setEnabled
+     * enable or disable the menu.
+     *
+     * Parameters:
+     * enabled - {Boolean} the new enabled state of the menu
+     */
+    setEnabled: function(enabled) {
+        return this.button.setEnabled(enabled);
+    },
+    /**
+     * APIMethod: isActive
+     * returns true if the menu is open.
+     *
+     * Returns:
+     * {Boolean} the active state of the menu
+     */
+    isActive: function() {
+        return this.button.isActive();
+    },
+    /**
+     * APIMethod: setActive
+     * Set the active state of the menu
+     *
+     * Parameters:
+     * active - {Boolean} the new active state of the menu
+     */
+    setActive: function(active) {
+        this.button.setActive(active);
+    },
+    /**
+     * APIMethod: setImage
+     * set the image of this menu to a new image URL
+     *
+     * Parameters:
+     * path - {String} the new url to use as the image for this menu
+     */
+    setImage: function(path) {
+        this.button.setImage(path);
+    },
+    /**
+     * APIMethod: setLabel
+     *
+     * sets the text of the menu.
+     *
+     * Parameters:
+     *
+     * label - {String} the new label for the menu
+     */
+    setLabel: function(label) {
+        this.button.setLabel(label);
+    },
+    /**
+     * APIMethod: getLabel
+     *
+     * returns the text of the menu.
+     */
+    getLabel: function() {
+        return this.button.getLabel();
+    },
+    /**
+     * APIMethod: setTooltip
+     * sets the tooltip displayed by the menu
+     *
+     * Parameters:
+     * tooltip - {String} the new tooltip
+     */
+    setTooltip: function(tooltip) {
+        this.button.setTooltip(tooltip);
+    },
+    /**
+     * APIMethod: focus
+     * capture the keyboard focus on this menu
+     */
+    focus: function() {
+        this.button.focus();
+    },
+    /**
+     * APIMethod: blur
+     * remove the keyboard focus from this menu
+     */
+    blur: function() {
+        this.button.blur();
+    }
+
+});
+
+// $Id: set.js 762 2010-03-16 13:48:29Z pagameba $
+/**
+ * Class: Jx.ButtonSet
+ *
+ * Extends: <Jx.Object>
+ *
+ * A ButtonSet manages a set of <Jx.Button> instances by ensuring that only
+ * one of the buttons is active.  All the buttons need to have been created
+ * with the toggle option set to true for this to work.
+ *
+ * Example:
+ * (code)
+ * var toolbar = new Jx.Toolbar('bar');
+ * var buttonSet = new Jx.ButtonSet();
+ *
+ * var b1 = new Jx.Button({label: 'b1', toggle:true, contentID: 'content1'});
+ * var b2 = new Jx.Button({label: 'b2', toggle:true, contentID: 'content2'});
+ * var b3 = new Jx.Button({label: 'b3', toggle:true, contentID: 'content3'});
+ * var b4 = new Jx.Button({label: 'b4', toggle:true, contentID: 'content4'});
+ *
+ * buttonSet.add(b1,b2,b3,b4);
+ * (end)
+ *
+ * Events:
+ * change - the current button has changed
+ *
+ * License:
+ * Copyright (c) 2008, DM Solutions Group Inc.
+ *
+ * This file is licensed under an MIT style license
+ */
+Jx.ButtonSet = new Class({
+    Family: 'Jx.ButtonSet',
+    Extends: Jx.Object,
+    Binds: ['buttonChanged'],
+    /**
+     * Property: buttons
+     * {Array} array of buttons that are managed by this button set
+     */
+    buttons: [],
+
+    /**
+     * APIMethod: add
+     * Add one or more <Jx.Button>s to the ButtonSet.
+     *
+     * Parameters:
+     * button - {<Jx.Button>} an instance of <Jx.Button> to add to the button
+     * set.  More than one button can be added by passing extra parameters to
+     * this method.
+     */
+    add : function() {
+        $A(arguments).each(function(button) {
+            if (button.domObj.hasClass(button.options.toggleClass)) {
+                button.domObj.removeClass(button.options.toggleClass);
+                button.domObj.addClass(button.options.toggleClass+'Set');
+            }
+            button.addEvent('down',this.buttonChanged);
+            button.setActive = function(active) {
+                if (button.options.active && this.activeButton == button) {
+                    return;
+                } else {
+                    Jx.Button.prototype.setActive.apply(button, [active]);
+                }
+            }.bind(this);
+            if (!this.activeButton || button.options.active) {
+                button.options.active = false;
+                button.setActive(true);
+            }
+            this.buttons.push(button);
+        }, this);
+        return this;
+    },
+    /**
+     * APIMethod: remove
+     * Remove a button from this Button.
+     *
+     * Parameters:
+     * button - {<Jx.Button>} the button to remove.
+     */
+    remove : function(button) {
+        this.buttons.erase(button);
+        if (this.activeButton == button) {
+            if (this.buttons.length) {
+                this.buttons[0].setActive(true);
+            }
+            button.removeEvent('down',this.buttonChanged);
+            button.setActive = Jx.Button.prototype.setActive;
+        }
+    },
+    /**
+     * APIMethod: empty
+     * empty the button set and clear the active button
+     */
+    empty: function() {
+      this.buttons = [];
+      this.activeButton = null;
+    },
+    /**
+     * APIMethod: setActiveButton
+     * Set the active button to the one passed to this method
+     *
+     * Parameters:
+     * button - {<Jx.Button>} the button to make active.
+     */
+    setActiveButton: function(button) {
+        var b = this.activeButton;
+        this.activeButton = button;
+        if (b && b != button) {
+            b.setActive(false);
+        }
+    },
+    /**
+     * Method: buttonChanged
+     * Handle selection changing on the buttons themselves and activate the
+     * appropriate button in response.
+     *
+     * Parameters:
+     * button - {<Jx.Button>} the button to make active.
+     */
+    buttonChanged: function(button) {
+        this.setActiveButton(button);
+        this.fireEvent('change', this);
+    }
+});// $Id: multi.js 833 2010-04-05 17:15:28Z pagameba $
+/**
+ * Class: Jx.Button.Multi
+ *
+ * Extends: <Jx.Button>
+ *
+ * Implements:
+ *
+ * Multi buttons are used to contain multiple buttons in a drop down list
+ * where only one button is actually visible and clickable in the interface.
+ *
+ * When the user clicks the active button, it performs its normal action.
+ * The user may also click a drop-down arrow to the right of the button and
+ * access the full list of buttons.  Clicking a button in the list causes
+ * that button to replace the active button in the toolbar and performs
+ * the button's regular action.
+ *
+ * Other buttons can be added to the Multi button using the add method.
+ *
+ * This is not really a button, but rather a container for buttons.  The
+ * button structure is a div containing two buttons, a normal button and
+ * a flyout button.  The flyout contains a toolbar into which all the
+ * added buttons are placed.  The main button content is cloned from the
+ * last button clicked (or first button added).
+ *
+ * The Multi button does not trigger any events itself, only the contained
+ * buttons trigger events.
+ *
+ * Example:
+ * (code)
+ * var b1 = new Jx.Button({
+ *     label: 'b1',
+ *     onClick: function(button) {
+ *         console.log('b1 clicked');
+ *     }
+ * });
+ * var b2 = new Jx.Button({
+ *     label: 'b2',
+ *     onClick: function(button) {
+ *         console.log('b2 clicked');
+ *     }
+ * });
+ * var b3 = new Jx.Button({
+ *     label: 'b3',
+ *     onClick: function(button) {
+ *         console.log('b3 clicked');
+ *     }
+ * });
+ * var multiButton = new Jx.Button.Multi();
+ * multiButton.add(b1, b2, b3);
+ * (end)
+ *
+ * License:
+ * Copyright (c) 2008, DM Solutions Group Inc.
+ *
+ * This file is licensed under an MIT style license
+ */
+Jx.Button.Multi = new Class({
+    Family: 'Jx.Button.Multi',
+    Extends: Jx.Button,
+
+    /**
+     * Property: {<Jx.Button>} activeButton
+     * the currently selected button
+     */
+    activeButton: null,
+
+    /**
+     * Property: buttons
+     * {Array} the buttons added to this multi button
+     */
+    buttons: null,
+
+    options: {
+        /* Option: template
+         * the button template for a multi button
+         */
+        template: '<span class="jxButtonContainer"><a class="jxButton jxButtonMulti jxDiscloser"><span class="jxButtonContent"><img src="'+Jx.aPixel.src+'" class="jxButtonIcon"><span class="jxButtonLabel"></span></span></a><a class="jxButtonDisclose" href="javascript:void(0)"><img src="'+Jx.aPixel.src+'"></a></span>'
+    },
+
+    /**
+     * Property: classes
+     * {<Hash>} a hash of object properties to CSS class names used to
+     * automatically extract references to important DOM elements when
+     * processing a widget template.  This allows developers to provide custom
+     * HTML structures without affecting the functionality of widgets.
+     */
+    classes: new Hash({
+        domObj: 'jxButtonContainer',
+        domA: 'jxButton',
+        domImg: 'jxButtonIcon',
+        domLabel: 'jxButtonLabel',
+        domDisclose: 'jxButtonDisclose'
+    }),
+
+    /**
+     * Method: render
+     * construct a new instance of Jx.Button.Multi.
+     */
+    render: function() {
+        this.parent();
+        this.buttons = [];
+
+        this.menu = new Jx.Menu();
+        this.menu.button = this;
+        this.buttonSet = new Jx.ButtonSet();
+
+        this.clickHandler = this.clicked.bind(this);
+
+        if (this.domDisclose) {
+            var button = this;
+            var hasFocus;
+
+            this.domDisclose.addEvents({
+                'click': (function(e) {
+                    if (this.list.count() === 0) {
+                        return;
+                    }
+                    if (!button.options.enabled) {
+                        return;
+                    }
+                    this.contentContainer.setStyle('visibility','hidden');
+                    this.contentContainer.setStyle('display','block');
+                    document.id(document.body).adopt(this.contentContainer);
+                    /* we have to size the container for IE to render the chrome
+                     * correctly but just in the menu/sub menu case - there is
+                     * some horrible peekaboo bug in IE related to ULs that we
+                     * just couldn't figure out
+                     */
+                    this.contentContainer.setContentBoxSize(this.subDomObj.getMarginBoxSize());
+
+                    this.showChrome(this.contentContainer);
+
+                    this.position(this.contentContainer, this.button.domObj, {
+                        horizontal: ['right right'],
+                        vertical: ['bottom top', 'top bottom'],
+                        offsets: this.chromeOffsets
+                    });
+
+                    this.contentContainer.setStyle('visibility','');
+
+                    document.addEvent('mousedown', this.hide);
+                    document.addEvent('keyup', this.keypressHandler);
+
+                    this.fireEvent('show', this);
+                }).bindWithEvent(this.menu),
+                'mouseenter':(function(){
+                    document.id(this.domObj.firstChild).addClass('jxButtonHover');
+                    if (hasFocus) {
+                        this.domDisclose.addClass(this.options.pressedClass);
+                    }
+                }).bind(this),
+                'mouseleave':(function(){
+                    document.id(this.domObj.firstChild).removeClass('jxButtonHover');
+                    this.domDisclose.removeClass(this.options.pressedClass);
+                }).bind(this),
+                mousedown: (function(e) {
+                    this.domDisclose.addClass(this.options.pressedClass);
+                    hasFocus = true;
+                    this.focus();
+                }).bindWithEvent(this),
+                mouseup: (function(e) {
+                    this.domDisclose.removeClass(this.options.pressedClass);
+                }).bindWithEvent(this),
+                keydown: (function(e) {
+                    if (e.key == 'enter') {
+                        this.domDisclose.addClass(this.options.pressedClass);
+                    }
+                }).bindWithEvent(this),
+                keyup: (function(e) {
+                    if (e.key == 'enter') {
+                        this.domDisclose.removeClass(this.options.pressedClass);
+                    }
+                }).bindWithEvent(this),
+                blur: function() { hasFocus = false; }
+
+            });
+            if (typeof Drag != 'undefined') {
+                new Drag(this.domDisclose, {
+                    onStart: function() {this.stop();}
+                });
+            }
+        }
+
+        this.menu.addEvents({
+            'show': (function() {
+                this.domA.addClass(this.options.activeClass);
+            }).bind(this),
+            'hide': (function() {
+                if (this.options.active) {
+                    this.domA.addClass(this.options.activeClass);
+                }
+            }).bind(this)
+        });
+        if (this.options.items) {
+            this.add(this.options.items);
+        }
+    },
+    /**
+     * APIMethod: add
+     * adds one or more buttons to the Multi button.  The first button
+     * added becomes the active button initialize.  This function
+     * takes a variable number of arguments, each of which is expected
+     * to be an instance of <Jx.Button>.
+     *
+     * Parameters:
+     * button - {<Jx.Button>} a <Jx.Button> instance, may be repeated in the parameter list
+     */
+    add: function() {
+        $A(arguments).flatten().each(function(theButton){
+            if (!theButton instanceof Jx.Button) {
+                return;
+            }
+            theButton.domA.addClass('jxDiscloser');
+            theButton.setLabel(theButton.options.label);
+            this.buttons.push(theButton);
+            var f = this.setButton.bind(this, theButton);
+            var opts = {
+                image: theButton.options.image,
+                imageClass: theButton.options.imageClass,
+                label: theButton.options.label || '&nbsp;',
+                enabled: theButton.options.enabled,
+                tooltip: theButton.options.tooltip,
+                toggle: true,
+                onClick: f
+            };
+            if (!opts.image || opts.image.indexOf('a_pixel') != -1) {
+                delete opts.image;
+            }
+            var button = new Jx.Menu.Item(opts);
+            this.buttonSet.add(button);
+            this.menu.add(button);
+            theButton.multiButton = button;
+            theButton.domA.addClass('jxButtonMulti');
+            if (!this.activeButton) {
+                this.domA.dispose();
+                this.setActiveButton(theButton);
+            }
+        }, this);
+    },
+    /**
+     * APIMethod: remove
+     * remove a button from a multi button
+     *
+     * Parameters:
+     * button - {<Jx.Button>} the button to remove
+     */
+    remove: function(button) {
+        if (!button || !button.multiButton) {
+            return;
+        }
+        // the toolbar will only remove the li.toolItem, which is
+        // the parent node of the multiButton's domObj.
+        if (this.menu.remove(button.multiButton)) {
+            button.multiButton = null;
+            if (this.activeButton == button) {
+                // if any buttons are left that are not this button
+                // then set the first one to be the active button
+                // otherwise set the active button to nothing
+                if (!this.buttons.some(function(b) {
+                    if (b != button) {
+                        this.setActiveButton(b);
+                        return true;
+                    } else {
+                        return false;
+                    }
+                }, this)) {
+                    this.setActiveButton(null);
+                }
+            }
+            this.buttons.erase(button);
+        }
+    },
+    /**
+     * APIMethod: empty
+     * remove all buttons from the multi button
+     */
+    empty: function() {
+      this.buttons.each(function(b){this.remove(b);}, this);
+    },
+    /**
+     * APIMethod: setActiveButton
+     * update the menu item to be the requested button.
+     *
+     * Parameters:
+     * button - {<Jx.Button>} a <Jx.Button> instance that was added to this multi button.
+     */
+    setActiveButton: function(button) {
+        if (this.activeButton) {
+            this.activeButton.domA.dispose();
+            this.activeButton.domA.removeEvent('click', this.clickHandler);
+        }
+        if (button && button.domA) {
+            this.domObj.grab(button.domA, 'top');
+            this.domA = button.domA;
+            this.domA.addEvent('click', this.clickHandler);
+            if (this.options.toggle) {
+                this.options.active = false;
+                this.setActive(true);
+            }
+        }
+        this.activeButton = button;
+    },
+    /**
+     * Method: setButton
+     * update the active button in the menu item, trigger the button's action
+     * and hide the flyout that contains the buttons.
+     *
+     * Parameters:
+     * button - {<Jx.Button>} The button to set as the active button
+     */
+    setButton: function(button) {
+        this.setActiveButton(button);
+        button.clicked();
+    }
+});// $Id: menu.item.js 626 2009-11-20 13:22:22Z pagameba $
+/**
+ * Class: Jx.Menu.Item
+ *
+ * Extends: <Jx.Button>
+ *
+ * A menu item is a single entry in a menu.  It is typically composed of
+ * a label and an optional icon.  Selecting the menu item emits an event.
+ *
+ * Jx.Menu.Item is represented by a <Jx.Button> with type MenuItem and the
+ * associated CSS changes noted in <Jx.Button>.  The container of a MenuItem
+ * is an 'li' element.
+ *
+ * Example:
+ * (code)
+ * (end)
+ *
+ * Events:
+ * click - fired when the menu item is clicked.
+ *
+ * License:
+ * Copyright (c) 2008, DM Solutions Group Inc.
+ *
+ * This file is licensed under an MIT style license
+ */
+Jx.Menu.Item = new Class({
+    Family: 'Jx.Menu.Item',
+    Extends: Jx.Button,
+    /**
+     * Property: owner
+     * {<Jx.SubMenu> or <Jx.Menu>} the menu that contains the menu item.
+     */
+    owner: null,
+    options: {
+        //image: null,
+        label: '&nbsp;',
+        toggleClass: 'jxMenuItemToggle',
+        pressedClass: 'jxMenuItemPressed',
+        activeClass: 'jxMenuItemActive',
+        /* Option: template
+         * the HTML structure of the button.  As a minimum, there must be a
+         * containing element with a class of jxMenuItemContainer and an
+         * internal element with a class of jxMenuItem.  jxMenuItemIcon and
+         * jxMenuItemLabel are used if present to put the image and label into
+         * the button.
+         */
+        template: '<li class="jxMenuItemContainer"><a class="jxMenuItem"><span class="jxMenuItemContent"><img class="jxMenuItemIcon" src="'+Jx.aPixel.src+'"><span class="jxMenuItemLabel"></span></span></a></li>'
+    },
+    classes: new Hash({
+        domObj:'jxMenuItemContainer',
+        domA: 'jxMenuItem',
+        domImg: 'jxMenuItemIcon',
+        domLabel: 'jxMenuItemLabel'
+    }),
+    /**
+     * APIMethod: render
+     * Create a new instance of Jx.Menu.Item
+     */
+    render: function() {
+        if (!this.options.image) {
+            this.options.image = Jx.aPixel.src;
+        }
+        this.parent();
+        if (this.options.image && this.options.image != Jx.aPixel.src) {
+            this.domObj.removeClass(this.options.toggleClass);
+        }
+        this.domObj.addEvent('mouseover', this.onMouseOver.bind(this));
+        this.domObj.store('jxMenuItem', this);
+    },
+    /**
+     * Method: setOwner
+     * Set the owner of this menu item
+     *
+     * Parameters:
+     * obj - {Object} the new owner
+     */
+    setOwner: function(obj) {
+        this.owner = obj;
+    },
+    /**
+     * Method: hide
+     * Hide the menu item.
+     */
+    hide: function() {this.blur();},
+    /**
+     * Method: show
+     * Show the menu item
+     */
+    show: $empty,
+    /**
+     * Method: clicked
+     * Handle the user clicking on the menu item, overriding the <Jx.Button::clicked>
+     * method to facilitate menu tracking
+     *
+     * Parameters:
+     * obj - {Object} an object containing an event property that was the user
+     * event.
+     */
+    clicked: function(obj) {
+        if (this.options.enabled) {
+            if (this.options.toggle) {
+                this.setActive(!this.options.active);
+            }
+            this.fireEvent('click', this);
+            if (this.owner && this.owner.deactivate) {
+                this.owner.deactivate(obj.event);
+            }
+        }
+    },
+    /**
+     * Method: onmouseover
+     * handle the mouse moving over the menu item
+     */
+    onMouseOver: function() {
+        if (this.owner && this.owner.setVisibleItem) {
+            this.owner.setVisibleItem(this);
+        }
+    }
+});
+
+// $Id: layout.js 718 2010-03-02 16:22:06Z pagameba $
 /**
  * Class: Jx.Layout
  *
@@ -19828,6 +22965,12 @@ Jx.Layout = new Class({
     Extends: Jx.Object,
 
     options: {
+        /* Option: resizeWithWindow
+         * boolean, automatically resize this layout when the window size
+         * changes, even if the element is not a direct descendant of the
+         * BODY.  False by default.
+         */
+        resizeWithWindow: false,
         /* Option: propagate
          * boolean, controls propogation of resize to child nodes.
          * True by default. If set to false, changes in size will not be
@@ -19922,7 +23065,7 @@ Jx.Layout = new Class({
         this.domObj.setStyle('position', this.options.position);
         this.domObj.store('jxLayout', this);
 
-        if (document.body == this.domObj.parentNode) {
+        if (this.options.resizeWithWindow || document.body == this.domObj.parentNode) {
             window.addEvent('resize', this.windowResize.bindWithEvent(this));
             window.addEvent('load', this.windowResize.bind(this));
         }
@@ -20220,1758 +23363,7 @@ Jx.Layout = new Class({
 
         this.fireEvent('sizeChange',this);
     }
-});// $Id: tab.js 626 2009-11-20 13:22:22Z pagameba $
-/**
- * Class: Jx.Button.Tab
- *
- * Extends: <Jx.Button>
- *
- * A single tab in a tab set.  A tab has a label (displayed in the tab) and a
- * content area that is displayed when the tab is active.  A tab has to be
- * added to both a <Jx.TabSet> (for the content) and <Jx.Toolbar> (for the
- * actual tab itself) in order to be useful.  Alternately, you can use
- * a <Jx.TabBox> which combines both into a single control at the cost of
- * some flexibility in layout options.
- *
- * A tab is a <Jx.ContentLoader> and you can specify the initial content of
- * the tab using any of the methods supported by
- * <Jx.ContentLoader::loadContent>.  You can acccess the actual DOM element
- * that contains the content (if you want to dynamically insert content
- * for instance) via the <Jx.Tab::content> property.
- *
- * A tab is a button of type *toggle* which means that it emits the *up*
- * and *down* events.
- *
- * Example:
- * (code)
- * var tab1 = new Jx.Button.Tab({
- *     label: 'tab 1',
- *     content: 'content1',
- *     onDown: function(tab) {
- *         console.log('tab became active');
- *     },
- *     onUp: function(tab) {
- *         console.log('tab became inactive');
- *     }
- * });
- * (end)
- *
- *
- *
- * License:
- * Copyright (c) 2008, DM Solutions Group Inc.
- *
- * This file is licensed under an MIT style license
- */
-Jx.Button.Tab = new Class({
-    Family: 'Jx.Button.Tab',
-    Extends: Jx.Button,
-    /**
-     * Property: content
-     * {HTMLElement} The content area that is displayed when the tab is active.
-     */
-    content: null,
-
-    options: {
-        toggleClass: 'jxTabToggle',
-        pressedClass: 'jxTabPressed',
-        activeClass: 'jxTabActive',
-        activeTabClass: 'tabContentActive',
-        template: '<span class="jxTabContainer"><a class="jxTab"><span class="jxTabContent"><img class="jxTabIcon"><span class="jxTabLabel"></span></span></a><a class="jxTabClose"></span>',
-        contentTemplate: '<div class="tabContent"></div>'
-    },
-    classes: new Hash({
-        domObj: 'jxTabContainer',
-        domA: 'jxTab',
-        domImg: 'jxTabIcon',
-        domLabel: 'jxTabLabel',
-        domClose: 'jxTabClose',
-        content: 'tabContent'
-    }),
-
-    /**
-     * APIMethod: render
-     * Create a new instance of Jx.Button.Tab.  Any layout options passed are used
-     * to create a <Jx.Layout> for the tab content area.
-     */
-    render : function( ) {
-        this.options = $merge(this.options, {toggle:true});
-        this.parent();
-        this.domObj.store('jxTab', this);
-        this.processElements(this.options.contentTemplate, this.classes);
-        new Jx.Layout(this.content, this.options);
-        this.loadContent(this.content);
-        this.addEvent('down', function(){
-            this.content.addClass(this.options.activeTabClass);
-        }.bind(this));
-        this.addEvent('up', function(){
-            this.content.removeClass(this.options.activeTabClass);
-        }.bind(this));
-
-        //remove the close button if necessary
-        if (this.domClose) {
-            if (this.options.close) {
-                this.domObj.addClass('jxTabClose');
-                this.domClose.addEvent('click', (function(){
-                    this.fireEvent('close');
-                }).bind(this));
-            } else {
-                this.domClose.dispose();
-            }
-        }
-    },
-    /**
-     * Method: clicked
-     * triggered when the user clicks the button, processes the
-     * actionPerformed event
-     */
-    clicked : function(evt) {
-        if (this.options.enabled) {
-            this.setActive(true);
-        }
-    }
-});// $Id: colorpalette.js 675 2009-12-29 06:49:17Z jonlb@comcast.net $
-/**
- * Class: Jx.ColorPalette
- *
- * Extends: <Jx.Widget>
- *
- * A Jx.ColorPalette presents a user interface for selecting colors.
- * Currently, the user can either enter a HEX colour value or select from a
- * palette of web-safe colours.  The user can also enter an opacity value.
- *
- * A Jx.ColorPalette can be embedded anywhere in a web page using its addTo
- * method.  However, a <Jx.Button> suJx.Tooltipbclass is provided (<Jx.Button.Color>)
- * that embeds a colour panel inside a button for easy use in toolbars.
- *
- * Colour changes are propogated via a change event.  To be notified
- * of changes in a Jx.ColorPalette, use the addEvent method.
- *
- * Example:
- * (code)
- * (end)
- *
- * Events:
- * change - triggered when the color changes.
- * click - the user clicked on a color swatch (emitted after a change event)
- *
- * License:
- * Copyright (c) 2008, DM Solutions Group Inc.
- *
- * This file is licensed under an MIT style license
- */
-Jx.ColorPalette = new Class({
-    Family: 'Jx.ColorPalette',
-    Extends: Jx.Widget,
-    /**
-     * Property: {HTMLElement} domObj
-     * the HTML element representing the color panel
-     */
-    domObj: null,
-    options: {
-        /* Option: parent
-         * default null, the DOM element to add the palette to.
-         */
-        parent: null,
-        /* Option: color
-         * default #000000, the initially selected color
-         */
-        color: '#000000',
-        /* Option: alpha
-         * default 100, the initial alpha value
-         */
-        alpha: 1,
-        /* Option: hexColors
-         * an array of hex colors for creating the palette, defaults to a
-         * set of web safe colors.
-         */
-        hexColors: ['00', '33', '66', '99', 'CC', 'FF'],
-        /* Option: alphaLabel
-         * the text to display next to the alpha input for i18n.
-         */
-        alphaLabel: 'alpha (%)'
-    },
-    /**
-     * APIMethod: render
-     * initialize a new instance of Jx.ColorPalette
-     */
-    render: function() {
-        this.domObj = new Element('div', {
-            id: this.options.id,
-            'class':'jxColorPalette'
-        });
-
-        var top = new Element('div', {'class':'jxColorBar'});
-        var d = new Element('div', {'class':'jxColorPreview'});
-
-        this.selectedSwatch = new Element('div', {'class':'jxColorSelected'});
-        this.previewSwatch = new Element('div', {'class':'jxColorHover'});
-        d.adopt(this.selectedSwatch);
-        d.adopt(this.previewSwatch);
-
-        top.adopt(d);
-
-        this.colorInputLabel = new Element('label', {'class':'jxColorLabel', html:'#'});
-        top.adopt(this.colorInputLabel);
-
-        var cc = this.changed.bind(this);
-        this.colorInput = new Element('input', {
-            'class':'jxHexInput',
-            'type':'text',
-            'maxLength':6,
-            events: {
-                'keyup':cc,
-                'blur':cc,
-                'change':cc
-            }
-        });
-
-        top.adopt(this.colorInput);
-
-        this.alphaLabel = new Element('label', {'class':'jxAlphaLabel', 'html':this.options.alphaLabel});
-        top.adopt(this.alphaLabel);
-
-        this.alphaInput = new Element('input', {
-            'class':'jxAlphaInput',
-            'type':'text',
-            'maxLength':3,
-            events: {
-                'keyup': this.alphaChanged.bind(this)
-            }
-        });
-        top.adopt(this.alphaInput);
-
-        this.domObj.adopt(top);
-
-        var swatchClick = this.swatchClick.bindWithEvent(this);
-        var swatchOver = this.swatchOver.bindWithEvent(this);
-
-        var table = new Element('table', {'class':'jxColorGrid'});
-        var tbody = new Element('tbody');
-        table.adopt(tbody);
-        for (var i=0; i<12; i++) {
-            var tr = new Element('tr');
-            for (var j=-3; j<18; j++) {
-                var bSkip = false;
-                var r, g, b;
-                /* hacky approach to building first three columns
-                 * because I couldn't find a good way to do it
-                 * programmatically
-                 */
-
-                if (j < 0) {
-                    if (j == -3 || j == -1) {
-                        r = g = b = 0;
-                        bSkip = true;
-                    } else {
-                        if (i<6) {
-                            r = g = b = i;
-                        } else {
-                            if (i == 6) {
-                                r = 5; g = 0; b = 0;
-                            } else if (i == 7) {
-                                r = 0; g = 5; b = 0;
-                            } else if (i == 8) {
-                                r = 0; g = 0; b = 5;
-                            } else if (i == 9) {
-                                r = 5; g = 5; b = 0;
-                            } else if (i == 10) {
-                                r = 0; g = 5; b = 5;
-                            } else if (i == 11) {
-                                r = 5; g = 0; b = 5;
-                            }
-                        }
-                    }
-                } else {
-                    /* remainder of the columns are built
-                     * based on the current row/column
-                     */
-                    r = parseInt(i/6,10)*3 + parseInt(j/6,10);
-                    g = j%6;
-                    b = i%6;
-                }
-                var bgColor = '#'+this.options.hexColors[r]+this.options.hexColors[g]+this.options.hexColors[b];
-
-                var td = new Element('td');
-                if (!bSkip) {
-                    td.setStyle('backgroundColor', bgColor);
-
-                    var a = new Element('a', {
-                        'class': 'colorSwatch ' + (((r > 2 && g > 2) || (r > 2 && b > 2) || (g > 2 && b > 2)) ? 'borderBlack': 'borderWhite'),
-                        'href':'javascript:void(0)',
-                        'title':bgColor,
-                        'alt':bgColor,
-                        events: {
-                            'mouseover': swatchOver,
-                            'click': swatchClick
-                        }
-                    });
-                    a.store('swatchColor', bgColor);
-                    td.adopt(a);
-                } else {
-                    var span = new Element('span', {'class':'emptyCell'});
-                    td.adopt(span);
-                }
-                tr.adopt(td);
-            }
-            tbody.adopt(tr);
-        }
-        this.domObj.adopt(table);
-        this.updateSelected();
-        if (this.options.parent) {
-            this.addTo(this.options.parent);
-        }
-    },
-
-    /**
-     * Method: swatchOver
-     * handle the mouse moving over a colour swatch by updating the preview
-     *
-     * Parameters:
-     * e - {Event} the mousemove event object
-     */
-    swatchOver: function(e) {
-        var a = e.target;
-
-        this.previewSwatch.setStyle('backgroundColor', a.retrieve('swatchColor'));
-    },
-
-    /**
-     * Method: swatchClick
-     * handle mouse click on a swatch by updating the color and hiding the
-     * panel.
-     *
-     * Parameters:
-     * e - {Event} the mouseclick event object
-     */
-    swatchClick: function(e) {
-        var a = e.target;
-
-        this.options.color = a.retrieve('swatchColor');
-        this.updateSelected();
-        this.fireEvent('click', this);
-    },
-
-    /**
-     * Method: changed
-     * handle the user entering a new colour value manually by updating the
-     * selected colour if the entered value is valid HEX.
-     */
-    changed: function() {
-        var color = this.colorInput.value;
-        if (color.substring(0,1) == '#') {
-            color = color.substring(1);
-        }
-        if (color.toLowerCase().match(/^[0-9a-f]{6}$/)) {
-            this.options.color = '#' +color.toUpperCase();
-            this.updateSelected();
-        }
-    },
-
-    /**
-     * Method: alphaChanged
-     * handle the user entering a new alpha value manually by updating the
-     * selected alpha if the entered value is valid alpha (0-100).
-     */
-    alphaChanged: function() {
-        var alpha = this.alphaInput.value;
-        if (alpha.match(/^[0-9]{1,3}$/)) {
-            this.options.alpha = parseFloat(alpha/100);
-            this.updateSelected();
-        }
-    },
-
-    /**
-     * Method: setColor
-     * set the colour represented by this colour panel
-     *
-     * Parameters:
-     * color - {String} the new hex color value
-     */
-    setColor: function( color ) {
-        this.colorInput.value = color;
-        this.changed();
-    },
-
-    /**
-     * Method: setAlpha
-     * set the alpha represented by this colour panel
-     *
-     * Parameters:
-     * alpha - {Integer} the new alpha value (between 0 and 100)
-     */
-    setAlpha: function( alpha ) {
-        this.alphaInput.value = alpha;
-        this.alphaChanged();
-    },
-
-    /**
-     * Method: updateSelected
-     * update the colour panel user interface based on the current
-     * colour and alpha values
-     */
-    updateSelected: function() {
-        var styles = {'backgroundColor':this.options.color};
-
-        this.colorInput.value = this.options.color.substring(1);
-
-        this.alphaInput.value = parseInt(this.options.alpha*100,10);
-        if (this.options.alpha < 1) {
-            styles.opacity = this.options.alpha;
-            styles.filter = 'Alpha(opacity='+(this.options.alpha*100)+')';
-            
-        } else {
-            styles.opacity = 1;
-            //not sure what the proper way to remove the filter would be since I don't have IE to test against.
-            styles.filter = '';  
-        }
-        this.selectedSwatch.setStyles(styles);
-        this.previewSwatch.setStyles(styles);
-        
-        this.fireEvent('change', this);
-    }
-});
-
-// $Id: color.js 675 2009-12-29 06:49:17Z jonlb@comcast.net $
-/**
- * Class: Jx.Button.Color
- *
- * Extends: <Jx.Button.Flyout>
- *
- * A <Jx.ColorPalette> wrapped up in a Jx.Button.  The button includes a
- * preview of the currently selected color.  Clicking the button opens
- * the color panel.
- *
- * A color button is essentially a <Jx.Button.Flyout> where the content
- * of the flyout is a <Jx.ColorPalette>.  For performance, all color buttons
- * share an instance of <Jx.ColorPalette> which means only one button can be
- * open at a time.  This isn't a huge restriction as flyouts already close
- * each other when opened.
- *
- * Example:
- * (code)
- * var colorButton = new Jx.Button.Color({
- *     onChange: function(button) {
- *         console.log('color:' + button.options.color + ' alpha: ' +
- *                     button.options.alpha);
- *     }
- * });
- * (end)
- *
- * Events:
- * change - fired when the color is changed.
- *
- * License:
- * Copyright (c) 2008, DM Solutions Group Inc.
- *
- * This file is licensed under an MIT style license
- */
-Jx.Button.Color = new Class({
-    Family: 'Jx.Button.Color',
-    Extends: Jx.Button.Flyout,
-
-    swatch: null,
-
-    options: {
-        /**
-         * Option: color
-         * a color to initialize the panel with, defaults to #000000
-         * (black) if not specified.
-         */
-        color: '#000000',
-        /**
-         * Option: alpha
-         * an alpha value to initialize the panel with, defaults to 1
-         *  (opaque) if not specified.
-         *
-         */
-        alpha: 100,
-        template: '<span class="jxButtonContainer"><a class="jxButton jxButtonFlyout jxDiscloser"><span class="jxButtonContent"><span class="jxButtonSwatch"><span class="jxButtonSwatchColor"></span></span><span class="jxButtonLabel"></span></span></a></span>'
-    },
-
-    classes: new Hash({
-        domObj: 'jxButtonContainer',
-        domA: 'jxButton',
-        swatch: 'jxButtonSwatchColor',
-        domLabel: 'jxButtonLabel'
-    }),
-
-    /**
-     * APIMethod: render
-     * creates a new color button.
-     */
-    render: function() {
-        if (!Jx.Button.Color.ColorPalette) {
-            Jx.Button.Color.ColorPalette = new Jx.ColorPalette(this.options);
-        }
-
-        /* we need to have an image to replace, but if a label is
-           requested, there wouldn't normally be an image. */
-        this.options.image = Jx.aPixel.src;
-
-        /* now we can safely initialize */
-        this.parent();
-        this.updateSwatch();
-
-        this.bound = {
-            changed: this.changed.bind(this),
-            hide: this.hide.bind(this)
-        };
-    },
-
-    /**
-     * Method: clicked
-     * override <Jx.Button.Flyout> to use a singleton color palette.
-     */
-    clicked: function() {
-        if (Jx.Button.Color.ColorPalette.currentButton) {
-            Jx.Button.Color.ColorPalette.currentButton.hide();
-        }
-        Jx.Button.Color.ColorPalette.currentButton = this;
-        Jx.Button.Color.ColorPalette.addEvent('change', this.bound.changed);
-        Jx.Button.Color.ColorPalette.addEvent('click', this.bound.hide);
-        this.content.appendChild(Jx.Button.Color.ColorPalette.domObj);
-        Jx.Button.Color.ColorPalette.domObj.setStyle('display', 'block');
-        Jx.Button.Flyout.prototype.clicked.apply(this, arguments);
-        /* setting these before causes an update problem when clicking on
-         * a second color button when another one is open - the color
-         * wasn't updating properly
-         */
-
-        Jx.Button.Color.ColorPalette.options.color = this.options.color;
-        Jx.Button.Color.ColorPalette.options.alpha = this.options.alpha/100;
-        Jx.Button.Color.ColorPalette.updateSelected();
-},
-
-    /**
-     * Method: hide
-     * hide the color panel
-     */
-    hide: function() {
-        this.setActive(false);
-        Jx.Button.Color.ColorPalette.removeEvent('change', this.bound.changed);
-        Jx.Button.Color.ColorPalette.removeEvent('click', this.bound.hide);
-        Jx.Button.Flyout.prototype.hide.apply(this, arguments);
-        Jx.Button.Color.ColorPalette.currentButton = null;
-    },
-
-    /**
-     * Method: setColor
-     * set the color represented by this color panel
-     *
-     * Parameters:
-     * color - {String} the new hex color value
-     */
-    setColor: function(color) {
-        this.options.color = color;
-        this.updateSwatch();
-    },
-
-    /**
-     * Method: setAlpha
-     * set the alpha represented by this color panel
-     *
-     * Parameters:
-     * alpha - {Integer} the new alpha value (between 0 and 100)
-     */
-    setAlpha: function(alpha) {
-        this.options.alpha = alpha;
-        this.updateSwatch();
-    },
-
-    /**
-     * Method: changed
-     * handle the color changing in the palette by updating the preview swatch
-     * in the button and firing the change event.
-     *
-     * Parameters:
-     * panel - <Jx.ColorPalette> the palette that changed.
-     */
-    changed: function(panel) {
-        var changed = false;
-        if (this.options.color != panel.options.color) {
-            this.options.color = panel.options.color;
-            changed = true;
-        }
-        if (this.options.alpha != panel.options.alpha * 100) {
-            this.options.alpha = panel.options.alpha * 100;
-            changed = true;
-        }
-        if (changed) {
-            this.updateSwatch();
-            this.fireEvent('change',this);
-        }
-    },
-
-    /**
-     * Method: updateSwatch
-     * Update the swatch color for the current color
-     */
-    updateSwatch: function() {
-        var styles = {'backgroundColor':this.options.color};
-        if (this.options.alpha < 100) {
-            styles.filter = 'Alpha(opacity='+(this.options.alpha)+')';
-            styles.opacity = this.options.alpha / 100;
-
-        } else {
-            styles.opacity = 1;
-            styles.filter = '';
-        }
-        this.swatch.setStyles(styles);
-    }
-});
-// $Id: menu.js 626 2009-11-20 13:22:22Z pagameba $
-/**
- * Class: Jx.Menu
- *
- * Extends: <Jx.Widget>
- *
- * A main menu as opposed to a sub menu that lives inside the menu.
- *
- * TODO: Jx.Menu
- * revisit this to see if Jx.Menu and Jx.SubMenu can be merged into
- * a single implementation.
- *
- * Example:
- * (code)
- * (end)
- *
- * License:
- * Copyright (c) 2008, DM Solutions Group Inc.
- *
- * This file is licensed under an MIT style license
- */
-Jx.Menu = new Class({
-    Family: 'Jx.Menu',
-    Extends: Jx.Widget,
-    /**
-     * Property: button
-     * {<Jx.Button>} The button that represents this menu in a toolbar and
-     * opens the menu.
-     */
-    button : null,
-    /**
-     * Property: subDomObj
-     * {HTMLElement} the HTML element that contains the menu items
-     * within the menu.
-     */
-    subDomObj : null,
-    /**
-     * Property: list
-     * {<Jx.List>} the list of items in the menu
-     */
-    list: null,
-
-    parameters: ['buttonOptions', 'options'],
-
-    options: {
-        template: "<div class='jxMenuContainer'><ul class='jxMenu'></ul></div>",
-        buttonTemplate: '<span class="jxButtonContainer"><a class="jxButton jxButtonMenu jxDiscloser"><span class="jxButtonContent"><img class="jxButtonIcon" src="'+Jx.aPixel.src+'"><span class="jxButtonLabel"></span></span></a></span>',
-        position: {
-            horizontal: ['left left'],
-            vertical: ['bottom top', 'top bottom']
-        }
-    },
-
-    classes: new Hash({
-        contentContainer: 'jxMenuContainer',
-        subDomObj: 'jxMenu'
-    }),
-
-    /**
-     * APIMethod: render
-     * Create a new instance of Jx.Menu.
-     */
-    render : function() {
-        this.parent();
-        if (!Jx.Menu.Menus) {
-            Jx.Menu.Menus = [];
-        }
-
-        this.contentContainer.addEvent('onContextmenu', function(e){e.stop();});
-
-        this.list = new Jx.List(this.subDomObj, {
-            onRemove: function(item) {
-                item.setOwner(null);
-            }.bind(this)
-        });
-
-        /* if options are passed, make a button inside an LI so the
-           menu can be embedded inside a toolbar */
-        if (this.options.buttonOptions) {
-            this.button = new Jx.Button($merge(this.options.buttonOptions,{
-                template: this.options.buttonTemplate,
-                onClick:this.show.bind(this)
-            }));
-
-            this.button.domA.addEvent('mouseover', this.onMouseOver.bindWithEvent(this));
-
-            this.domObj = this.button.domObj;
-            this.domObj.store('jxMenu', this);
-        }
-
-        /* pre-bind the hide function for efficiency */
-        this.bound = {
-            mousedown: this.hide.bindWithEvent(this),
-            keypress: this.keypressHandler.bindWithEvent(this)
-        };
-
-        if (this.options.parent) {
-            this.addTo(this.options.parent);
-        }
-    },
-    /**
-     * APIMethod: add
-     * Add menu items to the sub menu.
-     *
-     * Parameters:
-     * item - {<Jx.MenuItem>} the menu item to add.  Multiple menu items
-     * can be added by passing multiple arguments to this function.
-     * position -
-     * owner -
-     */
-    add: function(item, position, owner) {
-        if (Jx.type(item) == 'array') {
-            item.each(function(i){
-                i.setOwner(owner||this);
-            }, this);
-        } else {
-            item.setOwner(owner||this);
-        }
-        this.list.add(item, position);
-        return this;
-    },
-    /**
-     * APIMethod: remove
-     * Remove a menu item from the menu
-     *
-     * Parameters:
-     * item - {<Jx.MenuItem>} the menu item to remove
-     */
-    remove: function(item) {
-        this.list.remove(item);
-        return this;
-    },
-    /**
-     * APIMethod: replace
-     * Replace a menu item with another menu item
-     *
-     * Parameters:
-     * what - {<Jx.MenuItem>} the menu item to replace
-     * withWhat - {<Jx.MenuItem>} the menu item to replace it with
-     */
-    replace: function(item, withItem) {
-        this.list.replace(item, withItem);
-        return this;
-    },
-    /**
-     * Method: deactivate
-     * Deactivate the menu by hiding it.
-     */
-    deactivate: function() {this.hide();},
-    /**
-     * Method: onMouseOver
-     * Handle the user moving the mouse over the button for this menu
-     * by showing this menu and hiding the other menu.
-     *
-     * Parameters:
-     * e - {Event} the mouse event
-     */
-    onMouseOver: function(e) {
-        if (Jx.Menu.Menus[0] && Jx.Menu.Menus[0] != this) {
-            this.show({event:e});
-        }
-    },
-
-    /**
-     * Method: eventInMenu
-     * determine if an event happened inside this menu or a sub menu
-     * of this menu.
-     *
-     * Parameters:
-     * e - {Event} the mouse event
-     *
-     * Returns:
-     * {Boolean} true if the event happened in the menu or
-     * a sub menu of this menu, false otherwise
-     */
-    eventInMenu: function(e) {
-        var target = document.id(e.target);
-        if (!target) {
-            return false;
-        }
-        if (target.descendantOf(this.domObj) ||
-            target.descendantOf(this.subDomObj)) {
-            return true;
-        } else {
-            var ul = target.findElement('ul');
-            if (ul) {
-                var sm = ul.retrieve('jxSubMenu');
-                if (sm) {
-                    var owner = sm.owner;
-                    while (owner) {
-                        if (owner == this) {
-                            return true;
-                        }
-                        owner = owner.owner;
-                    }
-                }
-            }
-            return false;
-        }
-
-        /*
-        this.list.items().some(
-            function(item) {
-                var menuItem = item.retrieve('jxMenuItem');
-                return menuItem instanceof Jx.Menu.SubMenu &&
-                       menuItem.eventInMenu(e);
-            }
-        );
-        */
-    },
-
-    /**
-     * APIMethod: hide
-     * Hide the menu.
-     *
-     * Parameters:
-     * e - {Event} the mouse event
-     */
-    hide: function(e) {
-        if (e) {
-            if (this.visibleItem && this.visibleItem.eventInMenu) {
-                if (this.visibleItem.eventInMenu(e)) {
-                    return;
-                }
-            } else if (this.eventInMenu(e)) {
-                return;
-            }
-        }
-        if (Jx.Menu.Menus[0] && Jx.Menu.Menus[0] == this) {
-            Jx.Menu.Menus[0] = null;
-        }
-        if (this.button && this.button.domA) {
-            this.button.domA.removeClass(this.button.options.activeClass);
-        }
-        this.list.each(function(item){item.retrieve('jxMenuItem').hide(e);});
-        document.removeEvent('mousedown', this.bound.mousedown);
-        document.removeEvent('keydown', this.bound.keypress);
-        this.contentContainer.dispose();
-        this.visibleItem = null;
-        this.fireEvent('hide', this);
-    },
-    /**
-     * APIMethod: show
-     * Show the menu
-     */
-    show : function() {
-        if (this.button) {
-            if (Jx.Menu.Menus[0]) {
-                if (Jx.Menu.Menus[0] != this) {
-                    Jx.Menu.Menus[0].button.blur();
-                    Jx.Menu.Menus[0].hide();
-                } else {
-                    this.hide();
-                    return;
-                }
-            }
-            Jx.Menu.Menus[0] = this;
-            this.button.focus();
-            if (this.list.count() == 0) {
-                return;
-            }
-        }
-        this.contentContainer.setStyle('display','none');
-        document.id(document.body).adopt(this.contentContainer);
-        this.contentContainer.setStyles({
-            visibility: 'hidden',
-            display: 'block'
-        });
-
-        /* we have to size the container for IE to render the chrome correctly
-         * but just in the menu/sub menu case - there is some horrible peekaboo
-         * bug in IE related to ULs that we just couldn't figure out
-         */
-        this.contentContainer.setContentBoxSize(this.subDomObj.getMarginBoxSize());
-        this.showChrome(this.contentContainer);
-
-        this.position(this.contentContainer, this.domObj, $merge({
-            offsets: this.chromeOffsets
-        }, this.options.position));
-
-        this.contentContainer.setStyle('visibility','visible');
-
-        if (this.button && this.button.domA) {
-            this.button.domA.addClass(this.button.options.activeClass);
-        }
-
-        /* fix bug in IE that closes the menu as it opens because of bubbling */
-        document.addEvent('mousedown', this.bound.mousedown);
-        document.addEvent('keydown', this.bound.keypress);
-        this.fireEvent('show', this);
-    },
-    /**
-     * APIMethod: setVisibleItem
-     * Set the sub menu that is currently open
-     *
-     * Parameters:
-     * obj- {<Jx.SubMenu>} the sub menu that just became visible
-     */
-    setVisibleItem: function(obj) {
-        if (this.visibleItem != obj) {
-            if (this.visibleItem && this.visibleItem.hide) {
-                this.visibleItem.hide();
-            }
-            this.visibleItem = obj;
-            this.visibleItem.show();
-        }
-    },
-
-    /* hide flyout if the user presses the ESC key */
-    keypressHandler: function(e) {
-        e = new Event(e);
-        if (e.key == 'esc') {
-            this.hide();
-        }
-    },
-    /**
-     * APIMethod: isEnabled
-     * This returns true if the menu is enabled, false otherwise
-     *
-     * Returns:
-     * {Boolean} whether the menu is enabled or not
-     */
-    isEnabled: function() {
-        return this.button.isEnabled;
-    },
-
-    /**
-     * APIMethod: setEnabled
-     * enable or disable the menu.
-     *
-     * Parameters:
-     * enabled - {Boolean} the new enabled state of the menu
-     */
-    setEnabled: function(enabled) {
-        return this.button.setEnabled(enabled);
-    },
-    /**
-     * APIMethod: isActive
-     * returns true if the menu is open.
-     *
-     * Returns:
-     * {Boolean} the active state of the menu
-     */
-    isActive: function() {
-        return this.button.isActive();
-    },
-    /**
-     * APIMethod: setActive
-     * Set the active state of the menu
-     *
-     * Parameters:
-     * active - {Boolean} the new active state of the menu
-     */
-    setActive: function(active) {
-        this.button.setActive(active);
-    },
-    /**
-     * APIMethod: setImage
-     * set the image of this menu to a new image URL
-     *
-     * Parameters:
-     * path - {String} the new url to use as the image for this menu
-     */
-    setImage: function(path) {
-        this.button.setImage(path);
-    },
-    /**
-     * APIMethod: setLabel
-     *
-     * sets the text of the menu.
-     *
-     * Parameters:
-     *
-     * label - {String} the new label for the menu
-     */
-    setLabel: function(label) {
-        this.button.setLabel(label);
-    },
-    /**
-     * APIMethod: getLabel
-     *
-     * returns the text of the menu.
-     */
-    getLabel: function() {
-        return this.button.getLabel();
-    },
-    /**
-     * APIMethod: setTooltip
-     * sets the tooltip displayed by the menu
-     *
-     * Parameters:
-     * tooltip - {String} the new tooltip
-     */
-    setTooltip: function(tooltip) {
-        this.button.setTooltip(tooltip);
-    },
-    /**
-     * APIMethod: focus
-     * capture the keyboard focus on this menu
-     */
-    focus: function() {
-        this.button.focus();
-    },
-    /**
-     * APIMethod: blur
-     * remove the keyboard focus from this menu
-     */
-    blur: function() {
-        this.button.blur();
-    }
-
-});
-
-// $Id: set.js 626 2009-11-20 13:22:22Z pagameba $
-/**
- * Class: Jx.ButtonSet
- *
- * Extends: <Jx.Object>
- *
- * A ButtonSet manages a set of <Jx.Button> instances by ensuring that only one
- * of the buttons is active.  All the buttons need to have been created with
- * the toggle option set to true for this to work.
- *
- * Example:
- * (code)
- * var toolbar = new Jx.Toolbar('bar');
- * var buttonSet = new Jx.ButtonSet();
- *
- * var tab1 = new Jx.Button({label: 'b1', toggle:true, contentID: 'content1'});
- * var tab2 = new Jx.Button({label: 'b2', toggle:true, contentID: 'content2'});
- * var tab3 = new Jx.Button({label: 'b3', toggle:true, contentID: 'content3'});
- * var tab4 = new Jx.Button({label: 'b4', toggle:true, contentURL: 'test_content.html'});
- *
- * buttonSet.add(b1,b2,b3,b4);
- * (end)
- *
- * Events:
- * change - the current button has changed
- *
- * License:
- * Copyright (c) 2008, DM Solutions Group Inc.
- *
- * This file is licensed under an MIT style license
- */
-Jx.ButtonSet = new Class({
-    Family: 'Jx.ButtonSet',
-    Extends: Jx.Object,
-    /**
-     * Property: buttons
-     * {Array} array of buttons that are managed by this button set
-     */
-    buttons: null,
-    /**
-     * APIMethod: init
-     * initializes the button set.
-     */
-    init : function() {
-        this.buttons = [];
-        this.buttonChangedHandler = this.buttonChanged.bind(this);
-    },
-
-    /**
-     * Method: add
-     * Add one or more <Jx.Button>s to the ButtonSet.
-     *
-     * Parameters:
-     * button - {<Jx.Button>} an instance of <Jx.Button> to add to the button set.  More
-     * than one button can be added by passing extra parameters to this method.
-     */
-    add : function() {
-        $A(arguments).each(function(button) {
-            if (button.domObj.hasClass(button.options.toggleClass)) {
-                button.domObj.removeClass(button.options.toggleClass);
-                button.domObj.addClass(button.options.toggleClass+'Set');
-            }
-            button.addEvent('down',this.buttonChangedHandler);
-            button.setActive = function(active) {
-                if (button.options.active && this.activeButton == button) {
-                    return;
-                } else {
-                    Jx.Button.prototype.setActive.apply(button, [active]);
-                }
-            }.bind(this);
-            if (!this.activeButton || button.options.active) {
-                button.options.active = false;
-                button.setActive(true);
-            }
-            this.buttons.push(button);
-        }, this);
-        return this;
-    },
-    /**
-     * Method: remove
-     * Remove a button from this Button.
-     *
-     * Parameters:
-     * button - {<Jx.Button>} the button to remove.
-     */
-    remove : function(button) {
-        this.buttons.erase(button);
-        if (this.activeButton == button) {
-            if (this.buttons.length) {
-                this.buttons[0].setActive(true);
-            }
-            button.removeEvent('down',this.buttonChangedHandler);
-            button.setActive = Jx.Button.prototype.setActive;
-        }
-    },
-    /**
-     * Method: setActiveButton
-     * Set the active button to the one passed to this method
-     *
-     * Parameters:
-     * button - {<Jx.Button>} the button to make active.
-     */
-    setActiveButton: function(button) {
-        var b = this.activeButton;
-        this.activeButton = button;
-        if (b && b != button) {
-            b.setActive(false);
-        }
-    },
-    /**
-     * Method: selectionChanged
-     * Handle selection changing on the buttons themselves and activate the
-     * appropriate button in response.
-     *
-     * Parameters:
-     * button - {<Jx.Button>} the button to make active.
-     */
-    buttonChanged: function(button) {
-        this.setActiveButton(button);
-        this.fireEvent('change', this);
-    }
-});// $Id: multi.js 626 2009-11-20 13:22:22Z pagameba $
-/**
- * Class: Jx.Button.Multi
- *
- * Extends: <Jx.Button>
- *
- * Implements:
- *
- * Multi buttons are used to contain multiple buttons in a drop down list
- * where only one button is actually visible and clickable in the interface.
- *
- * When the user clicks the active button, it performs its normal action.
- * The user may also click a drop-down arrow to the right of the button and
- * access the full list of buttons.  Clicking a button in the list causes
- * that button to replace the active button in the toolbar and performs
- * the button's regular action.
- *
- * Other buttons can be added to the Multi button using the add method.
- *
- * This is not really a button, but rather a container for buttons.  The
- * button structure is a div containing two buttons, a normal button and
- * a flyout button.  The flyout contains a toolbar into which all the
- * added buttons are placed.  The main button content is cloned from the
- * last button clicked (or first button added).
- *
- * The Multi button does not trigger any events itself, only the contained
- * buttons trigger events.
- *
- * Example:
- * (code)
- * var b1 = new Jx.Button({
- *     label: 'b1',
- *     onClick: function(button) {
- *         console.log('b1 clicked');
- *     }
- * });
- * var b2 = new Jx.Button({
- *     label: 'b2',
- *     onClick: function(button) {
- *         console.log('b2 clicked');
- *     }
- * });
- * var b3 = new Jx.Button({
- *     label: 'b3',
- *     onClick: function(button) {
- *         console.log('b3 clicked');
- *     }
- * });
- * var multiButton = new Jx.Button.Multi();
- * multiButton.add(b1, b2, b3);
- * (end)
- *
- * License:
- * Copyright (c) 2008, DM Solutions Group Inc.
- *
- * This file is licensed under an MIT style license
- */
-Jx.Button.Multi = new Class({
-    Family: 'Jx.Button.Multi',
-
-    Extends: Jx.Button,
-    /**
-     * Property: {<Jx.Button>} activeButton
-     * the currently selected button
-     */
-    activeButton: null,
-    /**
-     * Property: buttons
-     * {Array} the buttons added to this multi button
-     */
-    buttons: null,
-
-    options: {
-        template: '<span class="jxButtonContainer"><a class="jxButton jxButtonMulti jxDiscloser"><span class="jxButtonContent"><img src="'+Jx.aPixel.src+'" class="jxButtonIcon"><span class="jxButtonLabel"></span></span></a><a class="jxButtonDisclose" href="javascript:void(0)"><img src="'+Jx.aPixel.src+'"></a></span>'
-    },
-    classes: new Hash({
-        domObj: 'jxButtonContainer',
-        domA: 'jxButton',
-        domImg: 'jxButtonIcon',
-        domLabel: 'jxButtonLabel',
-        domDisclose: 'jxButtonDisclose'
-    }),
-
-
-    /**
-     * APIMethod: render
-     * construct a new instance of Jx.Button.Multi.
-     */
-    render: function() {
-        this.parent();
-        this.buttons = [];
-
-        this.menu = new Jx.Menu();
-        this.menu.button = this;
-        this.buttonSet = new Jx.ButtonSet();
-
-        this.clickHandler = this.clicked.bind(this);
-
-        if (this.domDisclose) {
-            var button = this;
-            var hasFocus;
-
-            this.domDisclose.addEvents({
-                'click': (function(e) {
-                    if (this.list.count() === 0) {
-                        return;
-                    }
-                    if (!button.options.enabled) {
-                        return;
-                    }
-                    this.contentContainer.setStyle('visibility','hidden');
-                    this.contentContainer.setStyle('display','block');
-                    document.id(document.body).adopt(this.contentContainer);
-                    /* we have to size the container for IE to render the chrome
-                     * correctly but just in the menu/sub menu case - there is
-                     * some horrible peekaboo bug in IE related to ULs that we
-                     * just couldn't figure out
-                     */
-                    this.contentContainer.setContentBoxSize(this.subDomObj.getMarginBoxSize());
-
-                    this.showChrome(this.contentContainer);
-
-                    this.position(this.contentContainer, this.button.domObj, {
-                        horizontal: ['right right'],
-                        vertical: ['bottom top', 'top bottom'],
-                        offsets: this.chromeOffsets
-                    });
-
-                    this.contentContainer.setStyle('visibility','');
-
-                    document.addEvent('mousedown', this.hideWatcher);
-                    document.addEvent('keyup', this.keypressWatcher);
-
-                    this.fireEvent('show', this);
-                }).bindWithEvent(this.menu),
-                'mouseenter':(function(){
-                    document.id(this.domObj.firstChild).addClass('jxButtonHover');
-                    if (hasFocus) {
-                        this.domDisclose.addClass(this.options.pressedClass);
-                    }
-                }).bind(this),
-                'mouseleave':(function(){
-                    document.id(this.domObj.firstChild).removeClass('jxButtonHover');
-                    this.domDisclose.removeClass(this.options.pressedClass);
-                }).bind(this),
-                mousedown: (function(e) {
-                    this.domDisclose.addClass(this.options.pressedClass);
-                    hasFocus = true;
-                    this.focus();
-                }).bindWithEvent(this),
-                mouseup: (function(e) {
-                    this.domDisclose.removeClass(this.options.pressedClass);
-                }).bindWithEvent(this),
-                keydown: (function(e) {
-                    if (e.key == 'enter') {
-                        this.domDisclose.addClass(this.options.pressedClass);
-                    }
-                }).bindWithEvent(this),
-                keyup: (function(e) {
-                    if (e.key == 'enter') {
-                        this.domDisclose.removeClass(this.options.pressedClass);
-                    }
-                }).bindWithEvent(this),
-                blur: function() { hasFocus = false; }
-
-            });
-            if (typeof Drag != 'undefined') {
-                new Drag(this.domDisclose, {
-                    onStart: function() {this.stop();}
-                });
-            }
-        }
-
-        this.menu.addEvents({
-            'show': (function() {
-                this.domA.addClass(this.options.activeClass);
-            }).bind(this),
-            'hide': (function() {
-                if (this.options.active) {
-                    this.domA.addClass(this.options.activeClass);
-                }
-            }).bind(this)
-        });
-        if (this.options.items) {
-            this.add(this.options.items);
-        }
-    },
-    /**
-     * Method: add
-     * adds one or more buttons to the Multi button.  The first button
-     * added becomes the active button initialize.  This function
-     * takes a variable number of arguments, each of which is expected
-     * to be an instance of <Jx.Button>.
-     *
-     * Parameters:
-     * button - {<Jx.Button>} a <Jx.Button> instance, may be repeated in the parameter list
-     */
-    add: function() {
-        $A(arguments).flatten().each(function(theButton){
-            if (!theButton instanceof Jx.Button) {
-                return;
-            }
-            theButton.domA.addClass('jxDiscloser');
-            theButton.setLabel(theButton.options.label);
-            this.buttons.push(theButton);
-            var f = this.setButton.bind(this, theButton);
-            var opts = {
-                image: theButton.options.image,
-                imageClass: theButton.options.imageClass,
-                label: theButton.options.label || '&nbsp;',
-                enabled: theButton.options.enabled,
-                tooltip: theButton.options.tooltip,
-                toggle: true,
-                onClick: f
-            };
-            if (!opts.image || opts.image.indexOf('a_pixel') != -1) {
-                delete opts.image;
-            }
-            var button = new Jx.Menu.Item(opts);
-            this.buttonSet.add(button);
-            this.menu.add(button);
-            theButton.multiButton = button;
-            theButton.domA.addClass('jxButtonMulti');
-            if (!this.activeButton) {
-                this.domA.dispose();
-                this.setActiveButton(theButton);
-            }
-        }, this);
-    },
-    /**
-     * Method: remove
-     * remove a button from a multi button
-     *
-     * Parameters:
-     * button - {<Jx.Button>} the button to remove
-     */
-    remove: function(button) {
-        if (!button || !button.multiButton) {
-            return;
-        }
-        // the toolbar will only remove the li.toolItem, which is
-        // the parent node of the multiButton's domObj.
-        if (this.menu.remove(button.multiButton)) {
-            button.multiButton = null;
-            if (this.activeButton == button) {
-                // if any buttons are left that are not this button
-                // then set the first one to be the active button
-                // otherwise set the active button to nothing
-                if (!this.buttons.some(function(b) {
-                    if (b != button) {
-                        this.setActiveButton(b);
-                        return true;
-                    } else {
-                        return false;
-                    }
-                }, this)) {
-                    this.setActiveButton(null);
-                }
-            }
-            this.buttons.erase(button);
-        }
-    },
-    /**
-     * Method: setActiveButton
-     * update the menu item to be the requested button.
-     *
-     * Parameters:
-     * button - {<Jx.Button>} a <Jx.Button> instance that was added to this multi button.
-     */
-    setActiveButton: function(button) {
-        if (this.activeButton) {
-            this.activeButton.domA.dispose();
-            this.activeButton.domA.removeEvent('click', this.clickHandler);
-        }
-        if (button && button.domA) {
-            this.domObj.grab(button.domA, 'top');
-            this.domA = button.domA;
-            this.domA.addEvent('click', this.clickHandler);
-            if (this.options.toggle) {
-                this.options.active = false;
-                this.setActive(true);
-            }
-        }
-        this.activeButton = button;
-    },
-    /**
-     * Method: setButton
-     * update the active button in the menu item, trigger the button's action
-     * and hide the flyout that contains the buttons.
-     *
-     * Parameters:
-     * button - {<Jx.Button>} The button to set as the active button
-     */
-    setButton: function(button) {
-        this.setActiveButton(button);
-        button.clicked();
-    }
-});// $Id: menu.item.js 626 2009-11-20 13:22:22Z pagameba $
-/**
- * Class: Jx.Menu.Item
- *
- * Extends: <Jx.Button>
- *
- * A menu item is a single entry in a menu.  It is typically composed of
- * a label and an optional icon.  Selecting the menu item emits an event.
- *
- * Jx.Menu.Item is represented by a <Jx.Button> with type MenuItem and the
- * associated CSS changes noted in <Jx.Button>.  The container of a MenuItem
- * is an 'li' element.
- *
- * Example:
- * (code)
- * (end)
- *
- * Events:
- * click - fired when the menu item is clicked.
- *
- * License:
- * Copyright (c) 2008, DM Solutions Group Inc.
- *
- * This file is licensed under an MIT style license
- */
-Jx.Menu.Item = new Class({
-    Family: 'Jx.Menu.Item',
-    Extends: Jx.Button,
-    /**
-     * Property: owner
-     * {<Jx.SubMenu> or <Jx.Menu>} the menu that contains the menu item.
-     */
-    owner: null,
-    options: {
-        //image: null,
-        label: '&nbsp;',
-        toggleClass: 'jxMenuItemToggle',
-        pressedClass: 'jxMenuItemPressed',
-        activeClass: 'jxMenuItemActive',
-        /* Option: template
-         * the HTML structure of the button.  As a minimum, there must be a
-         * containing element with a class of jxMenuItemContainer and an
-         * internal element with a class of jxMenuItem.  jxMenuItemIcon and
-         * jxMenuItemLabel are used if present to put the image and label into
-         * the button.
-         */
-        template: '<li class="jxMenuItemContainer"><a class="jxMenuItem"><span class="jxMenuItemContent"><img class="jxMenuItemIcon" src="'+Jx.aPixel.src+'"><span class="jxMenuItemLabel"></span></span></a></li>'
-    },
-    classes: new Hash({
-        domObj:'jxMenuItemContainer',
-        domA: 'jxMenuItem',
-        domImg: 'jxMenuItemIcon',
-        domLabel: 'jxMenuItemLabel'
-    }),
-    /**
-     * APIMethod: render
-     * Create a new instance of Jx.Menu.Item
-     */
-    render: function() {
-        if (!this.options.image) {
-            this.options.image = Jx.aPixel.src;
-        }
-        this.parent();
-        if (this.options.image && this.options.image != Jx.aPixel.src) {
-            this.domObj.removeClass(this.options.toggleClass);
-        }
-        this.domObj.addEvent('mouseover', this.onMouseOver.bind(this));
-        this.domObj.store('jxMenuItem', this);
-    },
-    /**
-     * Method: setOwner
-     * Set the owner of this menu item
-     *
-     * Parameters:
-     * obj - {Object} the new owner
-     */
-    setOwner: function(obj) {
-        this.owner = obj;
-    },
-    /**
-     * Method: hide
-     * Hide the menu item.
-     */
-    hide: function() {this.blur();},
-    /**
-     * Method: show
-     * Show the menu item
-     */
-    show: $empty,
-    /**
-     * Method: clicked
-     * Handle the user clicking on the menu item, overriding the <Jx.Button::clicked>
-     * method to facilitate menu tracking
-     *
-     * Parameters:
-     * obj - {Object} an object containing an event property that was the user
-     * event.
-     */
-    clicked: function(obj) {
-        if (this.options.enabled) {
-            if (this.options.toggle) {
-                this.setActive(!this.options.active);
-            }
-            this.fireEvent('click', this);
-            if (this.owner && this.owner.deactivate) {
-                this.owner.deactivate(obj.event);
-            }
-        }
-    },
-    /**
-     * Method: onmouseover
-     * handle the mouse moving over the menu item
-     */
-    onMouseOver: function() {
-        if (this.owner && this.owner.setVisibleItem) {
-            this.owner.setVisibleItem(this);
-        }
-    }
-});
-
-// $Id: combo.js 681 2010-01-15 05:45:28Z jonlb@comcast.net $
-/**
- * Class: Jx.Button.Combo
- *
- * Extends: <Jx.Button.Multi>
- *
- * A drop down list of selectable items.  Items can be either a string, an image or both.
- *
- * Example:
- * (code)
- * new Jx.Button.Combo({
- *     label: 'Choose a symbol',
- *     items: [
- *         {label: 'Star', image: 'images/swatches.png', imageClass: 'comboStar'},
- *         {label: 'Square', image: 'images/swatches.png', imageClass: 'comboSquare'},
- *         {label: 'Triangle', image: 'images/swatches.png', imageClass: 'comboTriangle'},
- *         {label: 'Circle', image: 'images/swatches.png', imageClass: 'comboCircle'},
- *         {label: 'Plus', image: 'images/swatches.png', imageClass: 'comboPlus'},
- *         {label: 'Cross', image: 'images/swatches.png', imageClass: 'comboCross'}
- *     ],
- *     onChange: function(combo) { alert('you selected ' + combo.getValue()) }
- * })
- * (end)
- *
- * Events:
- * change - triggered when the user selects a new item from the list
- *
- * License:
- * Copyright (c) 2008, DM Solutions Group Inc.
- *
- * This file is licensed under an MIT style license
- */
-Jx.Button.Combo = new Class({
-    Family: 'Jx.Button.Combo',
-    Extends: Jx.Button,
-    ul : null,
-    /**
-     * Property: currentSelection
-     * {Object} current selection in the list
-     */
-    currentSelection : null,
-
-    options: {
-        /* Option: label
-         * string, default ''.  The label to display next to the combo.
-         */
-        label: '',
-        /* Option: template
-         */
-         template: '<span class="jxButtonContainer"><a class="jxButton jxButtonCombo jxDiscloser"><span class="jxButtonContent"><img class="jxButtonIcon" src="'+Jx.aPixel.src+'"><span class="jxButtonLabel"></span></span></a></span>'
-     },
-
-    /**
-     * APIMethod: render
-     * create a new instance of Jx.Combo
-     */
-    render: function() {
-        this.parent();
-
-        this.menu = new Jx.Menu();
-        this.menu.button = this;
-        this.buttonSet = new Jx.ButtonSet();
-
-        this.buttonSet = new Jx.ButtonSet({
-            onChange: (function(set) {
-                var button = set.activeButton;
-                var l = button.options.label;
-                if (l == '&nbsp;') {
-                    l = '';
-                }
-                this.setLabel(l);
-                var img = button.options.image;
-                if (img.indexOf('a_pixel') != -1) {
-                    img = '';
-                }
-                this.setImage(img);
-                if (this.options.imageClass && this.domImg) {
-                    this.domImg.removeClass(this.options.imageClass);
-                }
-                if (button.options.imageClass && this.domImg) {
-                    this.options.imageClass = button.options.imageClass;
-                    this.domImg.addClass(button.options.imageClass);
-                }
-                this.fireEvent('change', this);
-            }).bind(this)
-        });
-        if (this.options.items) {
-            this.add(this.options.items);
-        }
-        var button = this;
-        this.addEvent('click', function(e) {
-            if (this.list.count() === 0) {
-                return;
-            }
-            if (!button.options.enabled) {
-                return;
-            }
-            this.contentContainer.setStyle('visibility','hidden');
-            this.contentContainer.setStyle('display','block');
-            $(document.body).adopt(this.contentContainer);
-            /* we have to size the container for IE to render the chrome correctly
-             * but just in the menu/sub menu case - there is some horrible peekaboo
-             * bug in IE related to ULs that we just couldn't figure out
-             */
-            this.contentContainer.setContentBoxSize(this.subDomObj.getMarginBoxSize());
-
-            this.showChrome(this.contentContainer);
-
-            this.position(this.contentContainer, this.button.domObj, {
-                horizontal: ['right right'],
-                vertical: ['bottom top', 'top bottom'],
-                offsets: this.chromeOffsets
-            });
-
-            this.contentContainer.setStyle('visibility','');
-
-            document.addEvent('mousedown', this.bound.mousedown);
-            document.addEvent('keyup', this.bound.keypress);
-
-            this.fireEvent('show', this);
-        }.bindWithEvent(this.menu));
-
-        this.menu.addEvents({
-            'show': (function() {
-                this.setActive(true);
-            }).bind(this),
-            'hide': (function() {
-                this.setActive(false);
-            }).bind(this)
-        });
-
-    },
-
-    /**
-     * Method: valueChanged
-     * invoked when the current value is changed
-     */
-    valueChanged: function() {
-        this.fireEvent('change', this);
-    },
-
-    /**
-     * Method: getValue
-     * returns the currently selected value
-     */
-    getValue: function() {
-        return this.options.label;
-    },
-
-    setValue: function(value) {
-        this.buttonSet.buttons.each(function(button){
-            if (button.options.label === value) {
-                this.buttonSet.buttonChanged(button);
-            }
-        },this);
-    },
-
-    /**
-     * Method: onKeyPress
-     * Handle the user pressing a key by looking for an ENTER key to set the
-     * value.
-     *
-     * Parameters:
-     * e - {Event} the keypress event
-     */
-    onKeyPress: function(e) {
-        if (e.key == 'enter') {
-            this.valueChanged();
-        }
-    },
-
-    /**
-     * Method: add
-     * add a new item to the pick list
-     *
-     * Parameters:
-     * options - {Object} object with properties suitable to be passed to
-     * a <Jx.Menu.Item.Options> object.  More than one options object can be
-     * passed, comma separated or in an array.
-     */
-    add: function() {
-        $A(arguments).flatten().each(function(opt) {
-            var button = new Jx.Menu.Item($merge(opt,{
-                toggle: true
-            }));
-            this.menu.add(button);
-            this.buttonSet.add(button);
-        }, this);
-    },
-
-    /**
-     * Method: remove
-     * Remove the item at the given index.  Not implemented.
-     *
-     * Parameters:
-     * idx - {Integer} the item to remove.
-     */
-    remove: function(idx) {
-        //TODO: implement remove?
-    }
-});// $Id: toolbar.js 687 2010-02-02 16:57:21Z pagameba $
+});// $Id: toolbar.js 857 2010-04-20 12:12:11Z pagameba $
 /**
  * Class: Jx.Toolbar
  *
@@ -22060,6 +23452,14 @@ Jx.Toolbar = new Class({
          * things it contains.  Default is false.
          */
         autoSize: false,
+        /**
+         * Option: align
+         * Determines whether the toolbar is aligned left, center, or right.
+         * Mutually exclusive with the scroll option. If scroll is set to true
+         * this option does nothing. Default: 'left', valid values: 'left',
+         * 'center', or 'right'
+         */
+        align: 'left',
         /* Option: scroll
          * if true, the toolbar may scroll if the contents are wider than
          * the size of the toolbar
@@ -22114,6 +23514,7 @@ Jx.Toolbar = new Class({
                 parent: parent,
                 position: this.options.position,
                 autoSize: this.options.autoSize,
+                align: this.options.align,
                 scroll: this.options.scroll
             });
         }
@@ -22174,6 +23575,13 @@ Jx.Toolbar = new Class({
         this.list.remove(li);
         this.update();
         return this;
+    },
+    /**
+     * APIMethod: empty
+     * remove all items from the toolbar
+     */
+    empty: function() {
+      this.list.each(function(item){this.remove(item);},this);
     },
     /**
      * Method: deactivate
@@ -22239,25 +23647,28 @@ Jx.Toolbar = new Class({
      * the buttons on one line.
      */
     update: function () {
-        if (['top','bottom'].contains(this.options.position)) {
-            (function(){
-                var s = 0;
-                var children = this.domObj.getChildren();
-                children.each(function(button){
-                    var size = button.getMarginBoxSize();
-                    s += size.width +0.5;
-                },this);
-                if (s !== 0) {
-                    this.domObj.setStyle('width', Math.round(s));
-                } else {
-                    this.domObj.setStyle('width','auto');
-                }
-                this.fireEvent('update');
-            }).delay(1,this);
-        }
+        // if (['top','bottom'].contains(this.options.position)) {
+        //     (function(){
+        //         var s = 0;
+        //         var children = this.domObj.getChildren();
+        //         children.each(function(button){
+        //             var size = button.getMarginBoxSize();
+        //             s += size.width +0.5;
+        //         },this);
+        //         if (s !== 0) {
+        //             this.domObj.setStyle('width', Math.round(s));
+        //         } else {
+        //             this.domObj.setStyle('width','auto');
+        //         }
+        //     }).delay(1,this);
+        // }
+        this.fireEvent('update');
+    },
+    changeText : function(lang) {
+      this.update();
     }
 });
-// $Id$
+// $Id: container.js 856 2010-04-20 06:11:41Z jonlb@comcast.net $
 /**
  * Class: Jx.Toolbar.Container
  *
@@ -22283,14 +23694,16 @@ Jx.Toolbar = new Class({
  */
 
 Jx.Toolbar.Container = new Class({
-    
+
     Family: 'Jx.Toolbar.Container',
     Extends: Jx.Widget,
+    Binds: ['update'],
+    pluginNamespace: 'ToolbarContainer',
     /**
      * Property: domObj
      * {HTMLElement} the HTML element that the container lives in
      */
-    domObj : null,
+    domObj: null,
     options: {
         /* Option: parent
          * a DOM element to add this to
@@ -22312,36 +23725,52 @@ Jx.Toolbar.Container = new Class({
          * Default is true.
          */
         scroll: true,
-        template: "<div class='jxBarContainer'></div>",
-        scrollerTemplate: "<div class='jxToolbarContainer'><div class='jxScroller'><div class='jxToolbarWrapper'></div></div></div>"
+        /**
+         * Option: align
+         * Determines whether the toolbar is aligned left, center, or right.
+         * Mutually exclusive with the scroll option. If scroll is set to true
+         * this option does nothing. Default: 'left', valid values: 'left',
+         * 'center', or 'right'
+         */
+        align: 'left',
+        template: "<div class='jxBarContainer'><div class='jxBarControls'></div></div>",
+        scrollerTemplate: "<div class='jxBarScroller'><div class='jxBarWrapper'></div></div>"
     },
     classes: new Hash({
         domObj: 'jxBarContainer',
-        tbContainer: 'jxToolbarContainer', //used to hold the buttons and the scroller/wrapper
-        scroller: 'jxScroller', //used to hide the overflow of the wrapper
-        wrapper: 'jxToolbarWrapper' //used to allow multiple toolbars to float next to each other
+        scroller: 'jxBarScroller',
+        //used to hide the overflow of the wrapper
+        wrapper: 'jxBarWrapper',
+        controls: 'jxBarControls'
+        //used to allow multiple toolbars to float next to each other
     }),
-    
+
     updating: false,
-    
+
     /**
      * APIMethod: render
      * Create a new instance of Jx.Toolbar.Container
      */
-    render : function() {
+    render: function() {
         this.parent();
         /* if a container was passed in, use it instead of the one from the
          * template
          */
         if (document.id(this.options.parent)) {
             this.domObj = document.id(this.options.parent);
-            this.elements = new Hash({'jxBarContainer':this.domObj});
+            this.elements = new Hash({
+                'jxBarContainer': this.domObj
+            });
             this.domObj.addClass('jxBarContainer');
+            this.domObj.grab(this.controls);
+            this.domObj.addEvent('sizeChange', this.update);
         }
 
         if (this.options.scroll) {
             this.processElements(this.options.scrollerTemplate, this.classes);
-            this.domObj.adopt(this.tbContainer);
+            this.domObj.grab(this.scroller, 'top');
+        } else {
+            this.domObj.addClass('jxToolbarAlign' + this.options.align.capitalize());
         }
 
         /* this allows toolbars to add themselves to this bar container
@@ -22350,38 +23779,38 @@ Jx.Toolbar.Container = new Class({
          */
         this.domObj.store('jxBarContainer', this);
 
-        if (['top','right','bottom','left'].contains(this.options.position)) {
+        if (['top', 'right', 'bottom', 'left'].contains(this.options.position)) {
             this.domObj.addClass('jxBar' +
-                           this.options.position.capitalize());
+            this.options.position.capitalize());
         } else {
             this.domObj.addClass('jxBarTop');
             this.options.position = 'top';
         }
 
-        
-        if (this.options.scroll && ['top','bottom'].contains(this.options.position)) {
+        if (this.options.scroll && ['top', 'bottom'].contains(this.options.position)) {
             // make sure we update our size when we get added to the DOM
-            this.addEvent('addTo', this.update.bind(this));
-            
+            this.addEvent('addTo', function(){
+              this.domObj.getParent().addEvent('sizeChange', this.update);
+              this.update();
+            });
+
             this.scrollLeft = new Jx.Button({
                 image: Jx.aPixel.src
-            }).addTo(this.tbContainer, 'top');
-            this.scrollLeft.domObj.addClass('jxBarScrollLeft');
+            }).addTo(this.controls, 'bottom');
+            document.id(this.scrollLeft).addClass('jxBarScrollLeft');
             this.scrollLeft.addEvents({
-               click: this.scroll.bind(this,'left')
+                click: this.scroll.bind(this, 'left')
             });
-            
+
             this.scrollRight = new Jx.Button({
                 image: Jx.aPixel.src
-            }).addTo(this.tbContainer, 'bottom');
-            this.scrollRight.domObj.addClass('jxBarScrollRight');
+            }).addTo(this.controls, 'bottom');
+            document.id(this.scrollRight).addClass('jxBarScrollRight');
             this.scrollRight.addEvents({
-               click: this.scroll.bind(this, 'right')
+                click: this.scroll.bind(this, 'right')
             });
-            
-            
 
-        } else if (this.options.scroll && ['left','right'].contains(this.options.position)) {
+        } else if (this.options.scroll && ['left', 'right'].contains(this.options.position)) {
             //do we do scrolling up and down?
             //for now disable scroll in this case
             this.options.scroll = false;
@@ -22389,85 +23818,61 @@ Jx.Toolbar.Container = new Class({
             this.options.scroll = false;
         }
 
-        this.addEvent('add',this.update.bind(this));
+        this.addEvent('add', this.update);
         if (this.options.toolbars) {
             this.add(this.options.toolbars);
         }
     },
 
     update: function() {
-        if (this.options.scroll ) {
-            if (['top','bottom'].contains(this.options.position)) {
-                var tbcSize = this.tbContainer.getContentBoxSize().width;
-                
+        if (this.options.scroll) {
+            if (['top', 'bottom'].contains(this.options.position)) {
+                var tbcSize = this.domObj.getContentBoxSize().width;
+
                 var s = 0;
                 //next check to see if we need the scrollers or not.
                 var children = this.wrapper.getChildren();
                 if (children.length > 0) {
-                    children.each(function(tb){
+                    children.each(function(tb) {
                         s += tb.getMarginBoxSize().width;
-                    },this);
-                    
+                    },
+                    this);
+
                     var scrollerSize = tbcSize;
-                    
+
                     if (s === 0) {
-                        this.scrollLeft.domObj.setStyles({
-                            visibility: 'hidden',
-                            display: 'none'
-                        });
-                        this.scrollRight.domObj.setStyles({
-                            visibility: 'hidden',
-                            display: 'none'
-                        });
+                        this.scrollLeft.setEnabled(false);
+                        this.scrollRight.setEnabled(false);
                     } else {
-                        
-                        
+
+
                         var leftMargin = this.wrapper.getStyle('margin-left').toInt();
-                        
+                        scrollerSize -= this.controls.getMarginBoxSize().width;
+
+
                         if (leftMargin < 0) {
                             //has been scrolled left so activate the right scroller
-                            this.scrollLeft.domObj.setStyles({
-                                visibility: 'visible',
-                                display: 'inline-block'
-                            });
-                            scrollerSize -= this.scrollLeft.domObj.getMarginBoxSize().width;
+                            this.scrollLeft.setEnabled(true);
                         } else {
                             //we don't need it
-                            this.scrollLeft.domObj.setStyles({
-                                visibility: 'hidden',
-                                display: 'none'
-                            });
+                            this.scrollLeft.setEnabled(false);
                         }
-                        
+
                         if (s + leftMargin > scrollerSize) {
                             //we need the right one
-                            this.scrollRight.domObj.setStyles({
-                                visibility: 'visible',
-                                display: 'inline-block'
-                            });
-                            scrollerSize -= this.scrollRight.domObj.getMarginBoxSize().width;
+                            this.scrollRight.setEnabled(true);
                         } else {
                             //we don't need it
-                            this.scrollRight.domObj.setStyles({
-                                visibility: 'hidden',
-                                display: 'none'
-                            });
+                            this.scrollRight.setEnabled(false);
                         }
                     }
-                    
+
                 } else {
-                    this.scrollRight.domObj.setStyles({
-                        visibility: 'hidden',
-                        display: 'none'
-                    });
-                    this.scrollLeft.domObj.setStyles({
-                        visibility: 'hidden',
-                        display: 'none'
-                    });
-                    
+                    this.scrollRight.setEnabled(false);
+                    this.scrollLeft.setEnabled(false);
                 }
-                this.scroller.setStyle('width', scrollerSize );
-                
+                this.scroller.setStyle('width', scrollerSize);
+
                 this.findFirstVisible();
                 this.updating = false;
             }
@@ -22478,27 +23883,31 @@ Jx.Toolbar.Container = new Class({
      * Finds the first visible button on the toolbar and saves a reference in 
      * the scroller object
      */
-    findFirstVisible: function () {
-        if ($defined(this.scroller.retrieve('buttonPointer'))) { return; };
-        
+    findFirstVisible: function() {
+        if ($defined(this.scroller.retrieve('buttonPointer'))) {
+            return;
+        };
+
         var children = this.wrapper.getChildren();
-        
+
         if (children.length > 0) {
-            children.each(function(toolbar){
+            children.each(function(toolbar) {
                 var buttons = toolbar.getChildren();
                 if (buttons.length > 1) {
-                   buttons.each(function(button){
-                       var pos = button.getCoordinates(this.scroller);
-                       if (pos.left >= 0 && !$defined(this.scroller.retrieve('buttonPointer'))) {
-                           //this is the first visible button
-                           this.scroller.store('buttonPointer',button);
-                       }
-                   },this);
+                    buttons.each(function(button) {
+                        var pos = button.getCoordinates(this.scroller);
+                        if (pos.left >= 0 && !$defined(this.scroller.retrieve('buttonPointer'))) {
+                            //this is the first visible button
+                            this.scroller.store('buttonPointer', button);
+                        }
+                    },
+                    this);
                 }
-            },this);
+            },
+            this);
         }
     },
-    
+
     /**
      * Method: add
      * Add a toolbar to the container.
@@ -22507,7 +23916,7 @@ Jx.Toolbar.Container = new Class({
      * toolbar - {Object} the toolbar to add.  More than one toolbar
      *    can be added by passing multiple arguments.
      */
-    add: function( ) {
+    add: function() {
         $A(arguments).flatten().each(function(thing) {
             if (this.options.scroll) {
                 /* we potentially need to show or hide scroller buttons
@@ -22516,37 +23925,43 @@ Jx.Toolbar.Container = new Class({
                 thing.addEvent('update', this.update.bind(this));
                 thing.addEvent('show', this.scrollIntoView.bind(this));
             }
-            if (this.tbContainer) {
+            if (this.wrapper) {
                 this.wrapper.adopt(thing.domObj);
             } else {
                 this.domObj.adopt(thing.domObj);
             }
-            this.domObj.addClass('jxBar'+this.options.position.capitalize());
-        }, this);
+            this.domObj.addClass('jxBar' + this.options.position.capitalize());
+        },
+        this);
         if (arguments.length > 0) {
             this.fireEvent('add', this);
         }
         return this;
     },
-    
-    scroll: function (direction) {
-        if (this.updating) { return };
+
+    scroll: function(direction) {
+        if (this.updating) {
+            return
+        };
         this.updating = true;
-        
+
         var currentButton = this.scroller.retrieve('buttonPointer');
         if (direction === 'left') {
             //need to tween the amount of the previous button
             var previousButton = this.scroller.retrieve('previousPointer');
             if (!previousButton) {
                 previousButton = this.getPreviousButton(currentButton);
-            } 
+            }
             if (previousButton) {
                 var w = previousButton.getMarginBoxSize().width;
                 var ml = this.wrapper.getStyle('margin-left').toInt();
                 ml += w;
-                if (typeof Fx != 'undefined' && typeof Fx.Tween != 'undefined'){
+                if (typeof Fx != 'undefined' && typeof Fx.Tween != 'undefined') {
                     //scroll it
-                    this.wrapper.get('tween',{property: 'margin-left', onComplete: this.afterTweenLeft.bind(this,previousButton)}).start(ml);
+                    this.wrapper.get('tween', {
+                        property: 'margin-left',
+                        onComplete: this.afterTweenLeft.bind(this, previousButton)
+                    }).start(ml);
                 } else {
                     //set it
                     this.wrapper.setStyle('margin-left', ml);
@@ -22558,25 +23973,28 @@ Jx.Toolbar.Container = new Class({
         } else {
             //must be right
             var w = currentButton.getMarginBoxSize().width;
-            
+
             var ml = this.wrapper.getStyle('margin-left').toInt();
             ml -= w;
-            
-            //now, if Fx is defined tween the margin to the left to 
+
+            //now, if Fx is defined tween the margin to the left to
             //hide the current button
-            if (typeof Fx != 'undefined' && typeof Fx.Tween != 'undefined'){
+            if (typeof Fx != 'undefined' && typeof Fx.Tween != 'undefined') {
                 //scroll it
-                this.wrapper.get('tween',{property: 'margin-left', onComplete: this.afterTweenRight.bind(this,currentButton)}).start(ml);
+                this.wrapper.get('tween', {
+                    property: 'margin-left',
+                    onComplete: this.afterTweenRight.bind(this, currentButton)
+                }).start(ml);
             } else {
                 //set it
                 this.wrapper.setStyle('margin-left', ml);
                 this.afterTweenRight(currentButton);
             }
-            
+
         }
     },
-    
-    afterTweenRight: function (currentButton) {
+
+    afterTweenRight: function(currentButton) {
         var np = this.getNextButton(currentButton);
         if (!np) {
             np = currentButton;
@@ -22587,8 +24005,8 @@ Jx.Toolbar.Container = new Class({
         }
         this.update();
     },
-    
-    afterTweenLeft: function (previousButton) {
+
+    afterTweenLeft: function(previousButton) {
         this.scroller.store('buttonPointer', previousButton);
         var pp = this.getPreviousButton(previousButton);
         if ($defined(pp)) {
@@ -22598,8 +24016,8 @@ Jx.Toolbar.Container = new Class({
         }
         this.update();
     },
-    
-    
+
+
     /**
      * Method: remove
      * remove an item from a toolbar.  If the item is not in this toolbar
@@ -22612,7 +24030,7 @@ Jx.Toolbar.Container = new Class({
      * {Object} the item that was removed, or null if the item was not
      * removed.
      */
-    remove: function (item) {
+    remove: function(item) {
         if (item instanceof Jx.Widget) {
             item.dispose();
         } else {
@@ -22628,32 +24046,30 @@ Jx.Toolbar.Container = new Class({
      * Parameters:
      * item - the item to scroll.
      */
-    scrollIntoView: function (item) {
+    scrollIntoView: function(item) {
+        var currentButton = this.scroller.retrieve('buttonPointer');
+        // if (!$defined(currentButton)) return;
         if (item instanceof Jx.Widget) {
             item = item.domObj;
-            while (!item.hasClass('jxToolItem')){
+            while (!item.hasClass('jxToolItem')) {
                 item = item.getParent();
             }
         }
         var pos = item.getCoordinates(this.scroller);
-        var currentButton = this.scroller.retrieve('buttonPointer');
         var scrollerSize = this.scroller.getStyle('width').toInt();
-        
-        if (pos.right > 0 && pos.right <= scrollerSize ) { return; };
-        
+
+        if (pos.right > 0 && pos.right <= scrollerSize && pos.left > 0 && pos.left <= scrollerSize) {
+           //we are completely on screen 
+            return;
+        };
+
         if (pos.right > scrollerSize) {
             //it's right of the scroller
             var diff = pos.right - scrollerSize;
-            
+
             //loop through toolbar items until we have enough width to
             //make the item visible
-            
             var ml = this.wrapper.getStyle('margin-left').toInt();
-            if (ml === 0) {
-                diff += this.scrollLeft.domObj.measure(function(){
-                    return this.getMarginBoxSize().width;
-                });
-            }
             var w = currentButton.getMarginBoxSize().width;
             var np;
             while (w < diff && $defined(currentButton)) {
@@ -22665,16 +24081,15 @@ Jx.Toolbar.Container = new Class({
                 }
                 currentButton = np;
             }
-            
-            
-            
-            
-            
+
             ml -= w;
-            
-            if (typeof Fx != 'undefined' && typeof Fx.Tween != 'undefined'){
+
+            if (typeof Fx != 'undefined' && typeof Fx.Tween != 'undefined') {
                 //scroll it
-                this.wrapper.get('tween',{property: 'margin-left', onComplete: this.afterTweenRight.bind(this,currentButton)}).start(ml);
+                this.wrapper.get('tween', {
+                    property: 'margin-left',
+                    onComplete: this.afterTweenRight.bind(this, currentButton)
+                }).start(ml);
             } else {
                 //set it
                 this.wrapper.setStyle('margin-left', ml);
@@ -22684,32 +24099,35 @@ Jx.Toolbar.Container = new Class({
             //it's left of the scroller
             var ml = this.wrapper.getStyle('margin-left').toInt();
             ml -= pos.left;
-            
-            if (typeof Fx != 'undefined' && typeof Fx.Tween != 'undefined'){
+
+            if (typeof Fx != 'undefined' && typeof Fx.Tween != 'undefined') {
                 //scroll it
-                this.wrapper.get('tween',{property: 'margin-left', onComplete: this.afterTweenLeft.bind(this,item)}).start(ml);
+                this.wrapper.get('tween', {
+                    property: 'margin-left',
+                    onComplete: this.afterTweenLeft.bind(this, item)
+                }).start(ml);
             } else {
                 //set it
                 this.wrapper.setStyle('margin-left', ml);
                 this.afterTweenLeft(item);
             }
         }
-        
+
     },
-    
-    getPreviousButton: function (currentButton) {
+
+    getPreviousButton: function(currentButton) {
         pp = currentButton.getPrevious();
         if (!$defined(pp)) {
             //check for a new toolbar
-            pp = currentButton.getParent().getPrevious()
+            pp = currentButton.getParent().getPrevious();
             if (pp) {
                 pp = pp.getLast();
             }
-        } 
+        }
         return pp;
     },
-    
-    getNextButton: function (currentButton) {
+
+    getNextButton: function(currentButton) {
         np = currentButton.getNext();
         if (!np) {
             np = currentButton.getParent().getNext();
@@ -22719,7 +24137,7 @@ Jx.Toolbar.Container = new Class({
         }
         return np;
     }
-        
+
 });// $Id: toolbar.item.js 626 2009-11-20 13:22:22Z pagameba $
 /**
  * Class: Jx.Toolbar.Item
@@ -22763,7 +24181,7 @@ Jx.Toolbar.Item = new Class( {
             this.domObj.adopt(el);
         }
     }
-});// $Id: panel.js 674 2009-12-29 06:47:59Z jonlb@comcast.net $
+});// $Id: panel.js 837 2010-04-12 18:45:17Z conrad.barthelmes $
 /**
  * Class: Jx.Panel
  *
@@ -22783,6 +24201,17 @@ Jx.Toolbar.Item = new Class( {
  * close - fired when the panel is closed
  * collapse - fired when the panel is collapsed
  * expand - fired when the panel is opened
+ * 
+ * MooTools.lang Keys:
+ * - panel.collapseTooltip
+ * - panel.collapseLabel
+ * - panel.expandlabel
+ * - panel.maximizeTooltip
+ * - panel.maximizeLabel
+ * - panel.restoreTooltip
+ * - panel.restoreLabel
+ * - panel.closeTooltip
+ * - panel.closeLabel
  *
  * License:
  * Copyright (c) 2008, DM Solutions Group Inc.
@@ -22808,10 +24237,6 @@ Jx.Panel = new Class({
         maximizeClass: 'jxPanelMaximize',
         closeClass: 'jxPanelClose',
 
-        /* Option: id
-         * String, an id to assign to the panel's container
-         */
-        id: '',
         /* Option: label
          * String, the title of the Jx Panel
          */
@@ -22827,34 +24252,6 @@ Jx.Panel = new Class({
          * to control the state of the panel.
          */
         collapse: true,
-        /* Option: collapseTooltip
-         * the tooltip to display over the collapse button
-         */
-        collapseTooltip: 'Collapse/Expand Panel',
-        /* Option: collapseLabel
-         * the label to use for the collapse menu item
-         */
-        collapseLabel: 'Collapse',
-        /* Option: expandLabel
-         * the label to use for the expand menu item
-         */
-        expandLabel: 'Expand',
-        /* Option: maximizeTooltip
-         * the tooltip to display over the maximize button
-         */
-        maximizeTooltip: 'Maximize Panel',
-        /* Option: maximizeLabel
-         * the label to use for the maximize menu item
-         */
-        maximizeLabel: 'Maximize',
-        /* Option: maximizeTooltip
-         * the tooltip to display over the maximize button
-         */
-        restoreTooltip: 'Restore Panel',
-        /* Option: maximizeLabel
-         * the label to use for the maximize menu item
-         */
-        restoreLabel: 'Restore',
         /* Option: close
          * boolean, determine if the panel can be closed (hidden) by the user.
          * The application needs to provide a way to re-open the panel after
@@ -22863,14 +24260,6 @@ Jx.Panel = new Class({
          * the panel.
          */
         close: false,
-        /* Option: closeTooltip
-         * the tooltip to display over the close button
-         */
-        closeTooltip: 'Close Panel',
-        /* Option: closeLabel
-         * the label to use for the close menu item
-         */
-        closeLabel: 'Close',
         /* Option: closed
          * boolean, initial state of the panel (true to start the panel
          *  closed), default is false
@@ -22886,7 +24275,8 @@ Jx.Panel = new Class({
          */
         toolbars: [],
         type: 'panel',
-        template: '<div class="jxPanel"><div class="jxPanelTitle"><img class="jxPanelIcon" src="'+Jx.aPixel.src+'" alt="" title=""/><span class="jxPanelLabel"></span><div class="jxPanelControls"></div></div><div class="jxPanelContentContainer"><div class="jxPanelContent"></div></div></div>'
+        template: '<div class="jxPanel"><div class="jxPanelTitle"><img class="jxPanelIcon" src="'+Jx.aPixel.src+'" alt="" title=""/><span class="jxPanelLabel"></span><div class="jxPanelControls"></div></div><div class="jxPanelContentContainer"><div class="jxPanelContent"></div></div></div>',
+        controlButtonTemplate: '<a class="jxButtonContainer jxButton"><img class="jxButtonIcon" src="'+Jx.aPixel.src+'"></a>'
     },
     classes: new Hash({
         domObj: 'jxPanel',
@@ -22913,7 +24303,7 @@ Jx.Panel = new Class({
             this.domImg.setStyle('backgroundImage', 'url('+this.options.image+')');
         }
         if (this.options.label && this.domLabel) {
-            this.domLabel.set('html',this.options.label);
+            this.setLabel(this.options.label);
         }
 
         var tbDiv = new Element('div');
@@ -22924,96 +24314,103 @@ Jx.Panel = new Class({
         if (this.options.menu) {
             this.menu = new Jx.Menu({
                 image: Jx.aPixel.src
+            }, {
+              buttonTemplate: this.options.controlButtonTemplate
             });
             this.menu.domObj.addClass(this.options.menuClass);
             this.menu.domObj.addClass('jxButtonContentLeft');
             this.toolbar.add(this.menu);
         }
 
-        var b, item;
+        //var b, item;
         if (this.options.collapse) {
-            var colB = new Jx.Button({
+            this.colB = new Jx.Button({
+                template: this.options.controlButtonTemplate,
                 image: Jx.aPixel.src,
-                tooltip: this.options.collapseTooltip,
+                tooltip: MooTools.lang.get('Jx','panel').collapseTooltip,
                 onClick: function() {
                     that.toggleCollapse();
                 }
             });
-            colB.domObj.addClass(this.options.collapseClass);
+            this.colB.domObj.addClass(this.options.collapseClass);
             this.addEvents({
                 collapse: function() {
-                    colB.setTooltip(this.options.expandTooltip);
-                },
+                    this.colB.setTooltip(MooTools.lang.get('Jx','panel').expandTooltip);
+                }.bind(this),
                 expand: function() {
-                    colB.setTooltip(this.options.collapseTooltip);
-                }
+                    this.colB.setTooltip(MooTools.lang.get('Jx','panel').collapseTooltip);
+                }.bind(this)
             });
-            this.toolbar.add(colB);
+            this.toolbar.add(this.colB);
             if (this.menu) {
-                item = new Jx.Menu.Item({
+                this.colM = new Jx.Menu.Item({
                     label: this.options.collapseLabel,
                     onClick: function() { that.toggleCollapse(); }
                 });
+                var item = this.colM
                 this.addEvents({
                     collapse: function() {
-                        item.setLabel(this.options.expandLabel);
-                    },
+                        this.colM.setLabel(MooTools.lang.get('Jx','panel').expandLabel);
+                    }.bind(this),
                     expand: function() {
-                        item.setLabel(this.options.collapseLabel);
-                    }
+                        this.colM.setLabel(MooTools.lang.get('Jx','panel').collapseLabel);
+                    }.bind(this)
                 });
                 this.menu.add(item);
             }
         }
 
         if (this.options.maximize) {
-            var maxB = new Jx.Button({
+            this.maxB = new Jx.Button({
+                template: this.options.controlButtonTemplate,
                 image: Jx.aPixel.src,
-                tooltip: this.options.maximizeTooltip,
+                tooltip: MooTools.lang.get('Jx','panel').maximizeTooltip,
                 onClick: function() {
                     that.maximize();
                 }
             });
-            maxB.domObj.addClass(this.options.maximizeClass);
+            this.maxB.domObj.addClass(this.options.maximizeClass);
             this.addEvents({
                 maximize: function() {
-                    maxB.setTooltip(this.options.restoreTooltip);
-                },
+                    this.maxB.setTooltip(MooTools.lang.get('Jx','panel').restoreTooltip);
+                }.bind(this),
                 restore: function() {
-                    maxB.setTooltip(this.options.maximizeTooltip);
-                }
+                    this.maxB.setTooltip(MooTools.lang.get('Jx','panel').maximizeTooltip);
+                }.bind(this)
             });
-            this.toolbar.add(maxB);
+            this.toolbar.add(this.maxB);
             if (this.menu) {
-                item = new Jx.Menu.Item({
+                this.maxM = new Jx.Menu.Item({
                     label: this.options.maximizeLabel,
                     onClick: function() { that.maximize(); }
                 });
+                
                 this.addEvents({
                     maximize: function() {
-                        item.setLabel(this.options.restoreLabel);
-                    },
+                        this.maxM.setLabel(MooTools.lang.get('Jx','panel').restoreLabel);
+                    }.bind(this),
                     restore: function() {
-                        item.setLabel(this.options.maximizeLabel);
-                    }
+                        this.maxM.setLabel(MooTools.lang.get('Jx','panel').maximizeLabel);
+                    }.bind(this)
                 });
-                this.menu.add(item);
+                this.menu.add(this.maxM);
             }
         }
 
         if (this.options.close) {
-            var closeB = new Jx.Button({
+            this.closeB = new Jx.Button({
+                template: this.options.controlButtonTemplate,
                 image: Jx.aPixel.src,
-                tooltip: this.options.closeTooltip,
+                tooltip: MooTools.lang.get('Jx','panel').closeTooltip,
                 onClick: function() {
                     that.close();
                 }
             });
-            closeB.domObj.addClass(this.options.closeClass);
-            this.toolbar.add(closeB);
+            this.closeB.domObj.addClass(this.options.closeClass);
+            this.toolbar.add(this.closeB);
             if (this.menu) {
-                item = new Jx.Menu.Item({
-                    label: this.options.closeLabel,
+                this.closeM = new Jx.Menu.Item({
+                    label: MooTools.lang.get('Jx','panel').closeLabel,
                     onClick: function() {
                         that.close();
                     }
@@ -23173,7 +24570,7 @@ Jx.Panel = new Class({
      * s - {String} the new label
      */
     setLabel: function(s) {
-        this.domLabel.set('html',s);
+        this.domLabel.set('html',this.getText(s));
     },
     /**
      * Method: getLabel
@@ -23253,20 +24650,6 @@ Jx.Panel = new Class({
             window.setTimeout(this.onContentReady.bind(this),1);
         }
     },
-    /**
-     * Method: setBusy
-     * Set the panel as busy or not busy, which displays a loading image
-     * in the title bar.
-     *
-     * Parameters:
-     * isBusy - {Boolean} the busy state
-     */
-    setBusy : function(isBusy) {
-        this.busyCount += isBusy?1:-1;
-        if (this.loadingObj){
-            this.loadingObj.img.style.visibility = (this.busyCount>0)?'visible':'hidden';
-        }
-    },
 
     /**
      * Method: toggleCollapse
@@ -23315,9 +24698,37 @@ Jx.Panel = new Class({
     close: function() {
         this.domObj.dispose();
         this.fireEvent('close', this);
+    },
+    
+    changeText: function (lang) {
+    	this.parent();	//TODO: change this class so that we can access these properties without too much voodoo...
+    	if($defined(this.closeB)) {
+    		this.closeB.setTooltip(MooTools.lang.get('Jx','panel').closeTooltip);
+    	}
+    	if ($defined(this.closeM)) {
+    		this.closeM.setLabel(MooTools.lang.get('Jx','panel').closeLabel);
+    	}
+    	if ($defined(this.maxB)) {
+    		this.maxB.setTooltip(MooTools.lang.get('Jx','panel').maximizeTooltip);
+    	}
+    	if ($defined(this.colB)) {
+    		this.colB.setTooltip(MooTools.lang.get('Jx','panel').collapseTooltip);
+    	}
+    	if ($defined(this.colM)) {
+	    	if (this.options.closed == true) {
+	    		this.colM.setLabel(MooTools.lang.get('Jx','panel').expandLabel);
+	    	} else {
+	    		this.colM.setLabel(MooTools.lang.get('Jx','panel').collapseLabel);
+	    	}
+    	}
+      if (this.options.label && this.domLabel) {
+          this.setLabel(this.options.label);
+      }
+      // TODO: is this the right method to call?
+      // if toolbars left/right are used and localized, they may change their size..
+      this.layoutContent();
     }
-
-});// $Id: dialog.js 670 2009-12-18 06:04:44Z jonlb@comcast.net $
+});// $Id: dialog.js 876 2010-04-25 19:59:03Z conrad.barthelmes $
 /**
  * Class: Jx.Dialog
  *
@@ -23353,6 +24764,9 @@ Jx.Panel = new Class({
  *
  * Extends:
  * Jx.Dialog extends <Jx.Panel>, please go there for more details.
+ * 
+ * MooTools.lang Keys:
+ * - dialog.resizeToolTip
  *
  * License:
  * Copyright (c) 2008, DM Solutions Group Inc.
@@ -23362,15 +24776,6 @@ Jx.Panel = new Class({
 Jx.Dialog = new Class({
     Family: 'Jx.Dialog',
     Extends: Jx.Panel,
-    //Implements: [Jx.AutoPosition, Jx.Chrome],
-
-    /**
-     * Property: {HTMLElement} blanket
-     * modal dialogs prevent interaction with the rest of the application
-     * while they are open, this element is displayed just under the
-     * dialog to prevent the user from clicking anything.
-     */
-    blanket: null,
 
     options: {
         /* Option: modal
@@ -23378,6 +24783,23 @@ Jx.Dialog = new Class({
          * or not.  The default is to create modal dialogs.
          */
         modal: true,
+        /** 
+         * Option: maskOptions
+         */
+        maskOptions: {
+          'class':'jxModalMask',
+          maskMargins: true,
+          useIframeShim: true,
+          iframeShimOptions: {
+            className: 'jxIframeShim'
+          }
+        },
+        eventMaskOptions: {
+          'class':'jxEventMask',
+          maskMargins: false,
+          useIframeShim: false,
+          destroyOnHide: true
+        },
         /* just overrides default position of panel, don't document this */
         position: 'absolute',
         /* Option: width
@@ -23403,15 +24825,9 @@ Jx.Dialog = new Class({
          */
         vertical: 'center center',
         /* Option: label
-         * (optional) {String} the title of the dialog box.  "New Dialog"
-         * is the default value.
+         * (optional) {String} the title of the dialog box.
          */
-        label: 'New Dialog',
-        /* Option: id
-         * (optional) {String} an HTML ID to assign to the dialog, primarily
-         * used for applying CSS styles to specific dialogs
-         */
-        id: '',
+        label: '',
         /* Option: parent
          * (optional) {HTMLElement} a reference to an HTML element that
          * the dialog is to be contained by.  The default value is for the dialog
@@ -23423,10 +24839,7 @@ Jx.Dialog = new Class({
          * resizeable by the user or not.  Default is false.
          */
         resize: false,
-        /* Option: resizeTooltip
-         * the tooltip to display for the resize handle, empty by default.
-         */
-        resizeTooltip: '',
+
         /* Option: move
          * (optional) {Boolean} determines whether the dialog is
          * moveable by the user or not.  Default is true.
@@ -23437,13 +24850,47 @@ Jx.Dialog = new Class({
          * closeable by the user or not.  Default is true.
          */
         close: true,
+        /**
+         * Option: useKeyboard
+         * (optional) {Boolean} determines whether the Dialog listens to keyboard events globally
+         * Default is false
+         */
+        useKeyboard : false,
+        /**
+         * Option: keys
+         * (optional) {Object} refers with the syntax for MooTools Keyboard Class
+         * to functions. Set key to false to disable it manually 
+         */
+        keys: {
+          'esc' : 'close'
+        },
+        /**
+         * Option: keyboardMethods
+         *
+         * can be used to overwrite existing keyboard methods that are used inside
+         * this.options.keys - also possible to add new ones.
+         * Functions are bound to the dialog when using 'this'
+         *
+         * example:
+         *  keys : {
+         *    'alt+enter' : 'maximizeDialog'
+         *  },
+         *  keyboardMethods: {
+         *    'maximizeDialog' : function(ev){
+         *      ev.preventDefault();
+         *      this.maximize();
+         *    }
+         *  }
+         */
+        keyboardMethods : {},
         collapsedClass: 'jxDialogMin',
         collapseClass: 'jxDialogCollapse',
         menuClass: 'jxDialogMenu',
         maximizeClass: 'jxDialogMaximize',
         closeClass: 'jxDialogClose',
         type: 'dialog',
-        template: '<div class="jxDialog"><div class="jxDialogTitle"><img class="jxDialogIcon" src="'+Jx.aPixel.src+'" alt="" title=""/><span class="jxDialogLabel"></span><div class="jxDialogControls"></div></div><div class="jxDialogContentContainer"><div class="jxDialogContent"></div></div></div>'
+        template: '<div class="jxDialog"><div class="jxDialogTitle"><img class="jxDialogIcon" src="'+Jx.aPixel.src+'" alt="" title=""/><span class="jxDialogLabel"></span><div class="jxDialogControls"></div></div><div class="jxDialogContentContainer"><div class="jxDialogContent"></div></div></div>',
+
     },
     classes: new Hash({
         domObj: 'jxDialog',
@@ -23454,6 +24901,11 @@ Jx.Dialog = new Class({
         contentContainer: 'jxDialogContentContainer',
         content: 'jxDialogContent'
     }),
+    /**
+     * MooTools Keyboard class for Events (mostly used in Dialog.Confirm, Prompt or Message)
+     * But also optional here with esc to close
+     */
+    keyboard : null,
     /**
      * APIMethod: render
      * renders Jx.Dialog
@@ -23473,26 +24925,6 @@ Jx.Dialog = new Class({
         this.openOnLoaded = this.open.bind(this);
         this.options.parent = document.id(this.options.parent);
 
-        if (this.options.modal) {
-            this.blanket = new Element('div',{
-                'class':'jxDialogModal',
-                styles:{
-                    display:'none',
-                    zIndex: -1
-                }
-            });
-            this.blanket.resize = (function() {
-                var ss = document.id(document.body).getScrollSize();
-                this.setStyles({
-                    width: ss.x,
-                    height: ss.y
-                });
-            }).bind(this.blanket);
-            this.options.parent.adopt(this.blanket);
-            window.addEvent('resize', this.blanket.resize);
-
-        }
-
         this.domObj.setStyle('display','none');
         this.options.parent.adopt(this.domObj);
 
@@ -23502,13 +24934,19 @@ Jx.Dialog = new Class({
             new Drag(this.domObj, {
                 handle: this.title,
                 onBeforeStart: (function(){
-                    Jx.Dialog.orderDialogs(this);
+                    this.stack();
                 }).bind(this),
                 onStart: (function() {
+                    if (!this.options.modal && this.options.parent.mask) {
+                      this.options.parent.mask(this.options.eventMaskOptions);
+                    }
                     this.contentContainer.setStyle('visibility','hidden');
                     this.chrome.addClass('jxChromeDrag');
                 }).bind(this),
                 onComplete: (function() {
+                    if (!this.options.modal && this.options.parent.unmask) {
+                      this.options.parent.unmask();
+                    }
                     this.chrome.removeClass('jxChromeDrag');
                     this.contentContainer.setStyle('visibility','');
                     var left = Math.max(this.chromeOffsets.left, parseInt(this.domObj.style.left,10));
@@ -23529,7 +24967,7 @@ Jx.Dialog = new Class({
         if (this.options.resize && typeof Drag != 'undefined') {
             this.resizeHandle = new Element('div', {
                 'class':'jxDialogResize',
-                title: this.options.resizeTooltip,
+                title: MooTools.lang.get('Jx','panel').resizeTooltip,
                 styles: {
                     'display':this.options.closed?'none':'block'
                 }
@@ -23544,6 +24982,9 @@ Jx.Dialog = new Class({
             this.domObj.makeResizable({
                 handle:this.resizeHandle,
                 onStart: (function() {
+                    if (!this.options.modal && this.options.parent.mask) {
+                      this.options.parent.mask(this.options.eventMaskOptions);
+                    }
                     this.contentContainer.setStyle('visibility','hidden');
                     this.chrome.addClass('jxChromeDrag');
                 }).bind(this),
@@ -23551,6 +24992,9 @@ Jx.Dialog = new Class({
                     this.resizeChrome(this.domObj);
                 }).bind(this),
                 onComplete: (function() {
+                    if (!this.options.modal && this.options.parent.unmask) {
+                      this.options.parent.unmask();
+                    }
                     this.chrome.removeClass('jxChromeDrag');
                     var size = this.domObj.getMarginBoxSize();
                     this.options.width = size.width;
@@ -23566,8 +25010,11 @@ Jx.Dialog = new Class({
         }
         /* this adjusts the zIndex of the dialogs when activated */
         this.domObj.addEvent('mousedown', (function(){
-            Jx.Dialog.orderDialogs(this);
+            this.stack();
         }).bind(this));
+
+        // initialize keyboard class
+        this.initializeKeyboard();
     },
 
     /**
@@ -23721,22 +25168,20 @@ Jx.Dialog = new Class({
             'display': 'block',
             'visibility': 'hidden'
         });
-
-        if (this.blanket) {
-            this.blanket.resize();
-        }
-        
         this.toolbar.update();
         
-        Jx.Dialog.orderDialogs(this);
-
         /* do the modal thing */
-        if (this.blanket) {
-            this.blanket.setStyles({
-                visibility: 'visible',
-                display: 'block'
-            });
+        if (this.options.modal && this.options.parent.mask) {
+          var opts = $merge(this.options.maskOptions || {}, {
+            style: {
+              'z-index': Jx.getNumber(this.domObj.getStyle('z-index')) - 1
+            }
+          });
+          this.options.parent.mask(opts);
+          Jx.Stack.stack(this.options.parent.get('mask').element);
         }
+        /* stack the dialog */
+        this.stack();
 
         if (this.options.closed) {
             var m = this.domObj.measure(function(){
@@ -23765,7 +25210,7 @@ Jx.Dialog = new Class({
         this.showChrome(this.domObj);
         /* put it in the right place using auto-positioning */
         this.position(this.domObj, this.options.parent, this.options);
-        this.domObj.setStyle('visibility', '');
+        this.domObj.setStyle('visibility', 'visible');
     },
     /**
      * Method: hide
@@ -23773,14 +25218,15 @@ Jx.Dialog = new Class({
      * method to hide the dialog.
      */
     hide : function() {
-        Jx.Dialog.Stack.erase(this);
-        Jx.Dialog.ZIndex--;
         this.domObj.setStyle('display','none');
-        if (this.blanket) {
-            this.blanket.setStyle('visibility', 'hidden');
-            Jx.Dialog.ZIndex--;
+        this.unstack();
+        if (this.options.modal && this.options.parent.unmask) {
+          Jx.Stack.unstack(this.options.parent.get('mask').element);
+          this.options.parent.unmask();
         }
-
+        if(this.options.useKeyboard && this.keyboard != null) {
+          this.keyboard.deactivate();
+        }
     },
     /**
      * Method: openURL
@@ -23796,8 +25242,7 @@ Jx.Dialog = new Class({
             this.options.content = null;  //force Url loading
             this.loadContent(this.content);
             this.addEvent('contentLoaded', this.openOnLoaded);
-        }
-        else {
+        } else {
             this.open();
         }
     },
@@ -23821,6 +25266,9 @@ Jx.Dialog = new Class({
         } else {
             this.addEvent('contentLoaded', this.openOnLoaded);
         }
+        if(this.options.useKeyboard && this.keyboard != null) {
+          this.keyboard.activate();
+        }
     },
     /**
      * Method: close
@@ -23833,35 +25281,81 @@ Jx.Dialog = new Class({
         this.fireEvent('close');
     },
 
-    cleanup: function() {
-        if (this.blanket) {
-            this.blanket.destroy();
-        }
-    },
+    cleanup: function() { },
     
+    /**
+     * APIMethod: isOpen
+     * returns true if the dialog is currently open, false otherwise
+     */
     isOpen: function () {
         //check to see if we're visible
         return !((this.domObj.getStyle('display') === 'none') || (this.domObj.getStyle('visibility') === 'hidden'));
+    },
+    
+    createText: function (lang) {
+    	this.parent();
+    	if ($defined(this.maxM)) {
+			if (this.maximize) {
+				this.maxM.setLabel(MooTools.lang.get('Jx','panel').restoreLabel);
+	    	} else {
+	    		this.maxM.setLabel(MooTools.lang.get('Jx','panel').maximizeLabel);
+	    	}
+    	}
+    	if ($defined(this.resizeHandle)) {
+    		this.resizeHandle.set('title', MooTools.lang.get('Jx','dialog').resizeTooltip);
+    	}
+    },
+
+    changeText : function(lang) {
+      this.parent();
+      // re-opening and resizing the dialog to prevent it from being minimized
+      this.toggleCollapse(false);
+    },
+
+    initializeKeyboard: function() {
+      if(this.options.useKeyboard) {
+        var self = this;
+        this.keyboardEvents = {};
+        this.keyboardMethods = {
+          close : function(ev) {ev.preventDefault();self.close()}
+        }
+        this.keyboard = new Keyboard({
+          events: this.getKeyboardEvents()
+        });
+      }
+    },
+
+    /**
+     * Method: getKeyboardMethods
+     * used by this and all child classes to have methods listen to keyboard events,
+     * returned object will be parsed to the events object of a MooTools Keyboard instance
+     *
+     * @return Object
+     */
+    getKeyboardEvents : function() {
+      var self = this;
+      for(var i in this.options.keys) {
+        // only add a reference once, otherwise keyboard events will be fired twice in subclasses
+        if(!$defined(this.keyboardEvents[i])) {
+          if($defined(this.keyboardMethods[this.options.keys[i]])) {
+            this.keyboardEvents[i] = this.keyboardMethods[this.options.keys[i]];
+          }else if($defined(this.options.keyboardMethods[this.options.keys[i]])){
+            this.keyboardEvents[i] = this.options.keyboardMethods[this.options.keys[i]].bind(self);
+          }else if(Jx.type(this.options.keys[i]) == 'function') {
+            this.keyboardEvents[i] = this.options.keys[i].bind(self);
+          }else{
+            // allow disabling of special keys by setting them to false or null with having a warning
+            if(this.options.keyboardMethods[this.options.keys[i]] != false) {
+              $defined(console) ? console.warn("keyboard method %o not defined for %o", this.options.keys[i], this) : false;
+            }
+          }
+        }
+      }
+      return this.keyboardEvents;
     }
 });
 
-Jx.Dialog.Stack = [];
-Jx.Dialog.BaseZIndex = null;
-Jx.Dialog.orderDialogs = function(d) {
-    Jx.Dialog.Stack.erase(d).push(d);
-    if (Jx.Dialog.BaseZIndex === null) {
-        Jx.Dialog.BaseZIndex = Math.max(Jx.Dialog.Stack[0].domObj.getStyle('zIndex').toInt(), 1);
-    }
-    Jx.Dialog.Stack.each(function(d, i) {
-        var z = Jx.Dialog.BaseZIndex+i;
-        if (d.blanket) {
-            d.blanket.setStyle('zIndex',z);
-        }
-        d.domObj.setStyle('zIndex',z);
-    });
-
-};
-// $Id: splitter.js 626 2009-11-20 13:22:22Z pagameba $
+// $Id: splitter.js 826 2010-03-31 18:46:16Z pagameba $
 /**
  * Class: Jx.Splitter
  *
@@ -23878,6 +25372,9 @@ Jx.Dialog.orderDialogs = function(d) {
  * Example:
  * (code)
  * (end)
+ * 
+ * MooTools.lang Keys:
+ * - splitter.barToolTip
  *
  * License:
  * Copyright (c) 2008, DM Solutions Group Inc.
@@ -23957,11 +25454,6 @@ Jx.Splitter = new Class({
          * elements open or closed.
          */
         snaps: [],
-        /* Option: barTooltip
-         * the tooltip to display when the mouse hovers over a split bar,
-         * used for i18n.
-         */
-        barTooltip: 'drag this bar to resize',
         /* Option: onStart
          * an optional function to call when a bar starts dragging
          */
@@ -24110,7 +25602,7 @@ Jx.Splitter = new Class({
     prepareBar: function() {
         var o = new Element('div', {
             'class': 'jxSplitBar'+this.options.layout.capitalize(),
-            'title': this.options.barTitle
+            'title': MooTools.lang.get('Jx','panel').barTooltip
         });
         return o;
     },
@@ -24603,20 +26095,29 @@ Jx.Splitter = new Class({
                  currentPosition += rightBar.retrieve('size').height;
              }
          }
+    },
+    
+    createText: function (lang) {
+    	this.parent();
+    	this.bars.each(function(bar){
+    		document.id(bar).set('title', MooTools.lang.get('Jx','splitter').title);
+    	},this);
+    	
     }
-});// $Id: panelset.js 681 2010-01-15 05:45:28Z jonlb@comcast.net $
+});// $Id: panelset.js 770 2010-03-18 21:12:28Z jonlb@comcast.net $
 /**
  * Class: Jx.PanelSet
  *
  * Extends: <Jx.Widget>
  *
- * A panel set manages a set of panels within a DOM element.  The PanelSet fills
- * its container by resizing the panels in the set to fill the width and then
- * distributing the height of the container across all the panels.  Panels
- * can be resized by dragging their respective title bars to make them taller
- * or shorter.  The maximize button on the panel title will cause all other
- * panels to be closed and the target panel to be expanded to fill the remaining
- * space.  In this respect, PanelSet works like a traditional Accordion control.
+ * A panel set manages a set of panels within a DOM element.  The PanelSet
+ * fills its container by resizing the panels in the set to fill the width and
+ * then distributing the height of the container across all the panels. 
+ * Panels can be resized by dragging their respective title bars to make them
+ * taller or shorter.  The maximize button on the panel title will cause all
+ * other panels to be closed and the target panel to be expanded to fill the
+ * remaining space.  In this respect, PanelSet works like a traditional
+ * Accordion control.
  *
  * When creating panels for use within a panel set, it is important to use the
  * proper options.  You must override the collapse option and set it to false
@@ -24625,11 +26126,14 @@ Jx.Splitter = new Class({
  *
  * Example:
  * (code)
- * var p1 = new Jx.Panel({collapse: false, maximize: true, content: 'content1'});
- * var p2 = new Jx.Panel({collapse: false, maximize: true, content: 'content2'});
- * var p3 = new Jx.Panel({collapse: false, maximize: true, content: 'content3'});
+ * var p1 = new Jx.Panel({collapse: false, maximize: true, content: 'c1'});
+ * var p2 = new Jx.Panel({collapse: false, maximize: true, content: 'c2'});
+ * var p3 = new Jx.Panel({collapse: false, maximize: true, content: 'c3'});
  * var panelSet = new Jx.PanelSet('panels', [p1,p2,p3]);
  * (end)
+ * 
+ * MooTools.lang Keys:
+ * - panelset.barTooltip
  *
  * License:
  * Copyright (c) 2008, DM Solutions Group Inc.
@@ -24648,11 +26152,7 @@ Jx.PanelSet = new Class({
         /* Option: panels
          * an array of <Jx.Panel> objects that will be managed by the set.
          */
-        panels: [],
-        /* Option: barTooltip
-         * the tooltip to place on the title bars of each panel
-         */
-        barTooltip: 'drag this bar to resize'
+        panels: []
     },
 
     /**
@@ -24702,7 +26202,7 @@ Jx.PanelSet = new Class({
             prepareBar: (function(i) {
                 var bar = new Element('div', {
                     'class': 'jxPanelBar',
-                    'title': this.options.barTooltip
+                    'title': MooTools.lang.get('Jx','panelset').barTooltip
                 });
 
                 var panel = this.panels[i];
@@ -24832,15 +26332,23 @@ Jx.PanelSet = new Class({
         }
         panel.domObj.resize({top: top, height:panelSize, bottom: null});
         this.fireEvent('panelMaximize',panel);
+    },
+    
+    createText: function (lang) {
+      this.parent();
+      //barTooltip is handled by the splitter's createText() function
     }
-});// $Id: message.js 649 2009-11-30 22:19:48Z pagameba $
+});// $Id: message.js 861 2010-04-21 18:20:06Z conrad.barthelmes $
 /**
  * Class: Jx.Dialog.Message
  *
  * Extends: <Jx.Dialog>
  *
- * Jx.Dialog.Confirm is an extension of Jx.Dialog that allows the developer
+ * Jx.Dialog.Message is an extension of Jx.Dialog that allows the developer
  * to display a message to the user. It only presents an OK button.
+ * 
+ * MooTools.lang Keys:
+ * - message.okButton
  *
  * License:
  * Copyright (c) 2009, Jonathan Bomgardner
@@ -24848,9 +26356,9 @@ Jx.PanelSet = new Class({
  * This file is licensed under an MIT style license
  */
 Jx.Dialog.Message = new Class({
-
+    Family: 'Jx.Dialog.Message',
     Extends: Jx.Dialog,
-
+    Binds: ['onOk'],
     options: {
         /**
          * Option: message
@@ -24858,51 +26366,114 @@ Jx.Dialog.Message = new Class({
          */
         message: '',
         /**
-         * Jx.Dialog option defaults
+         * Option: width
+         * default width of message dialogs is 300px
          */
         width: 300,
+        /**
+         * Option: height
+         * default height of message dialogs is 150px
+         */
         height: 150,
+        /**
+         * Option: close
+         * by default, message dialogs are closable
+         */
         close: true,
+        /**
+         * Option: resize
+         * by default, message dialogs are resizable
+         */
         resize: true,
-        collapse: false
+        /**
+         * Option: collapse
+         * by default, message dialogs are not collapsible
+         */
+        collapse: false,
+        useKeyboard : true,
+        keys : {
+          'enter' : 'ok'
+        }
     },
     /**
-     * APIMethod: render
+     * Method: render
      * constructs the dialog.
      */
     render: function () {
         //create content to be added
-        this.buttons = new Jx.Toolbar({position: 'bottom'});
-        this.buttons.add(
-            new Jx.Button({
-                label: 'Ok',
-                onClick: this.onClick.bind(this, 'Ok')
-            })
-        );
+        this.buttons = new Jx.Toolbar({position: 'bottom',scroll:false});
+        this.ok = new Jx.Button({
+            label: MooTools.lang.get('Jx','message').okButton,
+            onClick: this.onOk
+        });
+        this.buttons.add(this.ok);
         this.options.toolbars = [this.buttons];
-        if (Jx.type(this.options.message) === 'string') {
+        var type = Jx.type(this.options.message);
+        if (type === 'string' || type == 'object' || type == 'element') {
             this.question = new Element('div', {
-                'class': 'jxMessage',
-                html: this.options.message
+                'class': 'jxMessage'
             });
+            switch(type) {
+              case 'string':
+              case 'object':
+                this.question.set('html', this.getText(this.options.message));
+              break;
+              case 'element':
+                this.options.message.inject(this.question);
+                break;
+            }
         } else {
             this.question = this.options.question;
-            $(this.question).addClass('jxMessage');
+            document.id(this.question).addClass('jxMessage');
         }
         this.options.content = this.question;
+        if(this.options.useKeyboard) {
+          var self = this;
+          this.options.keyboardMethods.ok = function(ev) { ev.preventDefault(); self.close(); }
+        }
         this.parent();
+        if(this.options.useKeyboard) {
+          this.keyboard.addEvents(this.getKeyboardEvents());
+        }
     },
     /**
-     * Method: onClick
+     * Method: onOk
      * Called when the OK button is clicked. Closes the dialog.
      */
-    onClick: function (value) {
+    onOk: function () {
         this.close();
+    },
+    
+    /**
+     * APIMethod: setMessage
+     * set the message of the dialog, useful for responding to language
+     * changes on the fly.
+     *
+     * Parameters
+     * message - {String} the new message
+     */
+    setMessage: function(message) {
+      this.options.message = message;
+      if ($defined(this.question)) {
+        this.question.set('html',this.getText(message));
+      }
+    },
+    
+    /**
+     * Method: createText
+     * handle change in language
+     */
+    changeText: function (lang) {
+      this.parent();
+      if ($defined(this.ok)) {
+        this.ok.setLabel(MooTools.lang.get('Jx','message').okButton);
+      }
+      if(Jx.type(this.options.message) === 'object') {
+        this.question.set('html', this.getText(this.options.message))
+      }
     }
-
-
 });
-// $Id: confirm.js 649 2009-11-30 22:19:48Z pagameba $
+// $Id: confirm.js 862 2010-04-21 21:10:40Z conrad.barthelmes $
 /**
  * Class: Jx.Dialog.Confirm
  *
@@ -24910,7 +26481,11 @@ Jx.Dialog.Message = new Class({
  *
  * Jx.Dialog.Confirm is an extension of Jx.Dialog that allows the developer
  * to prompt their user with e yes/no question.
- *
+ * 
+ * MooTools.lang Keys:
+ * - confirm.affirmitiveLabel
+ * - confirm.negativeLabel
+ * 
  * License:
  * Copyright (c) 2009, Jonathan Bomgardner
  *
@@ -24927,19 +26502,13 @@ Jx.Dialog.Confirm = new Class({
          */
         question: '',
         /**
-         * Option: affirmitiveLabel
-         * The text to use for the affirmitive button. Defaults to 'Yes'.
-         */
-        affirmitiveLabel: 'Yes',
-        /**
-         * Option: negativeLabel
-         * The text to use for the negative button. Defaults to 'No'.
-         */
-        negativeLabel: 'No',
-
-        /**
          * Jx.Dialog option defaults
          */
+        useKeyboard : true,
+        keys : {
+          'esc'   : 'cancel',
+          'enter' : 'ok'
+        },
         width: 300,
         height: 150,
         close: false,
@@ -24947,34 +26516,62 @@ Jx.Dialog.Confirm = new Class({
         collapse: false
     },
     /**
+     * Reference to MooTools keyboards Class for handling keypress events like Enter or ESC
+     */
+    keyboard : null,
+    /**
      * APIMethod: render
      * creates the dialog
      */
     render: function () {
         //create content to be added
-        this.buttons = new Jx.Toolbar({position: 'bottom'});
-        this.buttons.add(
-            new Jx.Button({
-                label: this.options.affirmitiveLabel,
-                onClick: this.onClick.bind(this, this.options.affirmitiveLabel)
-            }),
-            new Jx.Button({
-                label: this.options.negativeLabel,
-                onClick: this.onClick.bind(this, this.options.negativeLabel)
-            })
-        );
+        //turn scrolling off as confirm only has 2 buttons.
+        this.buttons = new Jx.Toolbar({position: 'bottom',scroll: false});
+
+        // COMMENT: returning boolean would be more what people expect instead of a localized label of a button?
+        this.ok = new Jx.Button({
+            label: MooTools.lang.get('Jx','confirm').affirmitiveLabel,
+            //onClick: this.onClick.bind(this, MooTools.lang.get('Jx','confirm').affirmitiveLabel)
+            onClick: this.onClick.bind(this, true)
+        }),
+        this.cancel = new Jx.Button({
+            label: MooTools.lang.get('Jx','confirm').negativeLabel,
+            //onClick: this.onClick.bind(this, MooTools.lang.get('Jx','confirm').negativeLabel)
+            onClick: this.onClick.bind(this, false)
+        })
+        this.buttons.add(this.ok, this.cancel);
         this.options.toolbars = [this.buttons];
-        if (Jx.type(this.options.question) === 'string') {
+        var type = Jx.type(this.options.question);
+        if (type === 'string' || type === 'object' || type == 'element'){
             this.question = new Element('div', {
-                'class': 'jxConfirmQuestion',
-                html: this.options.question
+                'class': 'jxConfirmQuestion'
             });
+            switch(type) {
+              case 'string':
+              case 'object':
+                this.question.set('html', this.getText(this.options.question));
+              break;
+              case 'element':
+                this.options.question.inject(this.question);
+                break;
+            }
         } else {
             this.question = this.options.question;
-            $(this.question).addClass('jxConfirmQuestion');
+            document.id(this.question).addClass('jxConfirmQuestion');
         }
         this.options.content = this.question;
+
+        // add default key functions
+        if(this.options.useKeyboard) {
+          var self = this;
+          this.options.keyboardMethods.ok     = function(ev) { ev.preventDefault(); self.onClick(true); }
+          this.options.keyboardMethods.cancel = function(ev) { ev.preventDefault(); self.onClick(false); }
+        }
         this.parent();
+        // add new ones
+        if(this.options.useKeyboard) {
+          this.keyboard.addEvents(this.getKeyboardEvents());
+        }
     },
     /**
      * Method: onClick
@@ -24985,19 +26582,31 @@ Jx.Dialog.Confirm = new Class({
         this.isOpening = false;
         this.hide();
         this.fireEvent('close', [this, value]);
+    },
+    
+    changeText: function (lang) {
+    	this.parent();
+    	if ($defined(this.ok)) {
+    		this.ok.setLabel(MooTools.lang.get('Jx','confirm').affirmitiveLabel);
+    	}
+    	if ($defined(this.cancel)) {
+    		this.cancel.setLabel(MooTools.lang.get('Jx','confirm').negativeLabel);
+    	}
+      if(Jx.type(this.options.question) === 'object') {
+        this.question.set('html', this.getText(this.options.question))
+      }
     }
 
-
-});// $Id: tooltip.js 649 2009-11-30 22:19:48Z pagameba $
+});// $Id: tooltip.js 835 2010-04-07 22:59:37Z conrad.barthelmes $
 /**
  * Class: Jx.Tooltip
  *
  * Extends: <Jx.Widget>
  *
  * An implementation of tooltips. These are very simple tooltips that are
- * designed to be instantiated in javascript and directly attached to the object
- * that they are the tip for. We can only have one Tip per element so we use
- * element storage to store the tip object and check for it's presence
+ * designed to be instantiated in javascript and directly attached to the
+ * object that they are the tip for. We can only have one Tip per element so
+ * we use element storage to store the tip object and check for it's presence
  * before creating a new tip. If one is there we remove it and create this new
  * one.
  *
@@ -25013,12 +26622,12 @@ Jx.Dialog.Confirm = new Class({
 Jx.Tooltip = new Class({
     Family: 'Jx.Widget',
     Extends : Jx.Widget,
-
+    Binds: ['enter', 'leave', 'move'],
     options : {
         /**
          * Option: offsets
-         * An object with x and y components for where to put the tip related to
-         * the mouse cursor.
+         * An object with x and y components for where to put the tip related
+         * to the mouse cursor.
          */
         offsets : {
             x : 15,
@@ -25032,8 +26641,8 @@ Jx.Tooltip = new Class({
         showDelay : 100,
         /**
          * Option: cssClass
-         * a class to be added to the tip's container. This can be used to style
-         * the tip.
+         * a class to be added to the tip's container. This can be used to
+         * style the tip.
          */
         cssClass : null
     },
@@ -25048,10 +26657,9 @@ Jx.Tooltip = new Class({
     parameters: ['target','tip','options'],
 
     /**
-     * APIMethod: render
+     * Method: render
      * Creates the tooltip
      *
-
      */
     render : function () {
         this.parent();
@@ -25072,8 +26680,8 @@ Jx.Tooltip = new Class({
             }
         }).inject(document.body);
 
-        if (Jx.type(this.options.tip) === 'string') {
-            this.domObj.set('html', this.options.tip);
+        if (Jx.type(this.options.tip) === 'string' || Jx.type(this.options.tip) == 'object') {
+            this.domObj.set('html', this.getText(this.options.tip));
         } else {
             this.domObj.grab(this.options.tip);
         }
@@ -25086,10 +26694,9 @@ Jx.Tooltip = new Class({
         this.options.target.store('Tip', this);
 
         //add events
-        this.options.target.addEvent('mouseenter', this.enter.bindWithEvent(this));
-        this.options.target.addEvent('mouseleave', this.leave.bindWithEvent(this));
-        this.options.target.addEvent('mousemove', this.move.bindWithEvent(this));
-
+        this.options.target.addEvent('mouseenter', this.enter);
+        this.options.target.addEvent('mouseleave', this.leave);
+        this.options.target.addEvent('mousemove', this.move);
     },
 
     /**
@@ -25098,9 +26705,8 @@ Jx.Tooltip = new Class({
      *
      * Parameters:
      * event - the event object
-     * element - the element the cursor passed over
      */
-    enter : function (event, element) {
+    enter : function (event) {
         this.timer = $clear(this.timer);
         this.timer = (function () {
             this.domObj.setStyle('visibility', 'visible');
@@ -25113,9 +26719,8 @@ Jx.Tooltip = new Class({
      *
      * Parameters:
      * event - the event object
-     * element - the element the cursor passed over
      */
-    leave : function (event, element) {
+    leave : function (event) {
         this.timer = $clear(this.timer);
         this.timer = (function () {
             this.domObj.setStyle('visibility', 'hidden');
@@ -25162,7 +26767,7 @@ Jx.Tooltip = new Class({
         this.domObj.setStyle('left', tipPlacement.x);
     },
     /**
-     * Method: detach
+     * APIMethod: detach
      * Called to manually remove a tooltip.
      */
     detach : function () {
@@ -25170,7 +26775,411 @@ Jx.Tooltip = new Class({
         this.destroy();
     }
 });
-// $Id: field.js 681 2010-01-15 05:45:28Z jonlb@comcast.net $
+// $Id: fieldset.js 867 2010-04-23 15:54:04Z conrad.barthelmes $
+/**
+ * Class: Jx.Fieldset
+ *
+ * Extends: <Jx.Widget>
+ *
+ * This class represents a fieldset. It can be used to group fields together.
+ *
+ * Example:
+ * (code)
+ * (end)
+ *
+ * License:
+ * Copyright (c) 2009, Jon Bomgardner.
+ *
+ * This file is licensed under an MIT style license
+ *
+ */
+Jx.Fieldset = new Class({
+    Family: 'Jx.Fieldset',
+    Extends : Jx.Widget,
+
+    options : {
+        /**
+         * Option: legend
+         * The text for the legend of a fieldset. Default is null
+         * or no legend.
+         */
+        legend : null,
+        /**
+         * Option: id
+         * The id to assign to this element
+         */
+        id : null,
+        /**
+         * Option: fieldsetClass
+         * A CSS class to assign to the fieldset. Useful for custom styling of
+         * the element
+         */
+        fieldsetClass : null,
+        /**
+         * Option: legendClass
+         * A CSS class to assign to the legend. Useful for custom styling of
+         * the element
+         */
+        legendClass : null,
+        /**
+         * Option: template
+         * a template for how this element should be rendered
+         */
+        template : '<fieldset class="jxFieldset"><legend><span class="jxFieldsetLegend"></span></legend></fieldset>',
+        /**
+         * Option: form
+         * The <Jx.Form> that this fieldset should be added to
+         */
+        form : null
+    },
+
+    classes: new Hash({
+        domObj: 'jxFieldset',
+        legend: 'jxFieldsetLegend'
+    }),
+
+    /**
+     * Property: legend
+     * a holder for the legend Element
+     */
+    legend : null,
+
+    /**
+     * APIMethod: render
+     * Creates a fieldset.
+     */
+    render : function () {
+        this.parent();
+
+        this.id = this.options.id;
+
+        if ($defined(this.options.form)
+                && this.options.form instanceof Jx.Form) {
+            this.form = this.options.form;
+        }
+
+        //FIELDSET
+        if (this.domObj) {
+            if ($defined(this.options.id)) {
+                this.domObj.set('id', this.options.id);
+            }
+            if ($defined(this.options.fieldsetClass)) {
+                this.domObj.addClass(this.options.fieldsetClass);
+            }
+        }
+
+        if (this.legend) {
+            if ($defined(this.options.legend)) {
+                this.legend.set('html', this.getText(this.options.legend));
+                if ($defined(this.options.legendClass)) {
+                    this.legend.addClass(this.options.legendClass);
+                }
+            } else {
+                this.legend.destroy();
+            }
+        }
+    },
+    /**
+     * APIMethod: add
+     * Adds fields to this fieldset
+     *
+     * Parameters:
+     * pass as many fields to this method as you like. They should be
+     * <Jx.Field> objects
+     */
+    add : function () {
+        var field;
+        for (var x = 0; x < arguments.length; x++) {
+            field = arguments[x];
+            //add form to the field and field to the form if not already there
+            if ($defined(field.jxFamily) && !$defined(field.form) && $defined(this.form)) {
+                field.form = this.form;
+                this.form.addField(field);
+            }
+            this.domObj.grab(field);
+        }
+        return this;
+    },
+    
+    /**
+     * APIMethod: addTo
+     *
+     */
+    addTo: function(what) {
+        if (what instanceof Jx.Form) {
+            this.form = what;
+        } else if (what instanceof Jx.Fieldset) {
+            this.form = what.form;
+        }
+        return this.parent(what);
+    }
+    
+});
+// $Id: form.js 852 2010-04-17 23:08:27Z jonlb@comcast.net $
+/**
+ * Class: Jx.Form
+ *
+ * Extends: <Jx.Widget>
+ *
+ * A class that represents an HTML form. You add fields using either
+ * Jx.Form.add() or by using the field's .addTo() method. You can get all form
+ * values or set them using this class. It also handles validation of fields.
+ *
+ * Example:
+ * (code)
+ * (end)
+ *
+ * License:
+ * Copyright (c) 2009, Jon Bomgardner.
+ *
+ * This file is licensed under an MIT style license
+ */
+Jx.Form = new Class({
+    Family: 'Jx.Form',
+    Extends: Jx.Widget,
+
+    options: {
+        /**
+         * Option: method
+         * the method used to submit the form
+         */
+        method: 'post',
+        /**
+         * Option: action
+         * where to submit it to
+         */
+        action: '',
+        /**
+         * Option: fileUpload
+         * whether this form handles file uploads or not.
+         */
+        fileUpload: false,
+        /**
+         * Option: formClass
+         */
+        formClass: null,
+        /**
+         * Option: name
+         * the name property for the form
+         */
+        name: '',
+        /**
+         * Option: acceptCharset
+         * the character encoding to be used. Defaults to utf-8.
+         */
+        acceptCharset: 'utf-8',
+
+        template: '<form class="jxForm"></form>'
+    },
+    
+    /**
+     * Property: defaultAction
+     * the default field to activate if the user hits the enter key in this
+     * form.  Set by specifying default: true as an option to a field.  Will
+     * only work if the default is a Jx button field or an input of a type
+     * that is a button
+     */
+    defaultAction: null,
+
+    /**
+     * Property: fields
+     * An array of all of the single fields (not contained in a fieldset) for
+     * this form
+     */
+    fields : null,
+    /**
+     * Property: pluginNamespace
+     * required variable for plugins
+     */
+    pluginNamespace: 'Form',
+
+    classes: $H({
+        domObj: 'jxForm'
+    }),
+    
+    init: function() {
+      this.parent();
+      this.fields = new Hash();
+    },
+    /**
+     * APIMethod: render
+     * Constructs the form but does not add it to anything to be shown. The
+     * caller should use form.addTo() to add the form to the DOM.
+     */
+    render : function () {
+        this.parent();
+        //create the form first
+        this.domObj.set({
+            'method' : this.options.method,
+            'action' : this.options.action,
+            'name' : this.options.name,
+            'accept-charset': this.options.acceptCharset,
+            events: {
+                keypress: function(e) {
+                    if (e.key == 'enter' && 
+                        e.target.tagName != "TEXTAREA" && 
+                        this.defaultAction &&
+                        this.defaultAction.click) {
+                        document.id(this.defaultAction).focus();
+                        this.defaultAction.click();
+                        e.stop();
+                    }
+                }.bind(this)
+            }
+        });
+
+        if (this.options.fileUpload) {
+            this.domObj.set('enctype', 'multipart/form-data');
+        }
+        
+        if ($defined(this.options.formClass)) {
+            this.domObj.addClass(this.options.formClass);
+        }
+    },
+
+    /**
+     * APIMethod: addField
+     * Adds a <Jx.Field> subclass to this form's fields hash
+     *
+     * Parameters:
+     * field - <Jx.Field> to add
+     */
+    addField : function (field) {
+        this.fields.set(field.id, field);
+        if (field.options.defaultAction) {
+            this.defaultAction = field;
+        }
+    },
+
+    /**
+     * Method: isValid
+     * Determines if the form passes validation
+     *
+     * Parameters:
+     * evt - the MooTools event object
+     */
+    isValid : function (evt) {
+        return true;
+    },
+
+    /**
+     * APIMethod: getValues
+     * Gets the values of all the fields in the form as a Hash object. This
+     * uses the mootools function Element.toQueryString to get the values and
+     * will either return the values as a querystring or as an object (using
+     * mootools-more's String.parseQueryString method).
+     *
+     * Parameters:
+     * asQueryString - {boolean} indicates whether to return the value as a
+     *                  query string or an object.
+     */
+    getValues : function (asQueryString) {
+        var queryString = this.domObj.toQueryString();
+        if ($defined(asQueryString) && asQueryString) {
+            return queryString;
+        } else {
+            return queryString.parseQueryString();
+        }
+    },
+    /**
+     * APIMethod: setValues
+     * Used to set values on the form
+     *
+     * Parameters:
+     * values - A Hash of values to set keyed by field name.
+     */
+    setValues : function (values) {
+        //TODO: This may have to change with change to getValues().
+        if (Jx.type(values) === 'object') {
+            values = new Hash(values);
+        }
+        this.fields.each(function (item) {
+            item.setValue(values.get(item.name));
+        }, this);
+    },
+
+    /**
+     * APIMethod: add
+     *
+     * Parameters:
+     * Pass as many parameters as you like. However, they should all be
+     * <Jx.Field> objects.
+     */
+    add : function () {
+        var field;
+        for (var x = 0; x < arguments.length; x++) {
+            field = arguments[x];
+            //add form to the field and field to the form if not already there
+            if (field instanceof Jx.Field && !$defined(field.form)) {
+                field.form = this;
+                this.addField(field);
+            } else if (field instanceof Jx.Fieldset && !$defined(field.form)) {
+                field.form = this;
+            }
+            
+            this.domObj.grab(field);
+        }
+        return this;
+    },
+
+    /**
+     * APIMethod: reset
+     * Resets all fields back to their original value
+     */
+    reset : function () {
+        this.fields.each(function (field, name) {
+            field.reset();
+        }, this);
+        this.fireEvent('reset',this);
+    },
+    /**
+     * APIMethod: getFieldsByName
+     * Allows retrieving a field from a form by the name of the field (NOT the
+     * ID).
+     *
+     * Parameters:
+     * name - {string} the name of the field to find
+     */
+    getFieldsByName: function (name) {
+        var fields = [];
+        this.fields.each(function(val, id){
+            if (val.name === name) {
+                fields.push(val);
+            }
+        },this);
+        return fields;
+    },
+    /**
+     * APIMethod: getField
+     * Returns a Jx.Field object by its ID.
+     *
+     * Parameters:
+     * id - {string} the id of the field to find.
+     */
+    getField: function (id) {
+        if (this.fields.has(id)) {
+            return this.fields.get(id);
+        } 
+        return null;
+    },
+    /**
+     * APIMethod: setBusy
+     * Sets the busy state of the Form and all of it's fields.
+     *
+     * Parameters:
+     * state - {boolean} indicated whether the form is busy or not.
+     */
+    setBusy: function(state) {
+      if (this.busy == state) {
+        return;
+      }
+      this.parent(state);
+      this.fields.each(function(field) {
+        field.setBusy(state, true);
+      });
+    }
+});
+// $Id: field.js 870 2010-04-23 16:39:45Z conrad.barthelmes $
 /**
  * Class: Jx.Field
  *
@@ -25184,6 +27193,9 @@ Jx.Tooltip = new Class({
  * Example:
  * (code)
  * (end)
+ * 
+ * MooTools.lang Keys:
+ * - field.requiredText
  *
  * License:
  * Copyright (c) 2009, Jon Bomgardner.
@@ -25194,7 +27206,8 @@ Jx.Field = new Class({
     Family: 'Jx.Field',
     Extends : Jx.Widget,
     pluginNamespace: 'Field',
-
+    Binds: ['changeText'],
+    
     options : {
         /**
          * Option: id
@@ -25267,12 +27280,6 @@ Jx.Field = new Class({
          * will not submit until it is filled in and validates.
          */
         required : false,
-        /**
-         * Option: requiredText
-         * Text to be displayed if a field is required. It is added as an
-         * <em> element inside the <label>.
-         */
-        requiredText : '*',
         /**
          * Option: readonly
          * {True|False} defaults to false. Whether this field is readonly.
@@ -25378,19 +27385,20 @@ Jx.Field = new Class({
                 this.label.addClass(this.options.labelClass);
             }
             if ($defined(this.options.label)) {
-                this.label.set('html', this.options.label
+                this.label.set('html', this.getText(this.options.label)
                         + this.options.labelSeparator);
             }
 
             this.label.set('for', this.id);
 
             if (this.options.required) {
-                var em = new Element('em', {
-                    'html' : this.options.requiredText,
+                this.requiredText = new Element('em', {
+                    'html' : this.getText({set:'Jx',key:'field',value:'requiredText'}),
                     'class' : 'required'
                 });
-                em.inject(this.label);
+                this.requiredText.inject(this.label);
             }
+
         }
 
         // FIELD
@@ -25416,8 +27424,20 @@ Jx.Field = new Class({
                 this.field.set("disabled", "disabled");
                 this.field.addClass('jxFieldDisabled');
             }
+            
+            //add events
+            this.field.addEvents({
+              'focus': this.onFocus.bind(this),
+              'blur': this.onBlur.bind(this),
+              'change': this.onChange.bind(this)
+            });
 
             this.field.store('field', this);
+
+            // add click event to label to set the focus to the field
+            if(this.label) {
+                this.label.addEvent('click', this.field.focus.bind(this.field));
+            }
         }
 
         // TAG
@@ -25495,6 +27515,51 @@ Jx.Field = new Class({
             this.parent(what);
         }
         return this;
+    },
+    
+    /**
+     * APIMethod: changeText
+     * This method should be overridden by subclasses. It should be used
+     * to change any language specific default text that is used by the widget.
+     * 
+     * Parameters:
+     * lang - the language being changed to or that had it's data set of 
+     *    translations changed.
+     */
+    changeText: function (lang) {
+        this.parent();
+        if ($defined(this.options.label)) {
+          this.label.set('html', this.getText(this.options.label) + this.options.labelSeparator);
+        }
+        if(this.options.required) {
+          this.requiredText = new Element('em', {
+              'html' : this.getText({set:'Jx',key:'field',value:'requiredText'}),
+              'class' : 'required'
+          });
+          this.requiredText.inject(this.label);
+        }
+        if ($defined(this.requiredText)) {
+          this.requiredText.set('html',MooTools.lang.get('Jx','field').requiredText);
+        }
+    }, 
+    
+    onFocus: function() {
+      this.fireEvent('focus', this);
+    },
+    
+    onBlur: function () {
+      this.fireEvent('blur',this);
+    },
+    
+    onChange: function () {
+      this.fireEvent('change', this);
+    },
+    
+    setBusy: function(state, withoutMask) {
+      if (!withoutMask) {
+        this.parent(state);
+      }
+      this.field.set('readonly', state || this.options.readonly);
     }
 
 });
@@ -25555,7 +27620,7 @@ Jx.Field.Text = new Class({
 
     }
 
-});// $Id$
+});// $Id: prompt.js 862 2010-04-21 21:10:40Z conrad.barthelmes $
 /**
  * Class: Jx.Dialog.Prompt
  *
@@ -25563,6 +27628,10 @@ Jx.Field.Text = new Class({
  *
  * Jx.Dialog.Prompt is an extension of Jx.Dialog that allows the developer
  * to display a message to the user and ask for a text response. 
+ * 
+ * MooTools.lang Keys:
+ * - prompt.okButton
+ * - prompt.cancelButton
  *
  * License:
  * Copyright (c) 2009, Jonathan Bomgardner
@@ -25581,9 +27650,24 @@ Jx.Dialog.Prompt = new Class({
         prompt: '',
         /**
          * Option: startingValue
-         * The startingvalue to place in the text box
+         * The startingvalue to place in the input field
          */
         startingValue: '',
+        /**
+         * Option: fieldOptions,
+         * Object with various
+         */
+        fieldOptions: {
+          type : 'Text',
+          options: {},
+          validate : true,
+          validatorOptions: {
+            validators: ['required'],
+            validateOnBlur: true,
+            validateOnChange : false
+          },
+          showErrorMsg : true
+        },
         /**
          * Jx.Dialog option defaults
          */
@@ -25591,7 +27675,12 @@ Jx.Dialog.Prompt = new Class({
         height: 200,
         close: true,
         resize: true,
-        collapse: false
+        collapse: false,
+        useKeyboard : true,
+        keys : {
+          'esc'   : 'cancel',
+          'enter' : 'ok'
+        }
     },
     /**
      * APIMethod: render
@@ -25599,35 +27688,81 @@ Jx.Dialog.Prompt = new Class({
      */
     render: function () {
         //create content to be added
-        this.buttons = new Jx.Toolbar({position: 'bottom'});
-        this.buttons.add(
-            new Jx.Button({
-                label: 'Ok',
-                onClick: this.onClick.bind(this, 'Ok')
-            }),
-            new Jx.Button({
-                label: 'Cancel',
-                onClick: this.onClick.bind(this,'Cancel')
-            })
-        );
+        this.buttons = new Jx.Toolbar({position: 'bottom',scroll:false});
+        this.ok = new Jx.Button({
+                label: MooTools.lang.get('Jx','prompt').okButton,
+                onClick: this.onClick.bind(this, true)
+            });
+        this.cancel = new Jx.Button({
+                label: MooTools.lang.get('Jx','prompt').cancelButton,
+                onClick: this.onClick.bind(this, false)
+            });
+        this.buttons.add(this.ok, this.cancel);
         this.options.toolbars = [this.buttons];
-        
-        this.field = new Jx.Field.Text({
-            label: this.options.prompt,
-            value: this.options.startingValue,
-            containerClass: 'jxPrompt'
-        });
+
+        var fOpts = this.options.fieldOptions;
+            fOpts.options.label = this.getText(this.options.prompt);
+            fOpts.options.value = this.options.startingValue;
+            fOpts.options.containerClass = 'jxPrompt';
+
+        if(Jx.type(fOpts.type) === 'string' && $defined(Jx.Field[fOpts.type.capitalize()])) {
+          this.field = new Jx.Field[fOpts.type.capitalize()](fOpts.options);
+        }else if(Jx.type(fOpts.type) === 'Jx.Object'){
+          this.field = fOpts.type;
+        }else{
+          // warning and fallback?
+          window.console ? console.warn("Field type does not exist %o, using Jx.Field.Text", fOpts.type) : false;
+          this.field = new Jx.Field.Text(fOpts.options);
+        }
+
+        if(this.options.fieldOptions.validate) {
+          this.validator = new Jx.Plugin.Field.Validator(this.options.fieldOptions.validatorOptions);
+          this.validator.attach(this.field);
+        }
+
         this.options.content = document.id(this.field);
+        
+        if(this.options.useKeyboard) {
+          var self = this;
+          this.options.keyboardMethods.ok     = function(ev) { ev.preventDefault(); self.onClick(true); }
+          this.options.keyboardMethods.cancel = function(ev) { ev.preventDefault(); self.onClick(false); }
+        }
         this.parent();
+        if(this.options.useKeyboard) {
+          this.keyboard.addEvents(this.getKeyboardEvents());
+        }
     },
     /**
      * Method: onClick
      * Called when the OK button is clicked. Closes the dialog.
      */
     onClick: function (value) {
-        this.isOpening = false;
-        this.hide();
-        this.fireEvent('close', [this, value, this.field.getValue()]);
+        if(value && $defined(this.validator)) {
+          if(this.validator.isValid()) {
+            this.isOpening = false;
+            this.hide();
+            this.fireEvent('close', [this, value, this.field.getValue()]);
+          }else{
+            //this.options.content.adopt(this.validator.getError());
+            this.field.field.focus.delay(50, this.field.field);
+            //todo: show error messages ?
+          }
+        }else{
+          this.isOpening = false;
+          this.hide();
+          this.fireEvent('close', [this, value, this.field.getValue()]);
+        }
+    },
+    
+    changeText: function (lang) {
+    	this.parent();
+    	if ($defined(this.ok)) {
+    		this.ok.setLabel(MooTools.lang.get('Jx','prompt').okButton);
+    	}
+    	if ($defined(this.cancel)) {
+    		this.cancel.setLabel(MooTools.lang.get('Jx','prompt').cancelButton);
+    	}
+      this.field.label.set('html', this.getText(this.options.prompt));
     }
 
 
@@ -26103,235 +28238,6 @@ Jx.Field.Hidden = new Class({
 
 
 
-// $Id: form.js 686 2010-02-01 05:45:28Z jonlb@comcast.net $
-/**
- * Class: Jx.Form
- *
- * Extends: <Jx.Widget>
- *
- * A class that represents an HTML form. You add fields using either Jx.Form.add()
- * or by using the field's .addTo() method. You can get all form values or set them
- * using this class. It also handles validation of fields.
- *
- * Example:
- * (code)
- * (end)
- *
- * License:
- * Copyright (c) 2009, Jon Bomgardner.
- *
- * This file is licensed under an MIT style license
- */
-Jx.Form = new Class({
-    Family: 'Jx.Form',
-    Extends: Jx.Widget,
-
-    options: {
-        /**
-         * Option: method
-         * the method used to submit the form
-         */
-        method: 'post',
-        /**
-         * Option: action
-         * where to submit it to
-         */
-        action: '',
-        /**
-         * Option: fileUpload
-         * whether this form handles file uploads or not.
-         */
-        fileUpload: false,
-        /**
-         * Option: id
-         * the id of this form
-         */
-        id: null,
-        /**
-         * Option: formClass
-         */
-        formClass: null,
-        /**
-         * Option: name
-         * the name property for the form
-         */
-        name: '',
-        /**
-         * Option: fileUpload
-         * Determines if this form needs to be setup for file uploads.
-         */
-        fileUpload: false
-    },
-    
-    /**
-     * Property: defaultAction
-     * the default field to activate if the user hits the enter key in this
-     * form.  Set by specifying default: true as an option to a field.  Will
-     * only work if the default is a Jx button field or an input of a type
-     * that is a button
-     */
-    defaultAction: null,
-
-    /**
-     * Property: fields
-     * An array of all of the single fields (not contained in a fieldset) for this form
-     */
-    fields : new Hash(),
-    /**
-     * Property: pluginNamespace
-     * required variable for plugins
-     */
-    pluginNamespace: 'Form',
-
-    /**
-     * APIMethod: render
-     * Constructs the form but does not add it to anything to be shown. The caller
-     * should use form.addTo() to add the form to the DOM.
-     */
-    render : function () {
-        //create the form first
-        this.domObj = new Element('form', {
-            'method' : this.options.method,
-            'action' : this.options.action,
-            'class' : 'jxForm',
-            'name' : this.options.name,
-            events: {
-                keypress: function(e) {
-                    if (e.key == 'enter' && 
-                        e.target.tagName != "TEXTAREA" && 
-                        this.defaultAction &&
-                        this.defaultAction.click) {
-                        document.id(this.defaultAction).focus();
-                        this.defaultAction.click();
-                    }
-                }.bind(this)
-            }
-        });
-
-        if (this.options.fileUpload) {
-            this.domObj.set('enctype', 'multipart/form-data');
-        }
-        if ($defined(this.options.id)) {
-            this.domObj.set('id', this.options.id);
-        }
-        if ($defined(this.options.formClass)) {
-            this.domObj.addClass(this.options.formClass);
-        }
-    },
-
-    /**
-     * APIMethod: addField
-     * Adds a <Jx.Field> subclass to this form's fields hash
-     *
-     * Parameters:
-     * field - <Jx.Field> to add
-     */
-    addField : function (field) {
-        this.fields.set(field.id, field);
-        if (field.options.defaultAction) {
-            this.defaultAction = field;
-        }
-    },
-
-    /**
-     * Method: isValid
-     * Determines if the form passes validation
-     *
-     * Parameters:
-     * evt - the Mootools event object
-     */
-    isValid : function (evt) {
-        return true;
-    },
-
-    /**
-     * APIMethod: getValues
-     * Gets the values of all the fields in the form as a Hash object. This
-     * uses the mootools function Element.toQueryString to get the values and
-     * will either return the values as a querystring or as an object (using
-     * mootools-more's String.parseQueryString method).
-     *
-     * Parameters:
-     * asQueryString - {boolean} indicates whether to return the value as a
-     *                  query string or an object.
-     */
-    getValues : function (asQueryString) {
-        var queryString = this.domObj.toQueryString();
-        if ($defined(asQueryString) && asQueryString) {
-            return queryString;
-        } else {
-            return queryString.parseQueryString();
-        }
-    },
-    /**
-     * APIMethod: setValues
-     * Used to set values on the form
-     *
-     * Parameters:
-     * values - A Hash of values to set keyed by field name.
-     */
-    setValues : function (values) {
-        //TODO: This may have to change with change to getValues().
-        if (Jx.type(values) === 'object') {
-            values = new Hash(values);
-        }
-        this.fields.each(function (item) {
-            item.setValue(values.get(item.name));
-        }, this);
-    },
-
-    /**
-     * APIMethod: add
-     *
-     * Parameters:
-     * Pass as many parameters as you like. However, they should all be
-     * <Jx.Field> objects.
-     */
-    add : function () {
-        var field;
-        for (var x = 0; x < arguments.length; x++) {
-            field = arguments[x];
-            //add form to the field and field to the form if not already there
-            if (field instanceof Jx.Field && !$defined(field.form)) {
-                field.form = this;
-                this.addField(field);
-            } else if (field instanceof Jx.Fieldset && !$defined(field.form)) {
-                field.form = this;
-            }
-            
-            this.domObj.grab(field);
-        }
-        return this;
-    },
-
-    /**
-     * APIMethod: reset
-     *
-     */
-    reset : function () {
-        this.fields.each(function (field, name) {
-            field.reset();
-        }, this);
-        this.fireEvent('reset',this);
-    },
-
-    getFieldsByName: function (name) {
-        var fields = [];
-        this.fields.each(function(val, id){
-            if (val.name === name) {
-                fields.push(val);
-            }
-        },this);
-        return fields;
-    },
-    
-    getField: function (id) {
-        if (this.fields.has(id)) {
-            return this.fields.get(id);
-        } 
-        return null;
-    }
-});
 /**
  * Class: Jx.Field.File
  *
@@ -26349,6 +28255,9 @@ Jx.Form = new Class({
  * call the Jx.Field.File.upload() method for each file input directly and
  * then submit the rest of the form via ajax.
  *
+ * MooTools.lang Keys:
+ * - file.browseLabel
+ * 
  * License:
  * Copyright (c) 2009, Jon Bomgardner.
  *
@@ -26411,6 +28320,17 @@ Jx.Field.File = new Class({
          */
         debug: false,
         /**
+         * Option: mode
+         * determines whether this file field acts in single upload mode or
+         * multiple file upload mode. The multiple upload mode was done to work with
+         * Jx.Panel.FileUpload. When in multiple mode, this field will remove the actual
+         * file control after a file is selected, fires an event to signify the selection but will
+         * hold on to the files until told to upload them. Obviously 'multiple' mode isn't designed
+         * to be used when the control is outside of the Upload Panel (unless the user designs
+         * their own upload panel around it).
+         */
+        mode: 'single',
+        /**
          * Events
          */
         onUploadBegin: $empty,
@@ -26425,6 +28345,30 @@ Jx.Field.File = new Class({
      * The Field type used in rendering
      */
     type: 'File',
+    /**
+     * Property: forms
+     * holds all form references when we're in multiple mode
+     */
+    forms: null,
+
+    init: function () {
+        this.parent();
+
+        this.forms = new Hash();
+        //create the iframe
+        //we use the same iFrame for each so we don't have to recreate it each time
+        this.setupIframe = true;
+        this.iframe = new IFrame(null, {
+            styles: {
+                'visibility':'hidden'
+            },
+            name : this.generateId()
+        });
+        this.iframe.inject(document.body);
+        this.iframe.addEvent('load', this.processIFrameUpload.bind(this));
+
+    },
+
     /**
      * APIMethod: render
      * renders the file input
@@ -26446,16 +28390,15 @@ Jx.Field.File = new Class({
             template : '<span class="jxInputContainer"><input class="jxInputText" type="text" /></span>'
         });
         this.browseButton = new Jx.Button({
-            label : 'Browse...'
+            label: MooTools.lang.get('Jx','file').browseLabel
         });
-
 
         this.fake.adopt(this.text, this.browseButton);
         this.field.grab(this.fake, 'after');
 
         this.field.addEvents({
             change : this.copyValue.bind(this),
-            mouseout : this.copyValue.bind(this),
+            //mouseout : this.copyValue.bind(this),
             mouseenter : this.mouseEnter.bind(this),
             mouseleave : this.mouseLeave.bind(this)
         });
@@ -26467,9 +28410,19 @@ Jx.Field.File = new Class({
      * the mouse moves out of it to copy the value into the "fake" text box.
      */
     copyValue: function () {
-        if (this.field.value !== '' && (this.text.field.value !== this.field.value)) {
+        if (this.options.mode=='single' && this.field.value !== '' && (this.text.field.value !== this.field.value)) {
             this.text.field.value = this.field.value;
             this.fireEvent('fileSelected', this);
+            if (this.options.autoUpload) {
+                this.uploadSingle();
+            }
+        } else if (this.options.mode=='multiple') {
+            var filename = this.field.value;
+            var form = this.prepForm();
+            this.forms.set(filename, form);
+            this.text.setValue('');
+            //fire the selected event.
+            this.fireEvent('fileSelected', filename);
         }
     },
     /**
@@ -26488,38 +28441,62 @@ Jx.Field.File = new Class({
     mouseLeave: function () {
         this.browseButton.domA.removeClass('jxButtonPressed');
     },
-    /**
-     * APIMethod: upload
-     * Call this to upload the file to the server
-     */
-    upload: function () {
-        this.fireEvent('uploadBegin', this);
-        //create the iframe
-        this.iframe = new IFrame(null, {
-            styles: {
-                display: 'none'
-            },
 
-            name : this.generateId()
-        });
-        this.iframe.inject(document.body);
-
+    prepForm: function () {
         //load in the form
-        this.form = new Jx.Form({
+        var form = new Jx.Form({
             action : this.options.handlerUrl,
             name : 'jxUploadForm',
             fileUpload: true
         });
 
-        //iframeBody.grab(this.form);
-        $(this.form).set('target', this.iframe.get('name')).setStyles({
+        //move the form input into it (cloneNode)
+        var parent = document.id(this.field.getParent());
+        var sibling = document.id(this.field).getPrevious();
+        var clone = this.field.clone().cloneEvents(this.field);
+        document.id(form).grab(this.field);
+        // tried clone.replaces(this.field) but it didn't seem to work
+        if (sibling) {
+          clone.inject(sibling, 'after');
+        } else if (parent) {
+            clone.inject(parent, 'top');
+        }
+        this.field = clone;
+
+        this.mouseLeave();
+
+        return form;
+    },
+
+    upload: function () {
+        //do we have files to upload?
+        if (this.forms.getLength() > 0) {
+            var keys = this.forms.getKeys();
+            this.currentKey = keys[0];
+            var form = this.forms.get(this.currentKey);
+            this.forms.erase(this.currentKey);
+            this.uploadSingle(form);
+        } else {
+            //fire finished event...
+            this.fireEvent('allUploadsComplete', this);
+        }
+    },
+    /**
+     * APIMethod: uploadSingle
+     * Call this to upload the file to the server
+     */
+    uploadSingle: function (form) {
+        this.form = $defined(form) ? form : this.prepForm();
+
+        this.fireEvent('fileUploadBegin', [this.currentKey, this]);
+
+        this.text.setValue('');
+
+        document.id(this.form).set('target', this.iframe.get('name')).setStyles({
             visibility: 'hidden',
             display: 'none'
         }).inject(document.body);
 
-
-        //move the form input into it (cloneNode)
-        $(this.form).grab(this.field.cloneNode(true));
         //if polling the server we need an APC_UPLOAD_PROGRESS id.
         //get it from the server.
         if (this.options.progress) {
@@ -26553,11 +28530,9 @@ Jx.Field.File = new Class({
             });
             id.addTo(this.form, 'top');
         }
-        this.iframe.addEvent('load', this.processIFrameUpload.bind(this));
-
 
         //submit the form
-        $(this.form).submit();
+        document.id(this.form).submit();
         //begin polling if needed
         if (this.options.progress && $defined(this.progressID)) {
             this.pollUpload();
@@ -26588,16 +28563,12 @@ Jx.Field.File = new Class({
      */
     processProgress: function (data) {
         if ($defined(data)) {
-            this.fireEvent('uploadProgress', [data, this]);
+            this.fireEvent('fileUploadProgress', [data, this.currentKey, this]);
             if (data.current < data.total) {
                 this.polling = true;
                 this.pollUpload();
             } else {
                 this.polling = false;
-                if (this.done) {
-                    this.uploadCleanUp();
-                    this.fireEvent('uploadComplete', [this.doneData, this]);
-                }
             }
         }
     },
@@ -26606,7 +28577,7 @@ Jx.Field.File = new Class({
      * called if there is a problem getting progress on the upload
      */
     uploadFailure: function (xhr) {
-        this.fireEvent('uploadProgressError', this);
+        this.fireEvent('fileUploadProgressError', [this, xhr]);
     },
     /**
      * Method: processIFrameUpload
@@ -26616,18 +28587,26 @@ Jx.Field.File = new Class({
     processIFrameUpload: function () {
         //the body text should be a JSON structure
         //get the body
-        var iframeBody = this.iframe.contentDocument.defaultView.document.body.innerHTML;
+        if (!this.setupIframe) {
+            var iframeBody = this.iframe.contentDocument.defaultView.document.body.innerHTML;
 
-        var data = JSON.decode(iframeBody);
-        if ($defined(data.success) && data.success) {
-            this.done = true;
-            this.doneData = data;
-            if (!this.polling) {
+            var data = JSON.decode(iframeBody);
+            if ($defined(data.success) && data.success) {
+                this.done = true;
+                this.doneData = data;
                 this.uploadCleanUp();
-                this.fireEvent('uploadComplete', [data, this]);
+                this.fireEvent('fileUploadComplete', [data, this.currentKey, this]);
+            } else {
+                this.fireEvent('fileUploadError', [data , this.currentKey, this]);
+            }
+
+            if (this.options.mode == 'multiple') {
+                this.upload();
+            } else {
+                this.fireEvent('allUploadsComplete', this);
             }
         } else {
-            this.fireEvent('uploadError', [data , this]);
+            this.setupIframe = false;
         }
     },
     /**
@@ -26638,24 +28617,38 @@ Jx.Field.File = new Class({
     uploadCleanUp: function () {
         if (!this.options.debug) {
             this.form.destroy();
-            this.iframe.destroy();
+            if (this.options.mode == 'single') {
+                this.iframe.destroy();
+            }
         }
     },
     /**
-     * APIMethod: getFileName
-     * Allows caller to get the filename of the file we're uploading
+     * APIMethod: remove
+     * Removes a file from the hash of forms to upload.
+     *
+     * Parameters:
+     * filename - the filename indicating which file to remove.
      */
-    getFileName: function () {
-        var fn = this.field.get('value');
-        return fn.slice(fn.lastIndexOf('/') + 1);
+    remove: function (filename) {
+        if (this.forms.has(filename)) {
+            this.forms.erase(filename);
+        }
     },
+    
     /**
-     * Method: getExt
-     * Returns the 3-letter extension of this file.
+     * APIMethod: changeText
+     * This method should be overridden by subclasses. It should be used
+     * to change any language specific default text that is used by the widget.
+     * 
+     * Parameters:
+     * lang - the language being changed to or that had it's data set of 
+     * 		translations changed.
      */
-    getExt: function () {
-        var fn = this.getFileName();
-        return fn.slice(fn.length - 3);
+    changeText: function (lang) {
+    	this.parent();
+    	if ($defined(this.browseButton)) {
+    		this.browseButton.setLabel( MooTools.lang.get('Jx','file').browseLabel);
+    	}
     }
 });
 /**
@@ -26684,6 +28677,12 @@ Jx.Field.File = new Class({
  * onUpdate - Fired when the bar is updated
  * onComplete - fires when the progress bar completes it's fill
  * 
+ * MooTools.lang keys:
+ * - progressbar.messageText
+ * - progressbar.progressText
+ *
+ * Copyright (c) 2010 by Jonathan Bomgardner
+ * Licensed under an mit-style license
  */
 Jx.Progressbar = new Class({
     Family: 'Jx.Progressbar',
@@ -26693,26 +28692,17 @@ Jx.Progressbar = new Class({
         onUpdate: $empty,
         onComplete: $empty,
         /**
-         * Option: messageText
-         * The text of a message displayed above the bar. Set to NULL to prevent any text from appearing
-         */
-        messageText: 'Loading...',
-        /**
-         * Option: progressText
-         * The text displayed inside the bar. This defaults to "{progress} of {total}" 
-         * where {progress} and {total} are substituted for passed in values.
-         */
-        progressText: '{progress} of {total}',
-        /**
          * Option: bar
          * an object that gives options for the bar itself. Specifically, 
          * the width and height of the bar. You can set either to 'auto' to
          * have the bar calculate its own width.
          */
+        /**
         bar: {
             width: 'auto',
             height: 20
         },
+         */
         /**
          * Option: parent
          * The element to put this progressbar into
@@ -26755,66 +28745,56 @@ Jx.Progressbar = new Class({
         this.parent();
         
         if ($defined(this.options.parent)) {
-            this.domObj.inject($(this.options.parent));
+            this.domObj.inject(document.id(this.options.parent));
         }
         
+        this.domObj.addClass('jxProgressStarting');
+        
         //determine width of progressbar
+        /**
         if (this.options.bar.width === 'auto') {
             //get width of container
             this.options.bar.width = this.domObj.getStyle('width').toInt();
         }
-        
-        //determine height
-        if (this.options.bar.height === 'auto') {
-            this.options.bar.height = this.domObj.getStyle('height').toInt() - 4;
-        }
+        */
+
+        //we need to know the width of the bar
+        this.width = document.id(this.domObj).getContentBoxSize().width;
         
         //Message
         if (this.message) {
-            if ($defined(this.options.messageText)) {
-                this.message.set('html', this.options.messsageText);
+            if ($defined(MooTools.lang.get('Jx','progressbar').messageText)) {
+                this.message.set('html', MooTools.lang.get('Jx','progressbar').messageText);
             } else {
                 this.message.destroy();
             }
         }
-        
-        //bar container itself
-        if (this.container) {
-            this.container.setStyles({
-                'position': 'relative',
-                'width': this.options.bar.width,
-                'height' : this.options.bar.height + 4
-            });
-        }
-        
-        //Outline
-        if (this.outline) {
-            this.outline.setStyles({
-                'width': this.options.bar.width,
-                'height' : this.options.bar.height
-            });
-        }
-        
+
         //Fill
         if (this.fill) {
             this.fill.setStyles({
-                'width': 0,
-                'height' : this.options.bar.height
+                'width': 0
             });
         }
         
         //TODO: check for {progress} and {total} in progressText
         var obj = {};
-        if (this.options.progressText.contains('{progress}')) {
+        var progressText;
+        if (!$defined(this.options.progressText)) {
+            progressText = MooTools.lang.get('Jx','progressbar').progressText;
+        } else {
+            progressText = this.options.progressText;
+        }
+        if (progressText.contains('{progress}')) {
             obj.progress = 0;
         }
-        if (this.options.progressText.contains('{total}')) {
+        if (progressText.contains('{total}')) {
             obj.total = 0;
         }
         
         //Progress text
         if (this.text) {
-            this.text.set('html', this.options.progressText.substitute(obj));
+            this.text.set('html', progressText.substitute(obj));
         }
         
     },
@@ -26828,19 +28808,30 @@ Jx.Progressbar = new Class({
      *              equal to the total)
      */
     update: function (total, progress) {
-        var newWidth = (progress * this.options.bar.width) / total;
+    	
+    	//check for starting class
+    	if (this.domObj.hasClass('jxProgressStarting')) {
+    		this.domObj.removeClass('jxProgressStarting').addClass('jxProgressWorking');
+    	}
+    	
+        var newWidth = (progress * this.width) / total;
         
         //update bar width
-        //TODO: animate this
         this.text.get('tween', {property:'width', onComplete: function() {
             var obj = {};
-            if (this.options.progressText.contains('{progress}')) {
+            var progressText;
+            if (!$defined(this.options.progressText)) {
+                progressText = MooTools.lang.get('Jx','progressbar').progressText;
+            } else {
+                progressText = this.options.progressText;
+            }
+            if (progressText.contains('{progress}')) {
                 obj.progress = progress;
             }
-            if (this.options.progressText.contains('{total}')) {
+            if (progressText.contains('{total}')) {
                 obj.total = total;
             }
-            var t = this.options.progressText.substitute(obj);
+            var t = progressText.substitute(obj);
             this.text.set('text', t);
         }.bind(this)}).start(newWidth);
         
@@ -26848,15 +28839,33 @@ Jx.Progressbar = new Class({
             
             if (total === progress) {
                 this.complete = true;
+                this.domObj.removeClass('jxProgressWorking').addClass('jxProgressFinished');
                 this.fireEvent('complete');
             } else {
                 this.fireEvent('update');
             }
         }).bind(this)}).start(newWidth);
         
+    },
+    
+    /**
+     * APIMethod: changeText
+     * This method should be overridden by subclasses. It should be used
+     * to change any language specific default text that is used by the widget.
+     * 
+     * Parameters:
+     * lang - the language being changed to or that had it's data set of 
+     * 		translations changed.
+     */
+    changeText: function (lang) {
+    	this.parent();
+    	if (this.message) {
+    		this.message.set('html',MooTools.lang.get('Jx','progressbar').messageText);
+    	}
+        //progress text will update on next update.
     }
     
-});
+});// $Id: upload.js 826 2010-03-31 18:46:16Z pagameba $
 /**
  * Class: Jx.Panel.FileUpload
  *
@@ -26864,6 +28873,9 @@ Jx.Progressbar = new Class({
  *
  * This class extends Jx.Panel to provide a consistent interface for uploading
  * files in an application.
+ * 
+ * MooTools.lang Keys:
+ * - upload.buttonText
  *
  * License:
  * Copyright (c) 2009, Jon Bomgardner.
@@ -26872,7 +28884,9 @@ Jx.Progressbar = new Class({
  */
 Jx.Panel.FileUpload = new Class({
 
+    Family: 'Jx.Panel.FileUpload',
     Extends: Jx.Panel,
+    Binds: ['moveToQueue','fileUploadBegin', 'fileUploadComplete','allUploadsComplete', 'fileUploadProgressError,', 'fileUploadError', 'fileUploadProgress'],
 
     options: {
         /**
@@ -26886,8 +28900,17 @@ Jx.Panel.FileUpload = new Class({
             handlerUrl: '',
             progressUrl: ''
         },
+
+        progressOptions: {
+            template: "<li class='jxListItemContainer jxProgressBar-container' id='{id}'><div class='jxProgressBar'><div class='jxProgressBar-outline'></div><div class='jxProgressBar-fill'></div><div class='jxProgressBar-text'></div></div></li>",
+            containerClass: 'progress-container',
+            messageText: null,
+            messageClass: 'progress-message',
+            progressText: 'Uploading {filename}',
+            progressClass: 'progress-bar'
+        },
         /**
-         * Option: onFileUploadComplete
+         * Option: onFileComplete
          * An event handler that is called when a file has been uploaded
          */
         onFileComplete: $empty,
@@ -26902,11 +28925,6 @@ Jx.Panel.FileUpload = new Class({
          * file input
          */
         prompt: null,
-        /**
-         * Option: buttonText
-         * The text to place on the upload button
-         */
-        buttonText: 'Upload Files',
         /**
          * Option: removeOnComplete
          * Determines whether a file is removed from the queue after uploading
@@ -26924,8 +28942,10 @@ Jx.Panel.FileUpload = new Class({
      * An array holding Jx.Field.File elements that are to be uploaded
      */
     fileQueue: [],
+
+    listTemplate: "<li class='jxListItemContainer' id='{id}'><a class='jxListItem' href='javascript:void(0);'><span class='itemLabel jxUploadFileName'>{name}</span><span class='jxUploadFileDelete' title='Remove this file from the queue.'></span></a></li>",
     /**
-     * APIMethod: render
+     * Method: render
      * Sets up the upload panel.
      */
     render: function () {
@@ -26949,25 +28969,21 @@ Jx.Panel.FileUpload = new Class({
         this.fileOpt = this.options.file;
         this.fileOpt.template = '<div class="jxInputContainer jxFileInputs"><input class="jxInputFile" type="file" name={name} /></div>';
 
-        this.currentFile = new Jx.Field.File(this.fileOpt);
-        this.currentFile.addEvent('fileSelected', this.moveToQueue.bind(this));
-        this.currentFile.addTo(this.domObjA);
+        this.file = new Jx.Field.File(this.fileOpt);
+        this.file.addEvent('fileSelected', this.moveToQueue);
+        this.file.addTo(this.domObjA);
 
-        //now the 'queue' listing with delete button
+        this.listView = new Jx.ListView({
+            template: '<ul class="jxListView jxList jxUploadQueue"></ul>'
+            
+        }).addTo(this.domObjA);
 
-        this.queueDiv = new Element('div', {
-            'class': 'jxUploadQueue'
-        });
-        //make the queueDiv a list
-        this.list = new Jx.List(this.queueDiv, {
-            hover: true
-        });
-        this.queueDiv.inject(this.domObjA);
+        //this is the upload button at the bottom of the panel.
         this.uploadBtn = new Jx.Button({
-            label : this.options.buttonText,
+            label : MooTools.lang.get('Jx','upload').buttonText,
             onClick: this.upload.bind(this)
         });
-        var tlb = new Jx.Toolbar({position: 'bottom'}).add(this.uploadBtn);
+        var tlb = new Jx.Toolbar({position: 'bottom', scroll: false}).add(this.uploadBtn);
         this.uploadBtn.setEnabled(false);
         this.options.toolbars = [tlb];
         //then pass it on to the Panel constructor
@@ -26976,35 +28992,25 @@ Jx.Panel.FileUpload = new Class({
     },
     /**
      * Method: moveToQueue
-     * Called by Jx.Field.File's fileSelected event. Moves the selected file into the
-     * upload queue.
+     * Called by Jx.Field.File's fileSelected event. Moves the selected file
+     * into the upload queue.
      */
-    moveToQueue: function (file) {
-        var cf = this.currentFile;
-        var name = cf.getFileName();
-
-        this.fileQueue.push(this.currentFile);
-
-        this.currentFile = new Jx.Field.File(this.fileOpt);
-        this.currentFile.addEvent('fileSelected', this.moveToQueue.bind(this));
-        $(this.currentFile).replaces($(cf));
-
-        //add to queue div
-
-        cf.queuedDiv = new Element('div', {id : name});
-        var s = new Element('span', {
-            html : name,
-            'class' : 'jxUploadFileName'
+    moveToQueue: function (filename) {
+        var theTemplate = new String(this.listTemplate).substitute({
+            name: filename,
+            id: filename
         });
-        var del = new Element('span', {
-            'class' : 'jxUploadFileDelete',
-            title : 'Remove from queue'
-        });
+        var item = new Jx.ListItem({template:theTemplate, enabled: true});
 
-        del.addEvent('click', this.removeFromQueue.bind(this, cf));
-        cf.queuedDiv.adopt(s, del);
-        this.list.add(cf.queuedDiv);
-        //cf.queuedDiv.inject(this.queueDiv);
+        $(item).getElement('.jxUploadFileDelete').addEvent('click', function(){
+            this.listView.remove(item);
+            this.file.remove(filename);
+            if (this.listView.list.count() == 0) {
+                this.uploadBtn.setEnabled(false);
+            }
+        }.bind(this));
+        this.listView.add(item);
+
         if (!this.uploadBtn.isEnabled()) {
             this.uploadBtn.setEnabled(true);
         }
@@ -27015,41 +29021,46 @@ Jx.Panel.FileUpload = new Class({
      * Called when the user clicks the upload button. Runs the upload process.
      */
     upload: function () {
-        var file = this.fileQueue.shift();
-        file.addEvent('uploadComplete', this.fileUploadComplete.bind(this));
-        file.addEvent('uploadError', this.fileUploadError.bind(this));
 
+        this.file.addEvents({
+            'fileUploadBegin': this.fileUploadBegin ,
+            'fileUploadComplete': this.fileUploadComplete,
+            'allUploadsComplete': this.allUploadsComplete,
+            'fileUploadError': this.fileUploadError,
+            'fileUploadProgress': this.fileUploadProgress,
+            'fileUploadProgressError': this.fileUploadError
+        });
+
+
+        this.file.upload();
+    },
+
+    fileUploadBegin: function (filename) {
         if (this.options.file.progress) {
-            file.addEvent('uploadProgress', this.fileUploadProgress.bind(this));
             //progressbar
             //setup options
-            var options = {
-                containerClass: 'progress-container',
-                messageText: null,
-                messageClass: 'progress-message',
-                progressText: 'uploading ' + file.getFileName(),
-                progressClass: 'progress-bar',
-                bar: {
-                    width: file.queuedDiv.getStyle('width').toInt(),
-                    height: file.queuedDiv.getFirst().getStyle('height').toInt()
-                }
-            };
-            var pb = new Jx.Progressbar(options);
-            file.pb = pb;
-            $(pb).replaces(file.queuedDiv);
+            // TODO: should (at least some of) these options be available to
+            // the developer?
+            var options = $merge({},this.options.progressOptions);
+            options.progressText = options.progressText.substitute({filename: filename});
+            options.template = options.template.substitute({id: filename});
+            this.pb = new Jx.Progressbar(options);
+            var item = document.id(filename);
+            this.oldContents = item;
+            this.listView.replace(item,$(this.pb));
         } else {
-            file.queuedDiv.getLast().removeClass('jxUploadFileDelete').addClass('jxUploadFileProgress');
+            var icon = document.id(filename).getElement('.jxUploadFileDelete')
+            icon.addClass('jxUploadFileProgress').set('title','File Uploading...');
         }
-        file.upload();
     },
+
     /**
      * Method: fileUploadComplete
-     * Called when a single file is uploaded completely (called by
-     * Jx.Field.File's uploadComplete event).
+     * Called when a single file is uploaded completely .
      *
      * Parameters:
      * data - the data returned from the event
-     * file - the file we're tracking
+     * filename - the filename of the file we're tracking
      */
     fileUploadComplete: function (data, file) {
         if ($defined(data.success) && data.success ){
@@ -27066,15 +29077,18 @@ Jx.Panel.FileUpload = new Class({
      * data - the data passed back from the server, if any.
      * file - the file we're tracking
      */
-    fileUploadError: function (data, file) {
-        var icon = file.queuedDiv.getLast();
+    fileUploadError: function (data, filename) {
+
+        if (this.options.file.progress) {
+            //show this old contents...
+            this.listView.replace(document.id(filename),this.oldContents);
+        }
+        var icon = document.id(filename).getElement('.jxUploadFileDelete');
         icon.erase('title');
         if (icon.hasClass('jxUploadFileProgress')) {
             icon.removeClass('jxUploadFileProgress').addClass('jxUploadFileError');
         } else {
-            //queued div is hidden, show it
-            file.queuedDiv.replaces(file.pb);
-            icon.removeClass('jxUploadFileDelete').addClass('jxUploadFileError');
+            icon.addClass('jxUploadFileError');
         }
         if ($defined(data.error) && $defined(data.error.message)) {
             var tt = new Jx.Tooltip(icon, data.error.message, {
@@ -27089,35 +29103,23 @@ Jx.Panel.FileUpload = new Class({
      * Parameters:
      * file - the file we're tracking
      */
-    removeUploadedFile: function (file) {
+    removeUploadedFile: function (filename) {
 
         if (this.options.removeOnComplete) {
-            if ($defined(file.pb)) {
-                file.pb.destroy();
-            }
-            this.list.remove(file.queuedDiv);
-            //file.queuedDiv.dispose();
-            var name = file.getFileName();
-            this.fileQueue.erase(name);
+           this.listView.remove(document.id(filename));
         } else {
-            if ($defined(file.pb)) {
-                file.queuedDiv.replaces(file.pb);
-                file.pb.destroy();
+            if (this.options.file.progress) {
+                this.listView.replace(document.id(filename),this.oldContents);
             }
-            var l = file.queuedDiv.getLast();
+            var l = document.id(filename).getElement('.jxUploadFileDelete');
             if (l.hasClass('jxUploadFileDelete')) {
-                l.removeClass('jxUploadFileDelete').addClass('jxUploadFileComplete');
+                l.addClass('jxUploadFileComplete');
             } else if (l.hasClass('jxUploadFileProgress')) {
                 l.removeClass('jxUploadFileProgress').addClass('jxUploadFileComplete');
             }
         }
 
-        this.fireEvent('fileComplete', file);
-        if (this.fileQueue.length > 0) {
-            this.upload();
-        } else {
-            this.fireEvent('complete');
-        }
+        this.fireEvent('fileUploadComplete', filename);
     },
     /**
      * Method: fileUploadProgress
@@ -27125,26 +29127,29 @@ Jx.Panel.FileUpload = new Class({
      * in the file. Only used if we're tracking progress.
      */
     fileUploadProgress: function (data, file) {
-        file.pb.update(data.total, data.current);
+        if (this.options.progress) {
+            this.pb.update(data.total, data.current);
+        }
     },
     /**
-     * Method: removeFromQueue
-     * Called when the delete icon is clicked for an individual file. It
-     * removes the file from the queue, disposes of it, and does NOT upload
-     * the file to the server.
-     *
-     * Pparameters:
-     * file - the file we're getting rid of.
+     * Method: allUploadCompleted
+     * Called when the Jx.Field.File completes uploading
+     * all files. Sets upload button to disabled and fires the allUploadCompleted
+     * event.
      */
-    removeFromQueue: function (file) {
-        var name = file.getFileName();
-        //TODO: Should prompt the user to be sure - use Jx.Dialog.Confirm?
-        this.list.remove(file.queuedDiv);
-        //$(name).destroy();
-        this.fileQueue = this.fileQueue.erase(file);
-        if (this.fileQueue.length === 0) {
-            this.uploadBtn.setEnabled(false);
-        }
+    allUploadsComplete: function () {
+        this.uploadBtn.setEnabled(false);
+        this.fireEvent('allUploadsCompleted',this);
+    },
+    /**
+     * Method: createText
+     * handle change in language
+     */
+    createText: function (lang) {
+      this.parent();
+      if ($defined(this.uploadBtn)) {
+        this.uploadBtn.setLabel(MooTools.lang.get('Jx','upload').buttonText);
+      }
     }
 });
 // $Id: listitem.js 649 2009-11-30 22:19:48Z pagameba $
@@ -27260,7 +29265,7 @@ Jx.ListView = new Class({
         this.list.replace(item, withItem);
         return this;
     }
-});// $Id: column.js 649 2009-11-30 22:19:48Z pagameba $
+});// $Id: column.js 878 2010-04-25 22:07:31Z jonlb@comcast.net $
 /**
  * Class: Jx.Column
  *
@@ -27279,24 +29284,31 @@ Jx.ListView = new Class({
  */
 Jx.Column = new Class({
 
-    Extends: Jx.Object,
+	Family: 'Jx.Column',
+    Extends: Jx.Widget,
 
     options: {
         /**
-         * Option: header
-         * The text to be used as a header for this column
+         * Option: renderMode
+         * The mode to use in rendering this column to determine its width. 
+         * Valid options include
+         * 
+         * fit - auto calculates the width for the best fit to the text. This 
+         * 			is the default.
+         * fixed - uses the value passed in the width option, doesn't 
+         * 			auto calculate.
+         * expand - uses the value in the width option as a minimum width and 
+         * 			allows this column to expand and take up any leftover space. 
+         * 			NOTE: there can be only 1 expand column in a grid. The 
+         * 			Jx.Columns object will only take the first column with this 
+         * 			option as the expanding column. All remaining columns marked 
+         * 			"expand" will be treated as "fixed".
          */
-        header: null,
-        /**
-         * Option: modelField
-         * The field of the model that this column is keyed to
-         */
-        modelField: null,
+        renderMode: 'fit',
         /**
          * Option: width
-         * Determines the width of the column. Set to 'null' or 'auto'
-         * to allow the column to autocalculate it's width based on its
-         * contents
+         * Determines the width of the column when using 'fixed' rendering mode
+         * or acts as a minimum width when using 'expand' mode.
          */
         width: null,
         /**
@@ -27320,51 +29332,31 @@ Jx.Column = new Class({
          */
         isHidden: false,
         /**
-         * Option: formatter
-         * an instance of <Jx.Formatter> or one of its subclasses which
-         * will be used to format the data in this column. It can also be
-         * an object containing the name (This should be the part after
-         * Jx.Formatter in the class name. For instance, to get a currency
-         * formatter, specify 'Currency' as the name.) and options for the
-         * needed formatter (see individual formatters for options).
-         * (code)
-         * {
-         *    name: 'formatter name',
-         *    options: {}
-         * }
-         * (end)
-         */
-        formatter: null,
-        /**
          * Option: name
          * The name given to this column
          */
         name: '',
         /**
-         * Option: dataType
-         * The type of the data in this column, used for sorting. Can be
-         * alphanumeric, numeric, currency, boolean, or date
+         * Option: template
          */
-        dataType: 'alphanumeric',
+        template: null,
         /**
-         * Option: templates
-         * objects used to determine the type of tag and css class to
-         * assign to a header cell and a regular cell. The css class can
-         * also be a function that returns a string to assign as the css
-         * class. The function will be passed the text to be formatted.
+         * Option: renderer
+         * an instance of a Jx.Grid.Renderer to use in rendering the content
+         * of this column or a config object for creating one like so:
+         *
+         * (code)
+         * {
+         *     name: 'Text',
+         *     options: { ... renderer options ... }
+         * }
          */
-        templates: {
-            header: {
-                tag: 'span',
-                cssClass: null
-            },
-            cell: {
-                tag: 'span',
-                cssClass: null
-            }
-        }
-
+        renderer: null
     },
+    
+    classes: $H({
+    	domObj: 'jxGridCellContent'
+    }),
     /**
      * Property: model
      * holds a reference to the model (an instance of <Jx.Store> or subclass)
@@ -27378,127 +29370,165 @@ Jx.Column = new Class({
      * initializes the column object
      */
     init : function () {
+
+        this.name = this.options.name;
+
+        //adjust header for column
+        if (!$defined(this.options.template)) {
+            this.options.template = '<span class="jxGridCellContent">' + this.name.capitalize() + '</span>';
+        }
+
         this.parent();
         if ($defined(this.options.grid) && this.options.grid instanceof Jx.Grid) {
             this.grid = this.options.grid;
         }
-        this.name = this.options.name;
-        //we need to check the formatter
-        if ($defined(this.options.formatter)
-                && !(this.options.formatter instanceof Jx.Formatter)) {
-            var t = Jx.type(this.options.formatter);
-            if (t === 'object') {
-                this.options.formatter = new Jx.Formatter[this.options.formatter.name](
-                        this.options.formatter.options);
+
+        //check renderer
+        if (!$defined(this.options.renderer)) {
+            //set a default renderer
+            this.options.renderer = new Jx.Grid.Renderer.Text({
+                textTemplate: '{' + this.name + '}'
+            });
+        } else {
+            if (!(this.options.renderer instanceof Jx.Grid.Renderer)) {
+                var t = Jx.type(this.options.renderer);
+                if (t === 'object') {
+                    this.options.renderer = new Jx.Grid.Renderer[this.options.renderer.name.capitalize()](
+                            this.options.renderer.options);
+                }
             }
         }
+
+        this.options.renderer.setColumn(this);
+
+        this.sortImg = new Element('img', {
+            src: Jx.aPixel.src
+        });
+
     },
+    	
     /**
      * APIMethod: getHeaderHTML
-     * Returns the header text wrapped in the tag specified in
-     * options.templates.hedaer.tag
      */
     getHeaderHTML : function () {
-        var text = this.options.header ? this.options.header
-                : this.options.modelField;
-        var ht = this.options.templates.header;
-        var el = new Element(ht.tag, {
-            'class' : 'jxGridCellContent',
-            'html' : text
-        });
-        if ($defined(ht.cssClass)) {
-            if (Jx.type(ht.cssClass) === 'function') {
-                el.addClass(ht.cssClass.run(text));
-            } else {
-                el.addClass(ht.cssClass);
-            }
-        }
-        this.header = el;
-        return el;
+    	if (this.isSortable()) {
+    		this.sortImg.inject(this.domObj);	
+    	}
+      return this.domObj;
     },
 
-    setWidth: function(newWidth) {
-        if (this.rule && parseInt(newWidth,10) >= 0) {
-            this.width = parseInt(newWidth,10);
-            this.rule.style.width = parseInt(newWidth,10) + "px";
+    setWidth: function(newWidth, asCellWidth) {
+        asCellWidth = $defined(asCellWidth) ? asCellWidth : false;
+
+        var delta = this.cellWidth - this.width;
+        if (!asCellWidth) {
+    	    this.width = parseInt(newWidth,10);
+    	    this.cellWidth = this.width + delta;
+    	    this.options.width = newWidth;
+        } else {
+            this.width = parseInt(newWidth,10) - delta;
+            this.cellWidth = newWidth;
+            this.options.width = this.width;
         }
+      if (this.rule && parseInt(this.width,10) >= 0) {
+          this.rule.style.width = parseInt(this.width,10) + "px";
+      }
+      if (this.cellRule && parseInt(this.cellWidth,10) >= 0) {
+          this.cellRule.style.width = parseInt(this.cellWidth,10) + "px";
+      }
     },
+    
+    getWidth: function () {
+    	return this.width;
+    },
+    
+    getCellWidth: function() {
+      return this.cellWidth;
+    },
+    
     /**
-     * APIMethod: getWidth
+     * APIMethod: calculateWidth
      * returns the width of the column.
      *
      * Parameters:
-     * recalculate - {boolean} determines if the width should be recalculated
-     *          if the column is set to autocalculate. Has no effect if the width is
-     *          preset
      * rowHeader - flag to tell us if this calculation is for the row header
      */
-    getWidth : function (recalculate, rowHeader) {
-        rowHeader = $defined(rowHeader) ? rowHeader : false;
+    calculateWidth : function (rowHeader) {
+        //if this gets called then we assume that we want to calculate the width
+    	rowHeader = $defined(rowHeader) ? rowHeader : false;
         var maxWidth;
-        //check for null width or for "auto" setting and measure all contents in this column
-        //in the entire model as well as the header (really only way to do it).
-        if (!$defined(this.width) || recalculate) {
-            if (this.options.width !== null
-                    && this.options.width !== 'auto') {
-                maxWidth = this.width = Jx.getNumber(this.options.width);
-            } else {
-                //calculate the width
-                var model = this.grid.getModel();
-                var oldPos = model.getPosition();
-                maxWidth = 0;
-                model.first();
-                while (model.valid()) {
-                    //check size by placing text into a TD and measuring it.
-                    //TODO: this should add .jxGridRowHead/.jxGridColHead if
-                    //      this is a header to get the correct measurement.
-                    var text = model.get(this.options.modelField);
-                    var klass = 'jxGridCell';
-                    if (this.grid.row.useHeaders()
-                            && this.options.modelField === this.grid.row
-                            .getRowHeaderField()) {
-                        klass = 'jxGridRowHead';
-                    }
-                    var s = this.measure(text, klass, rowHeader);
-                    if (s.width > maxWidth) {
-                        maxWidth = s.width;
-                    }
-                    if (model.hasNext()) {
-                        model.next();
-                    } else {
-                        break;
-                    }
+        var maxCellWidth;
+        
+        var model = this.grid.getModel();
+        model.first();
+        if ((this.options.renderMode == 'fixed' || 
+             this.options.renderMode == 'expand') && 
+            model.valid) {
+          var t = new Element('span', {
+            'class': 'jxGridCellContent',
+            html: 'a',
+            styles: {
+              width: this.options.width
+            }
+          });
+          var s = this.measure(t,'jxGridCell');
+          maxWidth = s.content.width;
+          maxCellWidth = s.cell.width;
+        } else {
+            //calculate the width
+            var oldPos = model.getPosition();
+            maxWidth = maxCellWidth = 0;
+            while (model.valid()) {
+                //check size by placing text into a TD and measuring it.
+                this.options.renderer.render();
+                var text = document.id(this.options.renderer);
+                var klass = 'jxGridCell';
+                if (this.grid.row.useHeaders()
+                        && this.options.name === this.grid.row
+                        .getRowHeaderColumn()) {
+                    klass = 'jxGridRowHead';
                 }
+                var s = this.measure(text, klass, rowHeader, model.getPosition());
+                if (s.content.width > maxWidth) {
+                    maxWidth = s.content.width;
+                }
+                if (s.cell.width > maxCellWidth) {
+                  maxCellWidth = s.cell.width
+                }
+                if (model.hasNext()) {
+                    model.next();
+                } else {
+                    break;
+                }
+            }
 
-                //check the column header as well (unless this is the row header)
-                if (!(this.grid.row.useHeaders() && this.options.modelField === this.grid.row
-                        .getRowHeaderField())) {
-                    klass = 'jxGridColHead';
-                    if (this.isEditable()) {
-                        klass += ' jxColEditable';
-                    }
-                    if (this.isResizable()) {
-                        klass += ' jxColResizable';
-                    }
-                    if (this.isSortable()) {
-                        klass += ' jxColSortable';
-                    }
-                    s = this.measure(this.options.header, klass);
-                    if (s.width > maxWidth) {
-                        maxWidth = s.width;
-                    }
+            //check the column header as well (unless this is the row header)
+            if (!(this.grid.row.useHeaders() && 
+                this.options.name === this.grid.row.getRowHeaderColumn())) {
+                klass = 'jxGridColHead';
+                if (this.isEditable()) {
+                    klass += ' jxColEditable';
                 }
-                if (!rowHeader) {
-                    this.width = maxWidth;
+                if (this.isResizable()) {
+                    klass += ' jxColResizable';
                 }
-                model.moveTo(oldPos);
+                if (this.isSortable()) {
+                    klass += ' jxColSortable';
+                }
+                s = this.measure(this.domObj.clone(), klass);
+                if (s.content.width > maxWidth) {
+                    maxWidth = s.content.width;
+                }
+                if (s.cell.width > maxCellWidth) {
+                  maxCellWidth = s.cell.width
+                }
             }
         }
-        if (!rowHeader) {
-            return this.width;
-        } else {
-            return maxWidth;
-        }
+        
+        this.width = maxWidth;
+        this.cellWidth = maxCellWidth;
+        model.moveTo(oldPos);
+        return this.width;
     },
     /**
      * Method: measure
@@ -27508,32 +29538,33 @@ Jx.Column = new Class({
      * text - the text to measure
      * klass - a string indicating and extra classes to add so that
      *          css classes can be taken into account.
+     * rowHeader - 
+     * row - 
      */
-    measure : function (text, klass, rowHeader) {
-        if ($defined(this.options.formatter)
-                && text !== this.options.header) {
-            text = this.options.formatter.format(text);
-        }
+    measure : function (text, klass, rowHeader, row) {
         var d = new Element('span', {
             'class' : klass
         });
-        var el = new Element('span', {
-            'html' : text,
-            'class': 'jxGridCellContent'
-        }).inject(d);
-        d.setStyle('height', this.grid.row.getHeight());
+        text.inject(d);
+        //d.setStyle('height', this.grid.row.getHeight(row));
         d.setStyles({
             'visibility' : 'hidden',
             'width' : 'auto'
-            //'font-family' : 'Arial'  removed because CSS may impose different font(s)
         });
+        
         d.inject(document.body, 'bottom');
         var s = d.measure(function () {
-            //if nogt rowHeader, get size of innner span
+            //if not rowHeader, get size of innner span
             if (!rowHeader) {
-                return this.getFirst().getContentBoxSize();
+                return {
+                  content: this.getFirst().getContentBoxSize(),
+                  cell: this.getFirst().getMarginBoxSize()
+                }
             } else {
-                return this.getMarginBoxSize();
+                return {
+                  content: this.getMarginBoxSize(),
+                  cell: this.getMarginBoxSize()
+                }
             }
         });
         d.destroy();
@@ -27568,35 +29599,23 @@ Jx.Column = new Class({
         return this.options.isHidden;
     },
     /**
+     * APIMethod: isAttached
+     * returns whether this column is attached to a store.
+     */
+    isAttached: function () {
+        return this.options.renderer.attached;
+    },
+
+    /**
      * APIMethod: getHTML
-     * returns the content of the current model row wrapped in the tag
-     * specified by options.templates.cell.tag and with the appropriate classes
-     * added
+     * calls render method of the renderer object passed in.
      */
     getHTML : function () {
-        var text = this.grid.getModel().get(this.options.modelField);
-        var ct = this.options.templates.cell;
-        if ($defined(this.options.formatter)) {
-            text = this.options.formatter.format(text);
-        }
-        var el = new Element(ct.tag, {
-            'html' : text,
-            'class' : 'jxGridCellContent',
-            styles: {
-                // width: this.getWidth()
-            }
-        });
-        if ($defined(ct.cssClass)) {
-            if (Jx.type(ct.cssClass) === 'function') {
-                el.addClass(ct.cssClass.run(text));
-            } else {
-                el.addClass(ct.cssClass);
-            }
-        }
-        return el;
+        this.options.renderer.render();
+        return document.id(this.options.renderer);
     }
 
-});// $Id: columns.js 660 2009-12-05 21:21:20Z jonlb@comcast.net $
+});// $Id: columns.js 878 2010-04-25 22:07:31Z jonlb@comcast.net $
 /**
  * Class: Jx.Columns
  *
@@ -27613,6 +29632,7 @@ Jx.Column = new Class({
  */
 Jx.Columns = new Class({
 
+  Family: 'Jx.Columns',
     Extends : Jx.Object,
 
     options : {
@@ -27641,6 +29661,11 @@ Jx.Columns = new Class({
     columns : [],
 
     parameters: ['options','grid'],
+    /**
+     * Property: hasExpandable
+     * 
+     */
+    hasExpandable: null,
 
     /**
      * APIMethod: init
@@ -27653,16 +29678,21 @@ Jx.Columns = new Class({
             this.grid = this.options.grid;
         }
 
+        this.hasExpandable = false;
+
         this.options.columns.each(function (col) {
             //check the column to see if it's a Jx.Grid.Column or an object
-                if (col instanceof Jx.Column) {
-                    this.columns.push(col);
-                } else if (Jx.type(col) === "object") {
-                    col.grid = this.grid;
-                    this.columns.push(new Jx.Column(col));
-                }
+            if (col instanceof Jx.Column) {
+                this.columns.push(col);
+            } else if (Jx.type(col) === "object") {
+                this.columns.push(new Jx.Column(col,this.grid));
+            }
+            var c = this.columns[this.columns.length - 1 ];
+            if (c.options.renderMode === 'expand') {
+                this.hasExpandable = true;
+            }
 
-            }, this);
+        }, this);
     },
     /**
      * APIMethod: getHeaderHeight
@@ -27729,11 +29759,16 @@ Jx.Columns = new Class({
      * index - an integer denoting the placement of the column in the grid (zero-based)
      */
     getByGridIndex : function (index) {
-        var headers = this.grid.colTableBody.getFirst().getChildren();
+        var headers = this.options.useHeaders ? 
+                        this.grid.colTableBody.getFirst().getChildren() :
+                        this.grid.gridTableBody.getFirst().getChildren();
         var cell = headers[index];
-        var hClasses = cell.get('class').split(' ').filter(function (cls) {
-            return cls.test('jxColHead-');
-        });
+          var hClasses = cell.get('class').split(' ').filter(function (cls) {
+            if(this.options.useHeaders)
+              return cls.test('jxColHead-')
+            else
+              return cls.test('jxCol-');
+          }.bind(this));
         var parts = hClasses[0].split('-');
         return this.getByName(parts[1]);
     },
@@ -27747,17 +29782,17 @@ Jx.Columns = new Class({
      */
     getHeaders : function (list) {
         var r = this.grid.row.useHeaders();
-        var hf = this.grid.row.getRowHeaderField();
+        var hf = this.grid.row.getRowHeaderColumn();
         this.columns.each(function (col, idx) {
-            if (r && hf === col.options.modelField) {
+            if (r && hf === col.options.name) {
                 //do nothing
             } else if (!col.isHidden()) {
-                var th = new Element('td', {
+                var th = new Element('th', {
                     'class' : 'jxGridColHead jxGridCol'+idx
                 });
                 th.adopt(col.getHeaderHTML());
                 // th.setStyle('width', col.getWidth());
-                th.addClass('jxColHead-' + col.options.modelField);
+                th.addClass('jxColHead-' + col.name);
                 //add other styles for different attributes
                 if (col.isEditable()) {
                     th.addClass('jxColEditable');
@@ -27787,15 +29822,20 @@ Jx.Columns = new Class({
      */
     getColumnCells : function (list) {
         var r = this.grid.row;
-        var f = r.getRowHeaderField();
+        var f = r.getRowHeaderColumn();
         var h = r.useHeaders();
         this.columns.each(function (col, idx) {
-            if (h && col.options.modelField !== f && !col.isHidden()) {
+            if (h && col.name !== f && !col.isHidden()) {
                 list.add(this.getColumnCell(col, idx));
             } else if (!h && !col.isHidden()) {
                 list.add(this.getColumnCell(col, idx));
             }
         }, this);
+        if (!this.hasExpandable) {
+            list.add(new Element('td',{
+                'class': 'jxGridCellUnattached'
+            }));
+        }
     },
     /**
      * APIMethod: getColumnCell
@@ -27810,7 +29850,7 @@ Jx.Columns = new Class({
             'class' : 'jxGridCell'
         });
         td.adopt(col.getHTML());
-        td.addClass('jxCol-' + col.options.modelField);
+        td.addClass('jxCol-' + col.name);
         td.addClass('jxGridCol'+idx);
         //add other styles for different attributes
         if (col.isEditable()) {
@@ -27822,27 +29862,106 @@ Jx.Columns = new Class({
         if (col.isSortable()) {
             td.addClass('jxColSortable');
         }
+        if (!col.isAttached()) {
+            td.addClass('jxGridCellUnattached');
+        }
 
         td.store('jxCellData',{
             col: col,
-            index: idx,
+            index: idx, //This is the position of the column
             row: this.grid.model.getPosition()
         });
 
         return td;
     },
+    
+    calculateWidths: function () {
+      //to calculate widths we loop through each column
+      var expand = null;
+      var totalWidth = 0;
+      var rowHeaderWidth = 0;
+      this.columns.each(function(col,idx){
+        //are we checking the rowheader?
+        var rowHeader = false;
+        if (col.name == this.grid.row.options.headerColumn) {
+          rowHeader = true;
+        }
+        //if it's fixed, set the width to the passed in width
+        if (col.options.renderMode == 'fixed') {
+          col.calculateWidth(); //col.setWidth(col.options.width);
+          
+        } else if (col.options.renderMode == 'fit') {
+          col.calculateWidth(rowHeader);
+        } else if (col.options.renderMode == 'expand' && !$defined(expand)) {
+          expand = col;
+        } else {
+          //treat it as fixed if has width, otherwise as fit
+          if ($defined(col.options.width)) {
+            col.setWidth(col.options.width);
+          } else {
+            col.calculateWidth(rowHeader);
+          }
+        }
+        if (!col.isHidden() && !(col.name == this.grid.row.options.headerColumn)) {
+            totalWidth += Jx.getNumber(col.getCellWidth());
+            if (rowHeader) {
+                rowHeaderWidth = col.getWidth();
+            }
+        }
+      },this);
+      
+      // width of the container
+      //var containerWidth = this.grid.gridObj.getContentBoxSize();
+      var gridSize = this.grid.gridObj.getContentBoxSize();
+      if (gridSize.width > totalWidth) {
+        //now figure the expand column
+        if ($defined(expand)) {
+          // var leftOverSpace = gridSize.width - totalWidth + rowHeaderWidth;
+          // -2 is for the right hand border on the cell and the table
+          var leftOverSpace = gridSize.width - totalWidth - 2;
+          if (leftOverSpace >= expand.options.width) {
+            //in order for this to be set properly the cellWidth must be the
+            //leftover space. we need to figure out the delta value and
+            //subtract it from the leftover width
+            expand.options.width = leftOverSpace;
+            expand.calculateWidth();
+            expand.setWidth(leftOverSpace, true);
+            totalWidth += leftOverSpace;
+          } else {
+            expand.setWidth(expand.options.width);
+          }
+        }
+      } //else {
+      this.grid.gridTable.setContentBoxSize({'width': totalWidth - rowHeaderWidth});
+      this.grid.colTable.setContentBoxSize({'width': totalWidth - rowHeaderWidth});
+      // }
+    },
 
     createRules: function(styleSheet, scope) {
         this.columns.each(function(col, idx) {
-            var selector = scope+' .jxGridCol'+idx+', '+scope + " .jxGridCol" + idx + " .jxGridCellContent";
-            col.rule = Jx.Styles.insertCssRule(selector, '', styleSheet);
+            var selector = scope+' .jxGridCol'+idx
+            var dec = '';
+            if (col.options.renderMode === 'fixed' || col.options.renderMode === 'expand') {
+              //set the white-space to 'normal !important'
+              dec = 'white-space: normal !important';
+            }
+            col.cellRule = Jx.Styles.insertCssRule(selector, dec, styleSheet);
+            col.cellRule.style.width = col.getCellWidth() + "px";
+
+            var selector = scope+" .jxGridCol" + idx + " .jxGridCellContent";
+            col.rule = Jx.Styles.insertCssRule(selector, dec, styleSheet);
             col.rule.style.width = col.getWidth() + "px";
+
         }, this);
     },
 
     updateRule: function(column) {
         var col = this.getByName(column);
-        col.rule.style.width = col.getWidth(true) + "px";
+        if (col.options.renderMode === 'fit') {
+          col.calculateWidth();
+        }
+        col.rule.style.width = col.getWidth() + "px";
+        col.cellRule.style.width = col.getCellWidth() + "px";
     },
     
     /**
@@ -27860,13 +29979,19 @@ Jx.Columns = new Class({
      * name - the name of the column to get an index for
      */
     getIndexFromGrid : function (name) {
-        var headers = this.grid.colTableBody.getFirst().getChildren();
+        var headers = this.options.useHeaders ? 
+                        this.grid.colTableBody.getFirst().getChildren() :
+                        this.grid.gridTableBody.getFirst().getChildren();
         var c;
         var i = -1;
+        var self = this;
         headers.each(function (h) {
             i++;
             var hClasses = h.get('class').split(' ').filter(function (cls) {
-                return cls.test('jxColHead-');
+                if(self.options.useHeaders)
+                  return cls.test('jxColHead-');
+                else
+                  return cls.test('jxCol-');
             });
             hClasses.each(function (cls) {
                 if (cls.test(name)) {
@@ -27878,7 +30003,7 @@ Jx.Columns = new Class({
     }
 
 });
-// $Id: row.js 649 2009-11-30 22:19:48Z pagameba $
+// $Id: row.js 809 2010-03-28 04:15:14Z jonlb@comcast.net $
 /**
  * Class: Jx.Row
  *
@@ -27896,6 +30021,7 @@ Jx.Columns = new Class({
  */
 Jx.Row = new Class({
 
+	Family: 'Jx.Row',
     Extends : Jx.Object,
 
     options : {
@@ -27922,7 +30048,7 @@ Jx.Row = new Class({
         },
         /**
          * Option: rowHeight
-         * The height of the row. Make it null or 'auto' to auto-calculate
+         * The height of the row. Make it null or 'auto' to auto-calculate.
          */
         rowHeight : 20,
         /**
@@ -27931,30 +30057,26 @@ Jx.Row = new Class({
          */
         headerWidth : 20,
         /**
-         * Option: headerField
-         * The field in the model to use as the header
+         * Option: headerColumn
+         * The name of the column in the model to use as the header
          */
-        headerField : 'id',
-        /**
-         * Option: templates
-         * objects used to determine the type of tag and css class to
-         * assign to a header cell. The css class can
-         * also be a function that returns a string to assign as the css
-         * class. The function will be passed the text to be formatted.
-         */
-        templates: {
-            header: {
-                tag: 'span',
-                cssClass: null
-            }
-        }
-
+        headerColumn : 'id'
     },
     /**
      * Property: grid
      * A reference to the grid that this row model belongs to
      */
     grid : null,
+    /**
+     * Property: heights
+     * This will hold the calculated height of each row in the grid.
+     */
+    heights: [],
+    /**
+     * Property: rules
+     * A hash that will hold all of the CSS rules for the rows.
+     */
+    rules: $H(),
 
     parameters: ['options','grid'],
 
@@ -27973,16 +30095,18 @@ Jx.Row = new Class({
      * APIMethod: getGridRowElement
      * Used to create the TR for the main grid row
      */
-    getGridRowElement : function () {
+    getGridRowElement : function (row) {
 
         var tr = new Element('tr');
-        tr.setStyle('height', this.getHeight());
+        //tr.setStyle('height', this.getHeight());
         if (this.options.alternateRowColors) {
             tr.className = (this.grid.getModel().getPosition() % 2) ? this.options.rowClasses.even
                     : this.options.rowClasses.odd;
         } else {
             tr.className = this.options.rowClasses.all;
         }
+        tr.store('jxRowData', {row: row});
+        tr.addClass('jxGridRow'+row);
         return tr;
     },
     /**
@@ -27992,24 +30116,16 @@ Jx.Row = new Class({
     getRowHeaderCell : function () {
         //get and set text for element
         var model = this.grid.getModel();
-        var th = new Element('td', {
+        var th = new Element('th', {
             'class' : 'jxGridRowHead'
         });
-
-        var text = model.get(this.options.headerField);
-        var ht = this.options.templates.header;
-        var el = new Element(ht.tag, {
-            'class' : 'jxGridCellContent',
-            'html' : text
-        }).inject(th);
-        if ($defined(ht.cssClass)) {
-            if (Jx.type(ht.cssClass) === 'function') {
-                el.addClass(ht.cssClass.run(text));
-            } else {
-                el.addClass(ht.cssClass);
-            }
-        }
-
+        var col = this.grid.columns.getByName(this.options.headerColumn);
+        var el = col.getHTML();
+        el.inject(th);
+        th.store('jxCellData',{
+        	row: model.getPosition(),
+        	rowHeader: true
+        });
         return th;
 
     },
@@ -28020,19 +30136,64 @@ Jx.Row = new Class({
     getRowHeaderWidth : function () {
         //this can be drawn from the column for the
         //header field
-        var col = this.grid.columns.getByField(this.options.headerField);
-        return col.getWidth(true, true);
+    	var col = this.grid.columns.getByName(this.options.headerColumn);
+    	if (!$defined(col.getWidth())) {
+    		col.calculateWidth(true);
+    	}
+        return col.getWidth();
     },
 
     /**
      * APIMethod: getHeight
      * determines and returns the height of a row
      */
-    getHeight : function () {
+    getHeight : function (row) {
         //this should eventually compute a height, however, we would need
         //a fixed width to do so reliably. For right now, we use a fixed height
         //for all rows.
-        return this.options.rowHeight;
+    	if ((!$defined(this.options.rowHeight) || this.options.rowHeight === 'auto') && $defined(this.heights[row])) {
+    		return this.heights[row];
+    	} else if (Jx.type(this.options.rowHeight === 'number')) {
+    		return this.options.rowHeight;
+    	}
+    },
+    calculateHeights : function () {
+    	//grab all rows in the grid body
+      document.id(this.grid.gridTableBody).getChildren().each(function(row){
+        row = document.id(row);
+        var data = row.retrieve('jxRowData');
+        var s = row.getContentBoxSize();
+        this.heights[data.row] = s.height;
+      },this);
+      document.id(this.grid.rowTableHead).getChildren().each(function(row){
+        row = document.id(row);
+        var data = row.retrieve('jxRowData');
+        if (data) {
+          var s = row.getContentBoxSize();
+          this.heights[data.row] = Math.max(this.heights[data.row],s.height);
+          if (Browser.Engine.webkit) {
+              //for some reason webkit (Safari and Chrome)
+              this.heights[data.row] -= 1;
+          }
+        }
+      },this);
+    	
+    },
+    
+    createRules: function(styleSheet, scope) {
+        this.grid.gridTableBody.getChildren().each(function(row, idx) {
+            var selector = scope+' .jxGridRow'+idx;
+            var rule = Jx.Styles.insertCssRule(selector, '', styleSheet);
+            this.rules.set('jxGridRow'+idx, rule);
+            rule.style.height = this.heights[idx] + "px";
+
+            if (Browser.Engine.webkit) {
+                selector += " th";
+                var thRule = Jx.Styles.insertCssRule(selector, '', styleSheet);
+                thRule.style.height = this.heights[idx] + "px";
+            }
+
+        }, this);
     },
     /**
      * APIMethod: useHeaders
@@ -28050,10 +30211,10 @@ Jx.Row = new Class({
      */
     getRowHeader : function (list) {
         var th = this.getRowHeaderCell();
-        if (this.grid.model.getPosition() === 0) {
-            var rowWidth = this.getRowHeaderWidth();
-            th.setStyle("width", rowWidth);
-        }
+        //if (this.grid.model.getPosition() === 0) {
+        //    var rowWidth = this.getRowHeaderWidth();
+        //    th.setStyle("width", rowWidth);
+        //}
         th.store('jxCellData', {
             rowHeader: true,
             row: this.grid.model.getPosition()
@@ -28061,16 +30222,16 @@ Jx.Row = new Class({
         list.add(th);
     },
     /**
-     * APIMethod: getRowHeaderField
-     * returns the name of the model field that is used for the header
+     * APIMethod: getRowHeaderColumn
+     * returns the name of the column that is used for the row header
      */
-    getRowHeaderField : function () {
-        return this.options.headerField;
+    getRowHeaderColumn : function () {
+        return this.options.headerColumn;
     }
 });
-// $Id: plugin.js 649 2009-11-30 22:19:48Z pagameba $
+// $Id: plugin.js 822 2010-03-31 11:28:31Z conrad.barthelmes $
 /**
- * Class: Jx.Grid.Plugin
+ * Class: Jx.Plugin
  *
  * Extend: <Jx.Object>
  *
@@ -28106,8 +30267,25 @@ Jx.Plugin = new Class({
      */
     detach: function(obj){
         obj.deregisterPlugin(this);
-    }
+    },
 
+    /**
+     * APIMethod: changeText
+     * This method should be overridden by subclasses. It should be used
+     * to change any language specific default text that is used by the widget.
+     *
+     * Parameters:
+     * lang - the language being changed to or that had it's data set of
+     *    translations changed.
+     */
+    changeText: function (lang) {
+        //if the mask is being used then recreate it. The code will pull
+        //the new text automatically
+        if (this.busy) {
+            this.setBusy(false);
+            this.setBusy(true);
+        }
+    }
 });// $Id: plugin.grid.js 649 2009-11-30 22:19:48Z pagameba $
 /**
  * Class: Jx.Plugin.Grid
@@ -28119,7 +30297,7 @@ Jx.Plugin = new Class({
  *
  * This file is licensed under an MIT style license
  */
-Jx.Plugin.Grid = {};// $Id: grid.js 672 2009-12-24 04:37:27Z jonlb@comcast.net $
+Jx.Plugin.Grid = {};// $Id: grid.js 855 2010-04-20 06:04:53Z jonlb@comcast.net $
 /**
  * Class: Jx.Grid
  *
@@ -28144,8 +30322,7 @@ Jx.Plugin.Grid = {};// $Id: grid.js 672 2009-12-24 04:37:27Z jonlb@comcast.net $
  * Sorter - sorts rows by specific column
  *
  * Jx.Grid renders data that comes from an external source.  This external
- * source, called the model, must be a Jx.Store or extended from it (such as
- * Jx.Store.Remote).
+ * source, called the model, must be a Jx.Store or extended from it.
  *
  * Events:
  * gridCellEnter(cell, list) - called when the mouse enters a cell
@@ -28165,6 +30342,9 @@ Jx.Grid = new Class({
     Family : 'Jx.Grid',
     Extends : Jx.Widget,
 
+    Binds: ['modelChanged','render','addRow','removeRow','removeRows',
+            'onSelect', 'onUnselect','onMouseEnter','onMouseLeave'],
+    
     options : {
         /**
          * Option: parent
@@ -28199,7 +30379,7 @@ Jx.Grid = new Class({
 
         /**
          * Option: model
-         * An instance of Jx.Store or one of its descendants
+         * An instance of Jx.Store
          */
         model : null,
 
@@ -28250,24 +30430,15 @@ Jx.Grid = new Class({
     init : function () {
         this.uniqueId = this.generateId('jxGrid_');
         
-        this.bound = {
-                columnChanged: this.modelChanged.bind(this),
-                render: this.render.bind(this),
-                addRow: this.addRow.bind(this),
-                removeRow: this.removeRow.bind(this),
-                multipleRemove: this.removeRows.bind(this)
-        };
-        
         var opts;
         if ($defined(this.options.model)
                 && this.options.model instanceof Jx.Store) {
             this.model = this.options.model;
-            this.model.addEvent('storeColumnChanged', this.bound.columnChanged);
-            this.model.addEvent('storeSortFinished', this.bound.render);
-            this.model.addEvent('storeRecordAdded', this.bound.addRow);
-            this.model.addEvent('storeRecordRemoved', this.bound.removeRow);
-            this.model.addEvent('storeMultipleRecordsRemoved', this.bound.multipleRemove);
-            this.model.addEvent('storeDataLoaded', this.bound.render);
+            this.model.addEvent('storeColumnChanged', this.modelChanged);
+            this.model.addEvent('storeSortFinished', this.render);
+            this.model.addEvent('storeRecordAdded', this.addRow);
+            this.model.addEvent('storeRecordRemoved', this.removeRow);
+            this.model.addEvent('storeMultipleRecordsRemoved', this.removeRows);
         }
 
         if ($defined(this.options.columns)) {
@@ -28292,8 +30463,6 @@ Jx.Grid = new Class({
         } else {
             this.row = new Jx.Row({grid: this});
         }
-
-
 
         //initialize the grid
         this.domObj = new Element('div', {'class':this.uniqueId});
@@ -28322,7 +30491,7 @@ Jx.Grid = new Class({
         this.colTable = new Element('table', {
             'class' : 'jxGridTable jxGridHeader'
         });
-        this.colTableBody = new Element('tbody');
+        this.colTableBody = new Element('thead');
         this.colTable.appendChild(this.colTableBody);
         this.colObj.appendChild(this.colTable);
 
@@ -28345,7 +30514,7 @@ Jx.Grid = new Class({
             }
         });
         this.gridTable = new Element('table', {
-            'class' : 'jxGridTable'
+            'class' : 'jxGridTable jxGridContent'
         });
         this.gridTableBody = new Element('tbody');
         this.gridTable.appendChild(this.gridTableBody);
@@ -28360,19 +30529,11 @@ Jx.Grid = new Class({
 
         this.gridObj.addEvent('scroll', this.onScroll.bind(this));
 
-        //bind events
-        this.bound = {
-            select: this.onSelect.bind(this),
-            unselect: this.onUnselect.bind(this),
-            mouseenter: this.onMouseEnter.bind(this),
-            mouseleave: this.onMouseLeave.bind(this)
-        };
-
         //setup the selection
         this.selection = new Jx.Selection();
         this.selection.addEvents({
-            select: this.bound.select,
-            unselect: this.bound.unselect
+            select: this.onSelect,
+            unselect: this.onUnselect
         });
         this.parent();
 
@@ -28407,16 +30568,8 @@ Jx.Grid = new Class({
 
         var size = this.domObj.getContentBoxSize();
 
-        //sum all of the column widths except the hidden columns and the header column
-        var w = size.width - rowWidth - 1;
-        var totalCols = 0;
-        this.columns.columns.each(function (col) {
-            if (col.options.modelField !== this.row.getRowHeaderField()
-                    && !col.isHidden()) {
-                totalCols += col.getWidth();
-            }
-        }, this);
 
+        
         /* -1 because of the right/bottom borders */
         this.rowColObj.setStyles({
             width : rowWidth - 1,
@@ -28442,6 +30595,25 @@ Jx.Grid = new Class({
             width : size.width - rowWidth - 1,
             height : size.height - colHeight - 1
         });
+
+    },
+
+    resizeRowsCols: function (mode) {
+        mode = $defined(mode) ? mode : 'all';
+
+        if (mode === 'all' || mode === 'columns') {
+            Jx.Styles.removeStyleSheet(this.styleSheet + "Columns");
+            Jx.Styles.enableStyleSheet(this.styleSheet + "Columns");
+            this.columns.calculateWidths();
+            this.columns.createRules(this.styleSheet + "Columns", "."+this.uniqueId);
+        }
+        
+        if (mode === 'all' || mode === 'rows') {
+            Jx.Styles.removeStyleSheet(this.styleSheet + "Rows");
+            Jx.Styles.enableStyleSheet(this.styleSheet + "Rows");
+            this.row.calculateHeights();
+            this.row.createRules(this.styleSheet + "Rows", "."+this.uniqueId);
+        }
 
     },
 
@@ -28490,6 +30662,12 @@ Jx.Grid = new Class({
         this.gridTable.replaceChild(n, this.gridTableBody);
         this.gridTableBody = n;
 
+        document.id(this.rowColObj).empty();
+        
+        if (Jx.Styles.isStyleSheetDefined(this.styleSheet)) {
+        	Jx.Styles.removeStyleSheet(this.styleSheet);
+        }
+
     },
 
     /**
@@ -28523,70 +30701,22 @@ Jx.Grid = new Class({
                 this.columns.getHeaders(headerList);
 
                 /* one extra column at the end for filler */
-                th = new Element('td', {
-                    'class':'jxGridColHead'
-                }).inject(trBody);
-                new Element('span',{
-                    'class': 'jxGridCellContent',
-                    styles : {
-                        width : 1000,
-                        height : colHeight - 1
+                th = new Element('th', {
+                    'class':'jxGridColHead',
+                    styles: {
+                      width: 1000,
+                      height: colHeight - 1
                     }
-                }).inject(th);
-
+                }).inject(trBody);
             } else {
                 //hide the headers
                 this.colTableBody.setStyle('visibility', 'hidden');
             }
 
-            if (this.row.useHeaders()) {
-                this.rowTableHead.setStyle('visibility', 'visible');
-
-                var rowHeight = this.row.getHeight();
-
-
-
-                //loop through all rows and add header
-                this.model.first();
-                while (this.model.valid()) {
-                    var tr = new Element('tr', {
-                        styles : {
-                            height : rowHeight
-                        }
-                    });
-                    var rowHeaderList = this.makeList(tr);
-                    this.row.getRowHeader(rowHeaderList);
-                    this.rowTableHead.appendChild(tr);
-                    if (this.model.hasNext()) {
-                        this.model.next();
-                    } else {
-                        break;
-                    }
-                }
-                /* one extra row at the end for filler */
-                tr = new Element('tr').inject(this.rowTableHead);
-                th = new Element('td', {
-                    'class' : 'jxGridRowHead',
-                    styles : {
-                        width : this.row.getRowHeaderWidth(),
-                        height : 1000
-                    }
-                }).inject(tr);
-            } else {
-                //hide row headers
-                this.rowTableHead.setStyle('visibility', 'hidden');
-            }
-
-            colHeight = this.columns.getHeaderHeight();
-
-
             //This section actually adds the rows
             this.model.first();
             while (this.model.valid()) {
-                tr = this.row.getGridRowElement();
-                tr.store('jxRowData', {row: this.model.getPosition()});
-
-
+                tr = this.row.getGridRowElement(this.model.getPosition());
                 var rl = this.makeList(tr);
                 this.gridTableBody.appendChild(tr);
                 //this.rowList.add(rl.container);
@@ -28601,10 +30731,47 @@ Jx.Grid = new Class({
                 }
 
             }
+            
+            
+            //Moved rowheaders after other columns so we can figure the heights
+            //of each row (after render)
+            if (this.row.useHeaders()) {
+                this.rowTableHead.setStyle('visibility', 'visible');
 
-            Jx.Styles.enableStyleSheet(this.styleSheet);
-            this.columns.createRules(this.styleSheet, "."+this.uniqueId);
+                //loop through all rows and add header
+                this.model.first();
+                while (this.model.valid()) {
+                    var tr = new Element('tr',{
+                    	'class': 'jxGridRow'+this.model.getPosition()
+                    });
+                    tr.store('jxRowData', {row:this.model.getPosition()});
+                    var rowHeaderList = this.makeList(tr);
+                    this.row.getRowHeader(rowHeaderList);
+                    this.rowTableHead.appendChild(tr);
+                    if (this.model.hasNext()) {
+                        this.model.next();
+                    } else {
+                        break;
+                    }
+                }
+                /* one extra row at the end for filler */
+                tr = new Element('tr').inject(this.rowTableHead);
+                th = new Element('th', {
+                    'class' : 'jxGridRowHead',
+                    styles : {
+                        width : this.row.getRowHeaderWidth(),
+                        height : 1000
+                    }
+                }).inject(tr);
+            } else {
+                //hide row headers
+                this.rowTableHead.setStyle('visibility', 'hidden');
+            }
+            
             this.domObj.resize();
+            this.resizeRowsCols();
+            this.resize();
+
             this.fireEvent('doneCreateGrid', this);
         } else {
             this.model.load();
@@ -28623,14 +30790,13 @@ Jx.Grid = new Class({
 
         var currentRow = this.model.getPosition();
         this.model.moveTo(row);
-
-        var newTD = this.columns.getColumnCell(this.columns.getByName(col));
+        // need to find out whether the header is used or not, to have the right reference back
+        var colIndex = this.options.row.useHeaders ? column+1 : column;
+        var newTD = this.columns.getColumnCell(this.columns.getByName(col),colIndex);
         //get parent list
         var list = td.getParent().retrieve('jxList');
         list.replace(td, newTD);
         this.columns.updateRule(col);
-        //newTD.replaces(td);
-
         this.model.moveTo(currentRow);
     },
     
@@ -28664,14 +30830,12 @@ Jx.Grid = new Class({
                     var lastTr = this.rowTableHead.children[this.rowTableHead.children.length - 1];
                     tr.inject(lastTr, 'before');
                 }
-                //this.rowTableHead.appendChild(tr);
             }
             tr = this.row.getGridRowElement();
             tr.store('jxRowData', {row: this.model.getPosition()});
             var rl = this.makeList(tr);
             this.columns.getColumnCells(rl);
             tr.inject(this.gridTableBody, position);
-            //this.gridTableBody.appendChild(tr);
         }
     },
     
@@ -28716,8 +30880,8 @@ Jx.Grid = new Class({
         }, this.selection);
         var target = this;
         l.addEvents({
-            mouseenter: this.bound.mouseenter,
-            mouseleave: this.bound.mouseleave
+            mouseenter: this.onMouseEnter,
+            mouseleave: this.onMouseLeave
         });
         this.lists.push(l);
         return l;
@@ -28737,10 +30901,293 @@ Jx.Grid = new Class({
 
     onMouseLeave: function (cell, list) {
         this.fireEvent('gridCellLeave', [cell,list,this]);
+    },
+
+    changeText : function(lang) {
+        this.parent();
+        this.resize();
+        this.resizeRowsCols();     
     }
 
 });
-// $Id: grid.selector.js 662 2009-12-08 06:56:43Z jonlb@comcast.net $
+/**
+ * Class: Jx.Grid.Renderer
+ * This is the base class and namespace for all grid renderers.
+ * 
+ * Extends: <Jx.Widget>
+ * We extended Jx.Widget to take advantage of templating support.
+ */
+Jx.Grid.Renderer = new Class({
+  
+  Family: 'Jx.Grid.Renderer',
+  Extends: Jx.Widget,
+  
+  parameters: ['options'],
+  
+  options: {
+    deferRender: true,
+    /**
+     * Option: template
+     * The template for rendering this cell. Will be processed as per
+     * the Jx.Widget standard.
+     */
+    template: '<span class="jxGridCellContent"></span>'
+  },
+    /**
+     * APIProperty: attached
+     * tells whether this renderer is used in attached mode
+     * or not. Should be set by renderers that get a reference to
+     * the store.
+     */
+  attached: null,
+
+  classes: $H({
+    domObj: 'jxGridCellContent'
+  }),
+
+  column: null,
+
+  init: function () {
+    this.parent();
+    this.attached = false;
+  },
+  
+  render: function () {
+    this.parent();
+  },
+  
+  setColumn: function (column) {
+    if (column instanceof Jx.Column) {
+      this.column = column;
+    }
+  }
+  
+});/**
+ * Class: Jx.Grid.Renderer.Text
+ * This is the default renderer for grid cells. It works the same as the 
+ * original column implementation. It needs a store, a field name, and an 
+ * optional formatter as well as other options.
+ * 
+ * Extends: <Jx.Grid.Renderer>
+ * 
+ */
+Jx.Grid.Renderer.Text = new Class({
+  
+  Family: 'Jx.Grid.Renderer.Text',
+  Extends: Jx.Grid.Renderer,
+  
+  options: {
+        /**
+         * Option: formatter
+         * an instance of <Jx.Formatter> or one of its subclasses which
+         * will be used to format the data in this column. It can also be
+         * an object containing the name (This should be the part after
+         * Jx.Formatter in the class name. For instance, to get a currency
+         * formatter, specify 'Currency' as the name.) and options for the
+         * needed formatter (see individual formatters for options).
+         * (code)
+         * {
+         *    name: 'formatter name',
+         *    options: {}
+         * }
+         * (end)
+         */
+        formatter: null,
+        /**
+         * Option: textTemplate
+         * Will be used for creating the text that goes iside the template. Use
+         * placeholders for indicating the field(s). You can add as much text 
+         * as you want. for example, if you wanted to display someone's full 
+         * name that is brokem up in the model with first and last names you 
+         * can write a template like '{lastName}, {firstName}' and as long as 
+         * the text between { and } are field names in the store they will be
+         * substituted properly.
+         */
+        textTemplate: null,
+        /**
+         * Option: css
+         * A string or function to use in adding classes to the text
+         */
+        css: null
+  },
+  
+  store: null,
+  
+  columnsNeeded: null,
+  
+  
+  init: function () {
+    this.parent();
+    //check the formatter
+    if ($defined(this.options.formatter)
+                && !(this.options.formatter instanceof Jx.Formatter)) {
+            var t = Jx.type(this.options.formatter);
+            if (t === 'object') {
+                this.options.formatter = new Jx.Formatter[this.options.formatter.name](
+                        this.options.formatter.options);
+            }
+        }
+  },
+  
+  setColumn: function (column) {
+    this.parent();
+    
+    this.store = column.grid.getModel();
+    this.attached = true;
+    
+    if ($defined(this.options.textTemplate)) {
+      this.columnsNeeded = this.store.parseTemplate(this.options.textTemplate);
+    }
+  },
+  
+  render: function () {
+    this.parent();
+    
+    var text = '';
+    if ($defined(this.options.textTemplate)) {
+        if (!$defined(this.columnsNeeded) || (Jx.type(this.columnsNeeded) === 'array' && this.columnsNeeded.length === 0)) {
+            this.columnsNeeded = this.store.parseTemplate(this.options.textTemplate);
+        }
+        text = this.store.fillTemplate(null,this.options.textTemplate,this.columnsNeeded);
+    } 
+    
+    if ($defined(this.options.formatter)) {
+        text = this.options.formatter.format(text);
+    }
+
+    this.domObj.set('html',text);
+
+    if ($defined(this.options.css) && Jx.type(this.options.css) === 'function') {
+      this.domObj.addClass(this.options.css.run(text));
+    } else if ($defined(this.options.css) && Jx.type(this.options.css) === 'string'){
+      this.domObj.addClass(this.options.css);
+    }
+        
+  }
+    
+});/**
+ * Class: Jx.Grid.Renderer.CheckBox
+ * Renders a checkbox into the cell. Allows options for connecting the cell
+ * to a model field and propogating changes back to the store.
+ * 
+ * Extends: <Jx.Grid.Renderer>
+ * 
+ */
+Jx.Grid.Renderer.Checkbox = new Class({
+  
+  Family: 'Jx.Grid.Renderer.Checkbox',
+  Extends: Jx.Grid.Renderer,
+  
+  Binds: ['onBlur','onChange'],
+  
+  options: {
+    useStore: false,
+    field: null,
+    updateStore: false,
+    checkboxOptions: {
+      template : '<input class="jxInputContainer jxInputCheck" type="checkbox" name="{name}"/>',
+      name: ''
+    }
+  },
+  
+  init: function () {
+    this.parent();
+  },
+  
+  render: function () {
+    this.parent();
+    var checkbox = new Jx.Field.Checkbox(this.options.checkboxOptions);
+    this.domObj.adopt(document.id(checkbox));
+    
+    if (this.options.useStore) {
+      //set initial state
+      checkbox.setValue(this.store.get(this.options.field));
+    }
+    
+    //hook up change and blur events to change store field
+    checkbox.addEvents({
+      'blur': this.onBlur,
+      'change': this.onChange
+    });
+  },
+  
+  setColumn: function (column) {
+    this.column = column;
+    
+    if (this.options.useStore) {
+      this.store = this.column.grid.getModel();
+      this.attached = true;
+    }
+  },
+  
+  onBlur: function (field) {
+    if (this.options.updateStore) {
+      this.updateStore(field);
+    }
+    this.column.grid.fireEvent('checkBlur',[this.column, field]);
+  },
+  
+  onChange: function (field) {
+    if (this.options.updateStore) {
+      this.updateStore(field);
+    }
+    this.column.grid.fireEvent('checkBlur',[this.column, field]);
+  },
+  
+  updateStore: function (field) {
+    var newValue = field.getValue();
+    
+    var data = document.id(field).getParent().retrieve('jxCellData');
+    var row = data.row;
+    
+    if (this.store.get(this.options.field, row) !== newValue) {
+      this.store.set(this.options.field, newValue, row);
+    }
+  }
+  
+  
+});/**
+ * Class: Jx.Grid.Renderer.Button
+ * Renders a <Jx.Button> into the cell. You can add s many buttons as you'd like per column by passing button configs
+ * in as an array option to options.buttonOptions
+ *
+ * Extends: <Jx.Grid.Renderer>
+ *
+ */
+Jx.Grid.Renderer.Button = new Class({
+
+    Family: 'Jx.Grid.Renderer.Button',
+    Extends: Jx.Grid.Renderer,
+
+    Binds: [],
+
+    options: {
+        template: '<span class="buttons"></span>',
+        /**
+         * Option: buttonOptions
+         * an array of option configurations for <Jx.Button>
+         */
+        buttonOptions: null
+    },
+
+    classes:  $H({
+        domObj: 'buttons'
+    }),
+
+    init: function () {
+        this.parent();
+    },
+
+    render: function () {
+        this.parent();
+
+        $A(this.options.buttonOptions).each(function(opts){
+            var button = new Jx.Button(opts);
+            this.domObj.grab(document.id(button));
+        },this);
+
+    }
+});// $Id: grid.selector.js 826 2010-03-31 18:46:16Z pagameba $
 /**
  * Class: Jx.Plugin.Selector
  *
@@ -28758,7 +31205,10 @@ Jx.Grid = new Class({
  */
 Jx.Plugin.Grid.Selector = new Class({
 
+	Family: 'Jx.Plugin.Grid.Selector',
     Extends : Jx.Plugin,
+    
+    Binds: ['select','checkSelection','checkAll','afterGridRender'],
 
     options : {
         /**
@@ -28775,13 +31225,30 @@ Jx.Plugin.Grid.Selector = new Class({
          * Option: column
          * determines if columns are selectable
          */
-        column : false
+        column : false,
+        /**
+         * Option: multiple
+         * Allow multiple selections
+         */
+        multiple: false,
+        /**
+         * Option: useCheckColumn
+         * Whether to use a check box column as the row header or as the 
+         * first column in the grid and use it for manipulating selections.
+         */
+        useCheckColumn: false,
+        /**
+         * Option: checkAsHeader
+         * Determines if the check column is the header of the rows
+         */
+        checkAsHeader: false
     },
     /**
-     * Property: bound
-     * storage for bound methods useful for working with events
+     * Property: selected
+     * Holds arrays of selected rows and/or columns and their headers
      */
-    bound: {},
+    selected: null,
+    
     /**
      * APIMethod: init
      * construct a new instance of the plugin.  The plugin must be attached
@@ -28789,7 +31256,12 @@ Jx.Plugin.Grid.Selector = new Class({
      */
     init: function() {
         this.parent();
-        this.bound.select = this.select.bind(this);
+        this.selected = $H({
+            columns: [],
+            rows: [],
+            rowHeads: [],
+            columnHeads: []
+        });
     },
     /**
      * APIMethod: attach
@@ -28804,21 +31276,84 @@ Jx.Plugin.Grid.Selector = new Class({
             return;
         }
         this.grid = grid;
-        this.grid.addEvent('gridCellSelect', this.bound.select);
+        this.grid.addEvent('gridCellSelect', this.select);
         if (this.options.cell) {
             this.oldSelectionClass = this.grid.selection.options.selectedClass;
             this.grid.selection.options.selectClass = "jxGridCellSelected";
+            if (this.options.multiple) {
+            	this.grid.selection.options.selectMode = 'multiple';
+            }
         }
+        
+        //setup check column if needed
+        if (this.options.useCheckColumn) {
+        	
+        	var template = '<span class="jxGridCellContent">';
+        	
+        	if (this.options.multiple) {
+        		template += '<span class="jxInputContainer jxInputContainerCheck"><input class="jxInputCheck" type="checkbox" name="checkAll" id="checkAll"/></span>';
+        	} else {
+        		template += '</span>';
+        	}
+        	
+        	template += "</span>";
+        	
+        	this.checkColumn = new Jx.Column({
+        		template: template,
+        		renderMode: 'fit',
+        		renderer: new Jx.Grid.Renderer.Checkbox({
+        		//	onChange: this.checkSelection
+        		}),
+        		name: 'selection'
+        	}, this.grid);
+        	this.grid.columns.columns.reverse();
+        	this.grid.columns.columns.push(this.checkColumn);
+        	this.grid.columns.columns.reverse();
+        	
+        	if (this.options.checkAsHeader) {
+        		this.oldHeaderColumn = this.grid.row.options.headerColumn;
+        		this.grid.row.options.headerColumn = 'selection';
+        		
+        		if (this.options.multiple) {
+                    this.grid.addEvent('doneCreateGrid', this.afterGridRender);
+        		}
+        	}
+            //attach event to header
+            if (this.options.multiple) {
+                var ch = document.id(this.checkColumn).getElement('input');
+                ch.addEvents({
+                    'change': this.checkAll
+                });
+            }
+
+        }
+    },
+
+    afterGridRender: function () {
+        if (this.options.checkAsHeader) {
+            var chkCol = document.id(this.checkColumn).clone();
+            chkCol.getElement('input').addEvent('change',this.checkAll);
+            this.grid.rowColObj.adopt(chkCol);
+            //document.id(this.checkColumn).inject(this.grid.rowColObj);
+        }
+        this.grid.removeEvent('doneCreateGrid',this.afterGridRender);
     },
     /**
      * APIMethod: detach
      */
     detach: function() {
         if (this.grid) {
-            this.grid.removeEvent('gridCellSelect', this.bound.select);
+            this.grid.removeEvent('gridCellSelect', this.select);
             if (this.options.cell) {
                 this.grid.selection.options.selectedClass = this.oldSelectionClass;
             }
+        }
+        if (this.options.useCheckColumn) {
+        	var col = this.grid.columns.getByName('selection');
+        	this.grid.columns.columns.erase(col);
+        	if (this.options.checkAsHeader) {
+        		this.grid.row.options.headerColumn = this.oldHeaderColumn;
+        	}
         }
         this.grid = null;
     },
@@ -28852,19 +31387,29 @@ Jx.Plugin.Grid.Selector = new Class({
             this.grid.selection.options.selectClass = this.oldSelectionClass;
             
         } else if (opt === 'row') {
-            this.selectedRow.removeClass('jxGridRowSelected');
-            this.selectedRow = null;
-            this.selectedRowHead.removeClass('jxGridRowHeaderSelected');
-            this.selectedRowHead = null;
+        	
+        	this.selected.get('rows').each(function(row){
+        		row.removeClass('jxGridRowSelected');
+        	},this);
+        	this.selected.set('rows',[]);
+        	
+        	this.selected.get('rowHeads').each(function(rowHead){
+        		rowHead.removeClass('jxGridRowHeaderSelected');
+        	},this);
+        	this.selected.set('rowHeads',[]);
+        	
         } else {
-            if ($defined(this.selectedCol)) {
+            this.selected.get('columns').each(function(column){
                 for (var i = 0; i < this.grid.gridTable.rows.length; i++) {
-                    this.grid.gridTable.rows[i].cells[this.selectedCol].removeClass('jxGridColumnSelected');
+                    this.grid.gridTable.rows[i].cells[column].removeClass('jxGridColumnSelected');
                 }
-            }
-            this.selectedColHead.removeClass('jxGridColumnHeaderSelected');
-            this.selectedColHead = null;
-            this.selectedCol = null;
+            },this);
+            this.selected.set('columns',[]);
+            
+            this.selected.get('columnHeads').each(function(rowHead){
+        		rowHead.removeClass('jxGridColumnHeaderSelected');
+        	},this);
+        	this.selected.set('columnHeads',[]);
         }
     },
     /**
@@ -28873,15 +31418,15 @@ Jx.Plugin.Grid.Selector = new Class({
      */
     select : function (cell) {
 
-        console.log('select method');
+        // console.log('select method');
         var data = cell.retrieve('jxCellData');
-        console.log(data);
+        // console.log(data);
 
-        if (this.options.row) {
+        if (this.options.row && $defined(data.row)) {
             this.selectRow(data.row);
         }
 
-        if (this.options.column) {
+        if (this.options.column && $defined(data.index)) {
             if (this.grid.row.useHeaders()) {
                 this.selectColumn(data.index - 1);
             } else {
@@ -28901,23 +31446,58 @@ Jx.Plugin.Grid.Selector = new Class({
         if (!this.options.row) { return; }
 
         var tr = (row >= 0 && row < this.grid.gridTableBody.rows.length) ? this.grid.gridTableBody.rows[row] : null;
+        tr = document.id(tr);
+        
+        var rows = this.selected.get('rows');
+	    if (tr.hasClass('jxGridRowSelected')) {
+	        tr.removeClass('jxGridRowSelected');
+	        this.setCheckField(row, false);
 
-        if (tr.hasClass('jxGridRowSelected')) {
-            this.selectedRow.removeClass('jxGridRowSelected');
-            this.selectedRow = null;
-        } else {
-            if (this.selectedRow) {
-                this.selectedRow.removeClass('jxGridRowSelected');
+            if (this.options.multiple && this.options.useCheckColumn) {
+                if (this.options.checkAsHeader) {
+                    document.id(this.grid.rowColObj).getElement('input').removeProperty('checked');
+                } else {
+                    document.id(this.checkColumn).getElement('input').removeProperty('checked');
+                }
             }
-            this.selectedRow = $(tr);
-            this.selectedRow.addClass('jxGridRowSelected');
-        }
-        this.selectRowHeader(row);
 
+	        //search array and remove this item
+	        rows.erase(tr);
+	    } else {
+	        rows.push(tr);
+	        tr.addClass('jxGridRowSelected');
+	        this.setCheckField(row, true);
+	    }
+	        
+	    if (!this.options.multiple) {
+	    	rows.each(function(row){
+	    		if (row !== tr) {
+	    			row.removeClass('jxGridRowSelected');
+	    			this.setCheckField(row.retrieve('jxRowData').row,false);
+	    			rows.erase(row);
+	    		}
+	    	},this);
+        }
+        	
+	    this.selectRowHeader(row);
+
+    },
+    
+    setCheckField: function (row, checked) {
+    	if (this.options.useCheckColumn) {
+    		var check;
+    		if (this.options.checkAsHeader) {
+    			check = document.id(this.grid.rowTableHead.rows[row].cells[0]).getFirst().getFirst();
+    		} else {
+    			var col = this.grid.columns.getIndexFromGrid(this.checkColumn.name);
+    			check = document.id(this.grid.gridTableBody.rows[row].cells[col]).getFirst().getFirst();
+    		}
+        	check.retrieve('field').setValue(checked);
+        }
     },
     /**
      * Method: selectRowHeader
-     * Apply the jxGridRowHea}derSelected style to the row header cell of a
+     * Apply the jxGridRowHeaderSelected style to the row header cell of a
      * selected row.
      *
      * Parameters:
@@ -28927,20 +31507,31 @@ Jx.Plugin.Grid.Selector = new Class({
         if (!this.grid.row.useHeaders()) {
             return;
         }
-        var cell = (row >= 0 && row < this.grid.rowTableHead.rows.length) ? this.grid.rowTableHead.rows[row].cells[0] : null;
+        var cell = (row >= 0 && row < this.grid.rowTableHead.rows.length) ? 
+        		this.grid.rowTableHead.rows[row].cells[0] : null;
 
         if (!cell) {
             return;
         }
-        if (this.selectedRowHead) {
-            this.selectedRowHead.removeClass('jxGridRowHeaderSelected');
+        cell = document.id(cell);
+        var cells = this.selected.get('rowHeads');
+        if (cells.contains(cell)) {
+            cell.removeClass('jxGridRowHeaderSelected');
+            cells.erase(cell);
+        } else {
+        	cell.addClass('jxGridRowHeaderSelected');
+        	cells.push(cell);
         }
-        if (this.selectedRowHead !== cell) {
-            this.selectedRowHead = $(cell);
-            cell.addClass('jxGridRowHeaderSelected');
-        } else if (cell.hasClass('jxgridRowHeaderSelected')) {
-            this.selectedRowHead = null;
+        
+        if (!this.options.multiple) {
+        	cells.each(function(c){
+        		if (c !== cell) {
+        			c.removeClass('jxGridRowHeaderSelected');
+        			cells.erase(c);
+        		}
+        	},this);
         }
+        
     },
     /**
      * Method: selectColumn
@@ -28952,19 +31543,33 @@ Jx.Plugin.Grid.Selector = new Class({
      */
     selectColumn: function (col) {
         if (col >= 0 && col < this.grid.gridTable.rows[0].cells.length) {
-            if ($defined(this.selectedCol)) {
-                for (var i = 0; i < this.grid.gridTable.rows.length; i++) {
-                    this.grid.gridTable.rows[i].cells[this.selectedCol].removeClass('jxGridColumnSelected');
-                }
-            }
-            if (col !== this.selectedCol) {
-                this.selectedCol = col;
-                for (i = 0; i < this.grid.gridTable.rows.length; i++) {
-                    this.grid.gridTable.rows[i].cells[col].addClass('jxGridColumnSelected');
-                }
+        	var cols = this.selected.get('columns');
+        	
+        	var m = '';
+            if (cols.contains(col)) {
+            	//deselect
+            	m = 'removeClass';
+            	cols.erase(col);
             } else {
-                this.selectedCol = null;
+            	//select
+            	m = 'addClass';
+            	cols.push(col);
             }
+            for (var i = 0; i < this.grid.gridTable.rows.length; i++) {
+                this.grid.gridTable.rows[i].cells[col][m]('jxGridColumnSelected');
+            }
+            
+            if (!this.options.multiple) {
+            	cols.each(function(c){
+            		if (c !== col) {
+            			for (var i = 0; i < this.grid.gridTable.rows.length; i++) {
+                            this.grid.gridTable.rows[i].cells[c].removeClass('jxGridColumnSelected');
+                        }
+            			cols.erase(c);
+            		}
+            	},this);
+            }
+            
             this.selectColumnHeader(col);
         }
     },
@@ -28983,22 +31588,76 @@ Jx.Plugin.Grid.Selector = new Class({
         }
 
 
-        var cell = (col >= 0 && col < this.grid.colTableBody.rows[0].cells.length) ? this.grid.colTableBody.rows[0].cells[col]
-                                                                                                                          : null;
+        var cell = (col >= 0 && col < this.grid.colTableBody.rows[0].cells.length) ? 
+        		this.grid.colTableBody.rows[0].cells[col] : null;
+        		
         if (cell === null) {
             return;
         }
 
-        if (this.selectedColHead) {
-            this.selectedColHead.removeClass('jxGridColumnHeaderSelected');
-        }
-        if (this.selectedColHead !== cell) {
-            this.selectedColHead = $(cell);
-            cell.addClass('jxGridColumnHeaderSelected');
+        cell = document.id(cell);
+        cells = this.selected.get('columnHeads');
+        
+        if (cells.contains(cell)) {
+            cell.removeClass('jxGridColumnHeaderSelected');
+            cells.erase(cell);
         } else {
-            this.selectedColHead = null;
+        	cell.addClass('jxGridColumnHeaderSelected');
+        	cells.push(cell);
+        }
+        
+        if (!this.options.multiple) {
+        	cells.each(function(c){
+        		if (c !== cell) {
+        			c.removeClass('jxGridColumnHeaderSelected');
+        			cells.erase(c);
+        		}
+        	},this);
         }
 
+    },
+    /**
+     * Method: checkSelection
+     * Checks whether a row's check box is/isn't checked and modifies the 
+     * selection appropriately.
+     * 
+     * Parameters:
+     * column - <Jx.Column> that created the checkbox
+     * field - <Jx.Field.Checkbox> instance that was checked/unchecked
+     */
+    checkSelection: function (column, field) {
+    	var data = document.id(field).getParent().retrieve('jxCellData');
+    	this.selectRow(data.row);
+    },
+    /**
+     * Method: checkAll
+     * Checks all checkboxes in the column the selector inserted.
+     */
+    checkAll: function () {
+        var col;
+        var rows;
+        var checked;
+
+        checked = this.options.checkAsHeader ? this.grid.rowColObj.getElement('input').get('checked') :
+                this.checkColumn.domObj.getElement('input').get('checked');
+
+        if (this.options.checkAsHeader) {
+            col = 0;
+            rows = this.grid.rowTableHead.rows;
+        } else {
+            col = this.grid.columns.getIndexFromGrid(this.checkColumn.name);
+            rows = this.grid.gridTableBody.rows;
+        }
+
+        $A(rows).each(function(row, idx) {
+            var check = row.cells[col].getElement('input');
+            if ($defined(check)) {
+                var rowChecked = check.get('checked');
+                if (rowChecked !== checked) {
+                    this.selectRow(idx);
+                }
+            }
+        }, this);
     }
 });
 // $Id: grid.prelighter.js 662 2009-12-08 06:56:43Z jonlb@comcast.net $
@@ -29282,15 +31941,13 @@ Jx.Plugin.Grid.Prelighter = new Class({
         }
     }
 });
-// $Id: grid.sorter.js 649 2009-11-30 22:19:48Z pagameba $
+// $Id: grid.sorter.js 809 2010-03-28 04:15:14Z jonlb@comcast.net $
 /**
  * Class: Jx.Plugin.Sorter
  *
  * Extends: <Jx.Plugin>
  *
  * Grid plugin to sort the grid by a single column.
- *
- * Original selection code from Jx.Grid's original class
  *
  * License:
  * Copyright (c) 2009, Jon Bomgardner.
@@ -29299,9 +31956,10 @@ Jx.Plugin.Grid.Prelighter = new Class({
  */
 Jx.Plugin.Grid.Sorter = new Class({
 
+    Family: 'Jx.Plugin.Grid.Sorter',
     Extends : Jx.Plugin,
+    Binds: ['sort', 'addHeaderClass'],
 
-    options : {},
     /**
      * Property: current
      * refernce to the currently sorted column
@@ -29318,21 +31976,6 @@ Jx.Plugin.Grid.Sorter = new Class({
      */
     currentGridIndex : null,
     /**
-     * Property: bound
-     * storage for bound methods useful for working with events
-     */
-    bound: {},
-    /**
-     * APIMethod: init
-     * construct a new instance of the plugin.  The plugin must be attached
-     * to a Jx.Grid instance to be useful though.
-     */
-    init: function() {
-        this.parent();
-        this.bound.sort = this.sort.bind(this);
-        this.bound.addHeaderClass = this.addHeaderClass.bind(this);
-    },
-    /**
      * APIMethod: attach
      * Sets up the plugin and attaches the plugin to the grid events it
      * will be monitoring
@@ -29344,15 +31987,14 @@ Jx.Plugin.Grid.Sorter = new Class({
 
         this.grid = grid;
 
-        this.grid.addEvent('gridCellSelect', this.bound.sort);
-        this.boundAddHeader = this.addHeaderClass.bind(this);
+        this.grid.addEvent('gridCellSelect', this.sort);
     },
     /**
      * APIMethod: detach
      */
     detach: function() {
         if (this.grid) {
-            this.grid.removeEvent('gridCellSelect', this.bound.sort);
+            this.grid.removeEvent('gridCellSelect', this.sort);
         }
         this.grid = null;
     },
@@ -29377,12 +32019,15 @@ Jx.Plugin.Grid.Sorter = new Class({
                     this.currentGridIndex = data.index - 1;
                 }
 
-                //The grid should be listening for the sortFinished event and will re-render the grid
-                //we will listen for the grid's doneCreateGrid event to add the header
-                this.grid.addEvent('doneCreateGrid', this.bound.addHeaderClass);
+                // The grid should be listening for the sortFinished event and
+                // will re-render the grid we will listen for the grid's
+                // doneCreateGrid event to add the header
+                this.grid.addEvent('doneCreateGrid', this.addHeaderClass);
                 //sort the store
                 var strategy = this.grid.getModel().getStrategy('sort');
-                strategy.sort(this.current.name, null, this.direction);
+                if (strategy) {
+                  strategy.sort(this.current.name, null, this.direction);
+                }
             }
 
         }
@@ -29393,14 +32038,14 @@ Jx.Plugin.Grid.Sorter = new Class({
      * column we sorted by so that the sort arrow shows
      */
     addHeaderClass : function () {
-        this.grid.removeEvent('doneCreateGrid', this.bound.addHeaderClass);
+        this.grid.removeEvent('doneCreateGrid', this.addHeaderClass);
 
         //get header TD
         var th = this.grid.colTable.rows[0].cells[this.currentGridIndex];
         th.addClass('jxGridColumnSorted' + this.direction.capitalize());
     }
 });
-// $Id: grid.resize.js 649 2009-11-30 22:19:48Z pagameba $
+// $Id: grid.resize.js 855 2010-04-20 06:04:53Z jonlb@comcast.net $
 /**
  * Class: Jx.Plugin.Resize
  *
@@ -29417,52 +32062,43 @@ Jx.Plugin.Grid.Sorter = new Class({
 Jx.Plugin.Grid.Resize = new Class({
 
     Extends : Jx.Plugin,
-
+    Binds: ['createHandles','removeHandles'],
     options: {
         /**
-         * Option: columns
+         * Option: column
          * set to true to make column widths resizeable
          */
-        columns: false,
+        column: false,
         /**
-         * Option: rows
+         * Option: row
          * set to true to make row heights resizeable
          */
-        rows: false,
+        row: false,
         /**
          * Option: tooltip
          * the tooltip to display for the draggable portion of the
          * cell header
          */
-        tooltip: 'Drag to resize, double click to auto-size.'
+        tooltip: MooTools.lang.get('Jx','plugin.resize').tooltip
     },
     /**
      * Property: els
      * the DOM elements by which the rows/columns are resized.
      */
-    els: [],
+    els: {
+      column: [],
+      row: []
+    },
 
     /**
      * Property: drags
      * the Drag instances
      */
-    drags: [],
-
-    /**
-     * Property: bound
-     * storage for bound methods useful for working with events
-     */
-    bound: {},
-    /**
-     * APIMethod: init
-     * construct a new instance of the plugin.  The plugin must be attached
-     * to a Jx.Grid instance to be useful though.
-     */
-    init: function() {
-        this.parent();
-        this.bound.createResizeHandles = this.createResizeHandles.bind(this);
-        this.bound.removeResizeHandles = this.removeResizeHandles.bind(this);
+    drags: {
+      column: [],
+      row: []
     },
+
     /**
      * APIMethod: attach
      * Sets up the plugin and connects it to the grid
@@ -29472,60 +32108,120 @@ Jx.Plugin.Grid.Resize = new Class({
             return;
         }
         this.grid = grid;
-        this.grid.addEvent('doneCreateGrid', this.bound.createResizeHandles);
-        this.grid.addEvent('beginCreateGrid', this.bound.removeResizeHandles);
-        this.createResizeHandles();
+        this.grid.addEvent('doneCreateGrid', this.createHandles);
+        this.grid.addEvent('beginCreateGrid', this.removeHandles);
+        this.createHandles();
     },
     /**
      * APIMethod: detach
      */
     detach: function() {
         if (this.grid) {
-            this.grid.removeEvent('doneCreateGrid', this.bound.createResizeHandles);
-            this.grid.removeEvent('beginCreateGrid', this.bound.removeResizeHandles);
+            this.grid.removeEvent('doneCreateGrid', this.createHandles);
+            this.grid.removeEvent('beginCreateGrid', this.removeHandles);
         }
         this.grid = null;
     },
 
-    removeResizeHandles: function() {
-        this.els.each(function(el) { el.dispose(); } );
-        this.els = [];
-        this.drags.each(function(drag){ drag.detach(); });
-        this.drags = [];
+    activate: function(option) {
+        if ($defined(this.options[option])) {
+          this.options[option] = true;
+        }
+        this.createHandles();
     },
-
-    createResizeHandles: function() {
-        if (this.options.columns && this.grid.columns.useHeaders()) {
+    
+    deactivate: function(option) {
+        if ($defined(this.options[option])) {
+          this.options[option] = false;
+        }
+        this.createHandles();
+    },
+    /**
+     * Method: removeHandles
+     * clean up any handles we created
+     */
+    removeHandles: function() {
+        ['column','row'].each(function(option) {
+          this.els[option].each(function(el) { el.dispose(); } );
+          this.els[option] = [];
+          this.drags[option].each(function(drag){ drag.detach(); });
+          this.drags[option] = [];
+        }, this);
+    },
+    /**
+     * Method: createHandles
+     * create handles that let the user drag to resize columns and rows
+     */
+    createHandles: function() {
+        this.removeHandles();
+        if (this.options.column && this.grid.columns.useHeaders()) {
+            var hf = this.grid.row.getRowHeaderColumn();
             this.grid.columns.columns.each(function(col, idx) {
-                if (col.header) {
+                if (col.options.name != hf && 
+                    col.isResizable() && 
+                    col.domObj) {
                     var el = new Element('div', {
                         'class':'jxGridColumnResize',
                         title: this.options.tooltip,
                         events: {
                             dblclick: function() {
+                                col.options.renderMode = 'fit';
                                 col.options.width = 'auto';
                                 col.setWidth(col.getWidth(true));
                             }
                         }
-                    }).inject(col.header);
-                    this.els.push(el);
-                    this.drags.push(new Drag(el, {
+                    }).inject(col.domObj);
+                    el.store('col', col);
+                    this.els.column.push(el);
+                    this.drags.column.push(new Drag(el, {
                         limit: {y:[0,0]},
+                        snap: 2,
+                        onBeforeStart: function(el) {
+                          var l = el.getPosition(el.parentNode).x.toInt();
+                          el.setStyles({
+                            left: l,
+                            right: null
+                          });
+                          
+                        },
+                        onStart: function(el) {
+                          var l = el.getPosition(el.parentNode).x.toInt();
+                          el.setStyles({
+                            left: l,
+                            right: null
+                          });
+                        },
                         onDrag: function(el) {
+                            var col = el.retrieve('col');
+                            col.options.renderMode = 'fixed';
                             var w = el.getPosition(el.parentNode).x.toInt();
                             col.setWidth(w);
+                            col.grid.resizeRowsCols("rows");
+                        },
+                        onComplete: function(el) {
+                          el.setStyle('left', null);
+                          //col.grid.resizeRowsCols("rows");
                         }
                     }));
                 }
             }, this);
         }
 
-        // if (this.options.rows && this.grid.row.useHeaders()) {
-        //
-        // }
+        //if (this.options.row && this.grid.row.useHeaders()) {}
+    },
+    /**
+     * Method: createText
+     * respond to a language change by updating the tooltip
+     */
+    createText: function (lang) {
+      this.parent();
+      var txt = MooTools.lang.get('Jx','plugin.resize').tooltip;
+      ['column','row'].each(function(option) {
+        this.els[option].each(function(el) { el.set('title',txt); } );
+      }, this);
     }
 });
-// $Id: $
+// $Id: grid.editor.js 876 2010-04-25 19:59:03Z conrad.barthelmes $
 /**
  * Class: Jx.Plugin.Editor
  *
@@ -29544,6 +32240,7 @@ Jx.Plugin.Grid.Resize = new Class({
 Jx.Plugin.Grid.Editor = new Class({
 
     Extends : Jx.Plugin,
+    Binds: ['activate','deactivate','changeText'],
 
     options : {
       /**
@@ -29552,15 +32249,11 @@ Jx.Plugin.Grid.Editor = new Class({
        */
       enabled : true,
       /**
-       * Option: hideOnBlur
-       * Determines whether the field or popup hides when the focus blurs the
-       * input field
-       */
-      hideOnBlur : true,
-      /**
        * Option: blurDelay
        * Set the time in miliseconds when the inputfield/popup shall hide. When
        * the user refocuses the input/popup within this time, the timeout will be cleared
+       *
+       * set to 'false' if no hiding on blur is wanted
        */
       blurDelay : 500,
       /**
@@ -29571,46 +32264,61 @@ Jx.Plugin.Grid.Editor = new Class({
        * - useLabel   - determines whether to use labels on top of the input.
        *                Text will be the column header
        * - useButtons - determines whether to use Submit and Cancel Buttons
-       * - buttonLabel.submit - Text for Submit Button
-       * - buttonLabel.cancel - Text for Cancel Button
+       * - buttonLabel.submit - Text for Submit Button, uses MooTools.lang.get('Jx', 'plugin.editor').submitButton for default
+       * - buttonLabel.cancel - Text for Cancel Button, uses MooTools.lang.get('Jx', 'plugin.editor').cancelButton for default
        */
       popup : {
-        use           : false,
-        useLabel      : true,
-        useCloseIcon  : false,      // do we need this? 
+        use           : true,
+        useLabels     : false,
         useButtons    : true,
         button        : {
           submit : {
-            label : 'Save',
+            label : '',
             image : 'images/accept.png'
           },
           cancel : {
-            label : 'Cancel',
+            label : '',
             image : 'images/cancel.png'
           }
         },
         template: '<div class="jxGridEditorPopup"><div class="jxGridEditorPopupInnerWrapper"></div></div>'
       },
       /**
+       * Option {boolean} validate
+       * - set to true to have all editable input fields as mandatory field
+       *   if they don't have 'mandatory:true' in their colOptions
+       */
+      validate : true,
+      /**
        * Option: {Array} fieldOptions with objects
        * Contains objects with options for the Jx.Field instances to show up.
        * Default options will be added automatically if custom options are entered.
        *
        * Preferences:
-       *   field   - Default * for all types or the name of the column in the model (Jx.Store)
-       *   type    - Input type to show (Text, Password, Textarea, Select, Checkbox)
-       *   options - All Jx.Field options for this column. More options depend on what type you are using.
-       *   popup   - options for every column to use a popup or not. All values set to 'default' by default
-       *             to use what is set in this.options.popup. This allowes every field to
-       *             have different settings for every column if needed.
+       *   field             - Default * for all types or the name of the column in the model (Jx.Store)
+       *   type              - Input type to show (Text, Password, Textarea, Select, Checkbox)
+       *   options           - All Jx.Field options for this column. More options depend on what type you are using.
+       *                       See Jx.Form.[yourField] for details
+       *   validatorOptions: - See Jx.Plugin.Field.Validator Options for details
+       *                       will only be used if this.options.validate is set to true
        */
       fieldOptions : [
         {
           field   : '*',
           type    : 'Text',
-          options : {}
+          options : {},
+          validatorOptions: {
+            validators : [],
+            validateOnBlur: true,
+            validateOnChange : false
+          }
         }
       ],
+      /**
+       * Option: {Boolean} fieldFormatted
+       * Displays the cell value also inside the input field as formatted
+       */
+      fieldFormatted : true,
       /**
        * Option cellChangeFx
        * set use to false if no highlighting effect is wanted.
@@ -29618,8 +32326,9 @@ Jx.Plugin.Grid.Editor = new Class({
        * this is just an idea how successfully changing could be highlighed for the user
        */
       cellChangeFx : {
-        use  : true,
-        save : '#090'
+        use     : true,
+        success : '#090',
+        error   : '#F00'
       },
       /**
        * Option cellOutline
@@ -29642,21 +32351,55 @@ Jx.Plugin.Grid.Editor = new Class({
        * http://mootools.net/docs/more/Interface/Keyboard
        */
       keys : {
-        'enter'            : 'saveNClose',
-        'ctrl+enter'       : 'saveNGoDown',
         'ctrl+shift+enter' : 'saveNGoUp',
         'tab'              : 'saveNGoRight',
+        'ctrl+enter'       : 'saveNGoDown',
         'shift+tab'        : 'saveNGoLeft',
+        'enter'            : 'saveNClose',
+        'ctrl+up'          : 'cancelNGoUp',
+        'ctrl+right'       : 'cancelNGoRight',
+        'ctrl+down'        : 'cancelNGoDown',
+        'ctrl+left'        : 'cancelNGoLeft',
         'esc'              : 'cancelNClose',
         'up'               : 'valueIncrement',
         'down'             : 'valueDecrement'
-      }
+      },
+      /**
+       * Option: keyboardMethods
+       *
+       * can be used to overwrite existing keyboard methods that are used inside
+       * this.options.keys - also possible to add new ones.
+       * Functions are bound to the editor plugin when using 'this'
+       *
+       * example:
+       *  keys : {
+       *    'ctrl+u' : 'cancelNGoRightNDown'
+       *  },
+       *  keyboardMethods: {
+       *    'cancelNGoRightNDown' : function(ev){
+       *      ev.preventDefault();
+       *      this.getNextCellInRow(false);
+       *      this.getNextCellInCol(false);
+       *    }
+       *  }
+       */
+      keyboardMethods : {},
+      /**
+       * Option: keypressLoop
+       * loop through the grid when pressing TAB (or some other method that uses
+       * this.getNextCellInRow() or this.getPrevCellInRow()). If set to false,
+       * the input field/popup will not start at the opposite site of the grid
+       * Defaults to true
+       */
+      keypressLoop : true,
+      /**
+       * Option: linkClickListener
+       * disables all click events on links that are formatted with Jx.Formatter.Uri
+       * - otherwise the link will open directly instead of open the input editor)
+       * - hold [ctrl] to open the link in a new tab
+       */
+      linkClickListener : true
     },
-    /**
-     * Property: bound
-     * storage for bound methods useful for working with events
-     */
-    bound: {},
     classes: ['jxGridEditorPopup', 'jxGridEditorPopupInnerWrapper'],
     /**
      * Property: activeCell
@@ -29666,6 +32409,7 @@ Jx.Plugin.Grid.Editor = new Class({
      *   cell         : Reference to the cell inside the table 
      *   span         : Reference to the Dom Element inside the selected cell of the grid
      *   oldValue     : Old value of the cell from the grid's model
+     *   newValue     : Object with <data> and <error> for better validation possibilites
      *   timeoutId    : TimeoutId if the focus blurs the input.
      *   coords       : Coordinates of the selected cell
      *   colOptions   : Reference to the column's option in which the cell is
@@ -29676,6 +32420,7 @@ Jx.Plugin.Grid.Editor = new Class({
       cell        : null,
       span        : null,
       oldValue    : null,
+      newValue    : { data: null, error: false },
       timeoutId   : null,
       coords      : {},
       colOptions  : {},
@@ -29686,7 +32431,7 @@ Jx.Plugin.Grid.Editor = new Class({
      *
      * References to all contents within a popup (only 1 popup for 1 grid initialization)
      *
-     * COMMENT: I don't know how deep you want to go into that.. innerWrapper and closeLink probably don't need
+     * COMMENT: I don't know how deep we need to go into that.. innerWrapper and closeLink probably don't need
      * own references.. I just made them here in case they are needed at some time..
      *
      * Containing Objects:
@@ -29701,7 +32446,7 @@ Jx.Plugin.Grid.Editor = new Class({
       domObj       : null,
       innerWarpper : null,
       closeIcon    : null,
-      buttons      : {
+      button       : {
         submit : null,
         cancel : null
       }
@@ -29724,8 +32469,6 @@ Jx.Plugin.Grid.Editor = new Class({
      */
     init: function() {
       this.parent();
-      this.bound.activate   = this.activate.bind(this);
-      this.bound.deactivate = this.deactivate.bind(this);
     },
     /**
      * APIMethod: attach
@@ -29740,8 +32483,8 @@ Jx.Plugin.Grid.Editor = new Class({
       }
       this.grid = grid;
 
-      this.grid.addEvent('gridCellSelect', this.bound.activate);
-      this.grid.addEvent('gridCellUnSelect', this.bound.deactivate);
+      this.grid.addEvent('gridCellSelect', this.activate);
+      this.grid.addEvent('gridCellUnSelect', this.deactivate);
 
       /*
        * add default field options to the options in case some new options were entered
@@ -29751,7 +32494,12 @@ Jx.Plugin.Grid.Editor = new Class({
         this.options.fieldOptions.unshift({
           field   : '*',
           type    : 'Text',
-          options : {}
+          options : {},
+          validatorOptions: {
+            validators : [],
+            validateOnBlur: true,
+            validateOnChange : false
+          }
         });
       }
 
@@ -29764,29 +32512,43 @@ Jx.Plugin.Grid.Editor = new Class({
        */
       var self = this;
       this.keyboardMethods = {
-        saveNClose     : function(ev) { 
-          if(self.activeCell.fieldOptions.type != 'Textarea') {
+        saveNClose     : function(ev) {
+          if(self.activeCell.fieldOptions.type != 'Textarea' || (self.activeCell.fieldOptions.type == 'Textarea' && ev.key != 'enter')) {
             self.deactivate()
           }
         },
-        saveNGoDown    : function(ev) {ev.preventDefault();self.getNextCellInCol()},
         saveNGoUp      : function(ev) {ev.preventDefault();self.getPrevCellInCol()},
         saveNGoRight   : function(ev) {ev.preventDefault();self.getNextCellInRow()},
+        saveNGoDown    : function(ev) {ev.preventDefault();self.getNextCellInCol()},
         saveNGoLeft    : function(ev) {ev.preventDefault();self.getPrevCellInRow()},
         cancelNClose   : function(ev) {ev.preventDefault();self.deactivate(false)},
+        cancelNGoUp    : function(ev) {ev.preventDefault();self.getPrevCellInCol(false)},
+        cancelNGoRight : function(ev) {ev.preventDefault();self.getNextCellInRow(false)},
+        cancelNGoDown  : function(ev) {ev.preventDefault();self.getNextCellInCol(false)},
+        cancelNGoLeft  : function(ev) {ev.preventDefault();self.getPrevCellInRow(false)},
         valueIncrement : function(ev) {ev.preventDefault();self.cellValueIncrement(true)},
         valueDecrement : function(ev) {ev.preventDefault();self.cellValueIncrement(false)}
       };
       
       var keyboardEvents = {};
       for(var i in this.options.keys) {
-        keyboardEvents[i] = this.keyboardMethods[this.options.keys[i]];
+        if($defined(this.keyboardMethods[this.options.keys[i]])) {
+          keyboardEvents[i] = this.keyboardMethods[this.options.keys[i]];
+        }else if($defined(this.options.keyboardMethods[this.options.keys[i]])){
+          keyboardEvents[i] = this.options.keyboardMethods[this.options.keys[i]].bind(self);
+        }else if(Jx.type(this.options.keys[i]) == 'function') {
+          keyboardEvents[i] = this.options.keys[i].bind(self);
+        }else{
+          $defined(console) ? console.warn("keyboard method %o not defined", this.options.keys[i]) : false;
+        }
       }
 
       // initalize keyboard support but do NOT activate it (this is done inside this.activate()).
       this.keyboard = new Keyboard({
         events: keyboardEvents
       });
+
+      this.addFormatterUriClickListener();
     },
     /**
      * APIMethod: detach
@@ -29795,11 +32557,36 @@ Jx.Plugin.Grid.Editor = new Class({
      * @return void
      */
     detach: function() {
-        if (this.grid) {
-            this.grid.removeEvent('gridClick', this.bound.activate);
-        }
-        this.grid = null;
-        this.keyboard = null;
+      if (this.grid) {
+        this.grid.removeEvent('gridClick', this.activate);
+      }
+      this.grid = null;
+      this.keyboard = null;
+    },
+    /**
+     * APIMethod: enable
+     * enables the grid 'externally'
+     *
+     * @return void
+     */
+    enable : function () {
+      this.options.enabled = true;
+    },
+    /**
+     * APIMethod: disable
+     * disables the grid 'externally'
+     *
+     * @var Boolean close - default true: also closes the currently open input/popup
+     * @var Boolean save - default false: also changes the currently open input/popup
+     * @return void
+     */
+    disable : function(close, save) {
+      close = $defined(close) ? close : true;
+      save = $defined(save) ? save : false;
+      if(close && this.activeCell.cell != null) {
+        this.deactivate(save);
+      }
+      this.options.enabled = false;
     },
     /**
      * Method: activate
@@ -29816,70 +32603,138 @@ Jx.Plugin.Grid.Editor = new Class({
         return;
 
       var data  = cell.retrieve('jxCellData');
+      // @todo Rename Header too??
+      // return if a table header was clicked
+      if(($defined(data.colHeader) && data.colHeader) || ($defined(data.rowHeader) && data.rowHeader))
+        return;
       var row   = data.row,
           index = data.index;
-          console.log(row, index);
+
+      clearTimeout(this.activeCell.timeoutId);
+
       if(this.cellIsInGrid(row, index)) {
+
+        var colIndex   = this.grid.options.row.useHeaders ? index-1 : index;
         var model      = this.grid.getModel(),
             //cell       = this.grid.gridTableBody.rows[row].cells[col] ? this.grid.gridTableBody.rows[row].cells[col] : null,
-            colOptions = this.grid.columns.getByGridIndex(index-1).options;
+            colOptions = this.grid.columns.getByGridIndex(colIndex).options;
         if (!cell || !colOptions.isEditable) {
           return;
         }
-        this.deactivate();
+        // if disabling a currently active one fails (mandatory for example) do not continue
+        if(this.activeCell.cell != null && this.deactivate() == false) {
+          return;
+        }
 
         // set active record index to selected row
         model.moveTo(row);
-          // store properties of the active cell
-          this.activeCell = {
-            oldValue      : model.get(data.index),
-            fieldOptions  : this.getFieldOptionsByColName(colOptions.name),
-            colOptions    : colOptions,
-            coords        : { row : row, index : index },
-            cell          : cell,
-            span          : cell.getElement('span.jxGridCellContent')
-          }
-          
+        
+        // store properties of the active cell
+        this.activeCell = {
+          oldValue      : model.get(data.index),
+          newValue      : {data: null, error: false},
+          fieldOptions  : this.getFieldOptionsByColName(colOptions.name),
+          colOptions    : colOptions,
+          coords        : {row : row, index : index},
+          cell          : cell,
+          span          : cell.getElement('span.jxGridCellContent'),
+          validator     : null,
+          field         : null,
+          timeoutId     : null
+        }
+
+        // check if this column has special validation settings - otherwise use default from this.options.validate
+        if(!$defined(this.activeCell.colOptions.validate) || typeof(this.activeCell.colOptions.validate) != 'boolean') {
+          this.activeCell.colOptions.validate = this.options.validate;
+        }
+
         var jxFieldOptions = $defined(this.activeCell.fieldOptions.options) ? this.activeCell.fieldOptions.options : {}
 
+        // check for different input field types
         switch(this.activeCell.fieldOptions.type) {
           case 'Text':
+          case 'Color':
           case 'Password':
           case 'File':
             jxFieldOptions.value = this.activeCell.oldValue;
-            this.activeCell.field = new Jx.Field[this.activeCell.fieldOptions.type](jxFieldOptions);
             break;
           case 'Textarea':
             jxFieldOptions.value = this.activeCell.oldValue.replace(/<br \/>/gi, '\n');
-            this.activeCell.field = new Jx.Field[this.activeCell.fieldOptions.type](jxFieldOptions);
             break;
           case 'Select':
-            this.activeCell.field = new Jx.Field[this.activeCell.fieldOptions.type](jxFieldOptions);
-            //COMMENT: a method to select the <option> by the visible text would be useful
-            //this.activeCell.field.setSelectedByText(this.activeCell.oldValue);
+            // find out which visible value fits to the value inside <option>{value}</option> and set it to selected
+            var oldValue  = this.activeCell.oldValue.toString();
+            function setCombos(opts, oldValue) {
+              for(var i = 0, j = opts.length; i < j; i++) {
+                if(opts[i].value == oldValue) {
+                  opts[i].selected = true;
+                }else{
+                  opts[i].selected = false;
+                }
+              }
+              return opts;
+            }
+
+            if(jxFieldOptions.comboOpts) {
+              jxFieldOptions.comboOpts = setCombos(jxFieldOptions.comboOpts, oldValue);
+            }else if(jxFieldOptions.optGroups) {
+              var groups = jxFieldOptions.optGroups;
+              for(var k = 0, n = groups.length; k < n; k++) {
+                groups[k].options = setCombos(groups[k].options, oldValue);
+              }
+              jxFieldOptions.optGroups = groups;
+            }
             break;
           case 'Radio':
           case 'Checkbox':
           default:
-            alert("Fieldtype \""+this.activeCell.fieldOptions.type+"\" is not supported yet :(");
+            $defined(console) ? console.warn("Fieldtype %o is not supported yet. If you have set a validator for a column, you maybe have forgotton to enter a field type.", this.activeCell.fieldOptions.type) : false;
             return;
             break;
         }
 
-        this.activeCell.field.render();
+        // update the 'oldValue' to the formatted style, to compare the new value with the formatted one instead with the non-formatted-one
+        if(this.options.fieldFormatted && this.activeCell.colOptions.renderer.options.formatter != null) {
+          if(!$defined(this.activeCell.colOptions.fieldFormatted) || this.activeCell.colOptions.fieldFormatted == true ) {
+            jxFieldOptions.value = this.activeCell.colOptions.renderer.options.formatter.format(jxFieldOptions.value);
+            this.activeCell.oldValue = jxFieldOptions.value;
+          }
+        }
+
+        // create jx.field
+        this.activeCell.field = new Jx.Field[this.activeCell.fieldOptions.type.capitalize()](jxFieldOptions);
+        // create validator
+        if(this.options.validate && this.activeCell.colOptions.validate) {
+          this.activeCell.validator = new Jx.Plugin.Field.Validator(this.activeCell.fieldOptions.validatorOptions);
+          this.activeCell.validator.attach(this.activeCell.field);
+        }
         this.setStyles(cell);
 
         if(this.options.useKeyboard) {
           this.keyboard.activate();
         }
 
-        if(this.options.hideOnBlur) {
+        // convert a string to an integer if somebody entered a numeric value in quotes, if it failes: make false
+        if(typeof(this.options.blurDelay) == 'string') {
+          this.options.blurDelay = this.options.blurDelay.toInt() ? this.options.blurDelay.toInt() : false;
+        }
+
+        // add a onblur() and onfocus() event to the input field if enabled.
+        if(this.options.blurDelay !== false && typeof(this.options.blurDelay) == 'number') {
           var self = this;
           this.activeCell.field.field.addEvents({
+            // activate the timeout to close the input/poup
             'blur' : function() {
-              self.activeCell.timeoutId = self.bound.deactivate.delay(self.options.blurDelay);
+              // @todo For some reason, webkit does not clear the timeout correctly when navigating through the grid with keyboard
+              clearTimeout(self.activeCell.timeoutId);
+              self.activeCell.timeoutId = self.deactivate.delay(self.options.blurDelay);
             },
+            // clear the timeout when the user focusses again
             'focus' : function() {
+              clearTimeout(self.activeCell.timeoutId);
+            }, 
+            // clear the timeout when the user puts the mouse over the input
+            'mouseover' : function() {
               clearTimeout(self.activeCell.timeoutId);
             }
           });
@@ -29889,9 +32744,10 @@ Jx.Plugin.Grid.Editor = new Class({
             });
           }
         }
+
         this.activeCell.field.field.focus();
       }else{
-        console.log('out of grid %o',cell);
+        if($defined(console)) {console.warn('out of grid %o',cell)}
       }
     }, 
     /**
@@ -29900,18 +32756,20 @@ Jx.Plugin.Grid.Editor = new Class({
      * value has changed
      *
      * Parameters:
-     * @var {Boolean} update (Optional, default: true)
-     * @return void
+     * @var {Boolean} save (Optional, default: true) - force aborting
+     * @return true if no data error occured, false if error (popup/input stays visible)
      */
-    deactivate: function(update) {
-      if(this.activeCell.field != null) {
-        update = $defined(update) ? update : true;
+    deactivate: function(save) {
 
-        var updated = false;
-        clearTimeout(this.activeCell.timeoutId);
+      clearTimeout(this.activeCell.timeoutId);
+      
+      if(this.activeCell.field !== null) {
+        save = $defined(save) ? save : true;
+
+        var newValue = {data : null, error : false};
 
         // update the value in the model
-        if(update && this.activeCell.field.getValue() != this.activeCell.oldValue) {
+        if(save && this.activeCell.field.getValue().toString() != this.activeCell.oldValue.toString()) {
           this.grid.model.moveTo(this.activeCell.coords.row);
           /*
            * @todo webkit shrinks the rows when the value is updated... but refreshing the grid
@@ -29919,42 +32777,84 @@ Jx.Plugin.Grid.Editor = new Class({
            */
           switch(this.activeCell.fieldOptions.type) {
             case 'Select':
-              // COMMENT: maybe add a getText() method for Jx.Field.Select to get the text inside an <option> ?
               var index = this.activeCell.field.field.selectedIndex;
-              this.grid.model.set(this.activeCell.coords.index, document.id(this.activeCell.field.field.options[index]).get("text"));
+              newValue.data = document.id(this.activeCell.field.field.options[index]).get('value');
               break;
             case 'Textarea':
-              this.grid.model.set(this.activeCell.coords.index, this.activeCell.field.getValue().replace(/\n/gi, '<br />'));
+              newValue.data = this.activeCell.field.getValue().replace(/\n/gi, '<br />');
               break;
             default:
-              //console.log(this.activeCell);
-              //console.log(this.grid.model.get(this.activeCell.coords.index, this.activeCell.coords.row));
-              this.grid.model.set(this.activeCell.coords.index, this.activeCell.field.getValue());
+              newValue.data = this.activeCell.field.getValue();
               break;
           }
-          updated = true;
-          this.activeCell.cell = this.grid.gridTableBody.rows[this.activeCell.coords.row].cells[this.activeCell.coords.index-1];
-          //this.activeCell.cell = this.grid.columns.getColumnCell(this.grid.columns.getByName(this.activeCell.colOptions.name));
+          if(save) {
+            this.activeCell.newValue.data = newValue.data;
+            // manually blur the field to activate the validator -> continues with this.terminate()
+            //this.activeCell.timeoutId = this.activeCell.field.field.blur.delay(50, this.activeCell.field.field);
+          }
+          // validation only if it should be saved!
+          if(this.activeCell.validator != null && !this.activeCell.validator.isValid()) {
+            newValue.error = true;
+            this.activeCell.field.field.focus.delay(50, this.activeCell.field.field);
+          }
         }else{
           this.activeCell.span.show();
         }
-        if(this.options.useKeyboard) {
-          this.activeCell.field.removeEvent('keypress', this.bound.setKeyboard);
+
+
+        if(save && newValue.data != null && newValue.error == false) {
+          this.grid.model.set(this.activeCell.coords.index, newValue.data);
+          this.addFormatterUriClickListener();
+        // else show error message and cell
+        }else if(newValue.error == true) {
+          this.activeCell.span.show();
         }
-        //console.log(this.activeCell.cell);
+
+        // update reference to activeCell
+        if($defined(this.activeCell.coords.row) && $defined(this.activeCell.coords.index)) {
+          var colIndex = this.grid.options.row.useHeaders ? this.activeCell.coords.index-1 : this.activeCell.coords.index;
+          this.activeCell.cell = this.grid.gridTableBody.rows[this.activeCell.coords.row].cells[colIndex];
+        }
+
+        if(this.options.useKeyboard) {
+          this.activeCell.field.removeEvent('keypress', this.setKeyboard);
+        }
+
         /**
          * COMMENT: this is just an idea how changing a value could be visualized
          * we could also pass an Fx.Tween element?
          * the row could probably be highlighted as well?
          */
         if(this.options.cellChangeFx.use) {
-          if(updated) {
-            this.activeCell.cell.highlight(this.options.cellChangeFx.save);
+          var highlighter = new Fx.Tween(this.activeCell.cell, {
+            duration: 250,
+            onComplete: function(ev) {
+              this.element.removeProperty('style');
+            }
+          });
+          var currentCellBg = this.activeCell.cell.getStyle('background-color');
+          currentCellBg = currentCellBg == 'transparent' ? '#fff' : currentCellBg;
+          if(newValue.data != null && newValue.error == false) {
+            highlighter.start('background-color',this.options.cellChangeFx.success, currentCellBg);
+          }else if(newValue.error){
+            highlighter.start('background-color',this.options.cellChangeFx.error, currentCellBg);
           }
         }
 
-        this.keyboard.deactivate();
-        this.unsetActiveField();
+        // check for error and keep input field alive
+        if(newValue.error) {
+          if(this.options.cellChangeFx.use) {
+            this.activeCell.field.field.highlight(this.options.cellChangeFx.error);
+          }
+          this.activeCell.field.field.setStyle('border','1px solid '+this.options.cellChangeFx.error);
+          this.activeCell.field.field.focus();
+          return false;
+        // otherwise hide it
+        }else{
+          this.keyboard.deactivate();
+          this.unsetActiveField();
+          return true;
+        }
       }
     },
     /**
@@ -30024,16 +32924,13 @@ Jx.Plugin.Grid.Editor = new Class({
      */
     showPopUp : function(cell) {
       if(this.popup.domObj != null) {
-        this.popup.domObj.setStyles({
-          'width'  : cell.getContentBoxSize().width
-        });
-        
         Jx.Widget.prototype.position(this.popup.domObj, cell, {
             horizontal: ['left left'],
             vertical: ['top top']
         });
         this.activeCell.field.domObj.inject(this.popup.innerWrapper, 'top');
         this.popup.domObj.show();
+        this.setPopUpButtons();
         this.setPopUpStylesAfterRendering();
       }else{
         this.createPopUp(cell);
@@ -30057,7 +32954,6 @@ Jx.Plugin.Grid.Editor = new Class({
           template  = Jx.Widget.prototype.processTemplate(this.options.popup.template, this.classes);
 
       popup = template.jxGridEditorPopup;
-      popup.setStyle('width', cell.getContentBoxSize().width);
       
       innerWrapper = template.jxGridEditorPopupInnerWrapper;
       /**
@@ -30076,49 +32972,10 @@ Jx.Plugin.Grid.Editor = new Class({
       });
       */
 
-      /**
-       * COMMENT do we need this close Icon?
-       */
-      if(this.options.popup.useCloseIcon) {
-        closeIcon = new Element('a', {
-          'html'  : '<img src="'+Jx.aPixel.src+'" alt="" title=""/>',
-          'class' : 'jxTabClose',   // or something similar.. I choosed this because it's exactly what I needed
-          'styles' : {
-            'position' : 'absolute',
-            'right'    : '0',
-            'top'      : '-3px',
-            'z-index'  : 1
-          },
-          'events' : {
-            'click' : function() {
-              self.deactivate(false);
-            }
-          }
-        }).inject(innerWrapper);
-      }
-
-      if(this.options.popup.useButtons) {
-        submit = new Jx.Button({
-          label : this.options.popup.button.submit.label,
-          image : this.options.popup.button.submit.image,
-          onClick: function() { 
-            self.deactivate(true);
-          }
-        }).addTo(innerWrapper);
-        cancel = new Jx.Button({
-          label : this.options.popup.button.cancel.label,
-          image : this.options.popup.button.cancel.image,
-          onClick: function() { 
-            self.deactivate(false);
-          }
-        }).addTo(innerWrapper);
-      }
-
       this.popup.domObj         = popup;
       this.popup.innerWrapper   = innerWrapper;
       this.popup.closeIcon      = closeIcon;
-      this.popup.buttons.submit = submit;
-      this.popup.buttons.cancel = cancel;
+      this.setPopUpButtons();
 
       this.activeCell.field.domObj.inject(this.popup.innerWrapper, 'top');
       this.popup.domObj.inject(document.body);
@@ -30135,8 +32992,13 @@ Jx.Plugin.Grid.Editor = new Class({
      * @return void
      */
     setPopUpStylesAfterRendering: function() {
-      if(this.options.popup.useButtons) {
-        this.popup.domObj.setStyle('min-width', this.popup.buttons.submit.domObj.getSize().x + this.popup.buttons.cancel.domObj.getSize().x + "px");
+      if(this.options.popup.useButtons && this.popup.button.submit != null && this.popup.button.cancel != null) {
+        this.popup.domObj.setStyle('min-width', this.popup.button.submit.domObj.getSize().x + this.popup.button.cancel.domObj.getSize().x + "px");
+      }else{
+        if(this.popup.button.submit != null)
+          this.popup.button.submit.domObj.hide();
+        if(this.popup.button.cancel != null)
+          this.popup.button.cancel.domObj.hide();
       }
       this.activeCell.field.field.setStyle('width',
         this.activeCell.field.type == 'Select' ?
@@ -30144,8 +33006,49 @@ Jx.Plugin.Grid.Editor = new Class({
           this.popup.domObj.getSize().x - 17 + "px");
     },
     /**
+     * Method: setPopUpButtons
+     * creates the PopUp Buttons if enabled in options or deletes them if set to false
+     *
+     * @return void
+     */
+    setPopUpButtons : function() {
+      var self = this,
+          button = {
+            submit : null,
+            cancel : null
+          };
+      // check if buttons are needed, innerWrapper exists and no buttons already exist
+      if(this.options.popup.useButtons && this.popup.innerWrapper != null && this.popup.button.submit == null) {
+        button.submit = new Jx.Button({
+          label : this.options.popup.button.submit.label.length == 0 ? MooTools.lang.get('Jx','plugin.editor').submitButton : this.options.popup.button.submit.label,
+          image : this.options.popup.button.submit.image,
+          onClick: function() {
+            self.deactivate(true);
+          }
+        }).addTo(this.popup.innerWrapper);
+        button.cancel = new Jx.Button({
+          label : this.options.popup.button.cancel.label.length == 0 ? MooTools.lang.get('Jx','plugin.editor').cancelButton : this.options.popup.button.cancel.label,
+          image : this.options.popup.button.cancel.image,
+          onClick: function() {
+            self.deactivate(false);
+          }
+        }).addTo(this.popup.innerWrapper);
+      }else if(this.options.popup.useButtons && this.popup.button.submit != null) {
+        button = {
+          submit : this.popup.button.submit,
+          cancel : this.popup.button.cancel
+        };
+      // check if buttons are not needed and buttons already exist to remove them
+      }else if(this.options.popup.useButtons == false && this.popup.button.submit != null) {
+        this.popup.button.submit.cleanup();
+        this.popup.button.cancel.cleanup();
+      }
+
+      this.popup.button = button;
+    },
+    /**
      * Method: unsetActiveField
-     * resets the activeField
+     * resets the activeField and hides the popup
      *
      * @return void
      */
@@ -30161,13 +33064,28 @@ Jx.Plugin.Grid.Editor = new Class({
       this.activeCell = {
         field         : null,
         oldValue      : null,
+        newValue      : { data: null, error: false},
         cell          : null,
         span          : null,
         timeoutId     : null,
         //popup         : null,   // do not destroy the popup, it might be used again
         colOptions    : {},
         coords        : {},
-        fieldOptions  : {}
+        fieldOptions  : {},
+        validator     : null
+      }
+    },
+    /**
+     * Method: unsetPopUp
+     * resets the popup manually to be able to use it with different settings
+     */
+    unsetPopUp : function() {
+      if(this.popup.domObj != null) {
+        this.popup.domObj.destroy();
+        this.popup.innerWrapper   = null;
+        this.popup.closeIcon      = null;
+        this.popup.button.submit = null;
+        this.popup.button.cancel = null;
       }
     },
     /**
@@ -30176,30 +33094,44 @@ Jx.Plugin.Grid.Editor = new Class({
      * otherwise the focus jumps to the next editable cell in the next row
      * or starts at the beginning
      *
+     * @var  {Boolean} save (Optional, default: true)
      * @return void
      */
-    getNextCellInRow: function() {
-      var nextCell = true, nextRow = true;
-      var i = 0;
-      do {
-        nextCell = i > 0 ? nextCell.getNext() : this.activeCell.cell.getNext();
-        // check if cell is still in row, otherwise returns null
-        if(nextCell == null) {
-          nextRow  = this.activeCell.cell.getParent('tr').getNext();
-          // check if this was the last row in the table
-          if(nextRow == null) {
-            nextRow = this.activeCell.cell.getParent('tbody').getFirst();
+    getNextCellInRow: function(save) {
+      save = $defined(save) ? save : true;
+      if(this.activeCell.cell != null) {
+        var nextCell = true, nextRow = true,
+            sumCols = this.grid.columns.columns.length,
+            jxCellClass = 'td.jxGridCell:not(.jxGridCellUnattached)';
+        var i = 0;
+        do {
+          nextCell = i > 0 ? nextCell.getNext(jxCellClass) : this.activeCell.cell.getNext(jxCellClass);
+          // check if cell is still in row, otherwise returns null
+          if(nextCell == null) {
+            nextRow  = this.activeCell.cell.getParent('tr').getNext();
+            // check if this was the last row in the table
+            if(nextRow == null && this.options.keypressLoop) {
+              nextRow = this.activeCell.cell.getParent('tbody').getFirst();
+            }else if(nextRow == null && !this.options.keypressLoop){
+              return;
+            }
+            nextCell = nextRow.getFirst(jxCellClass);
           }
-          nextCell = nextRow.getFirst();
+          var data  = nextCell.retrieve('jxCellData');
+          i++;
+          // if all columns are set to uneditable during runtime, jump out of the loop after
+          // running through 2 times to prevent an endless-loop and browser crash :)
+          if(i == sumCols*2) {
+            this.deactivate(save);
+            return;
+          }
+        }while(!data.col.options.isEditable);
+
+        if(save === false) {
+          this.deactivate(save);
         }
-        var data  = nextCell.retrieve('jxCellData'),
-            row   = data.row,
-            index = data.index;
-        i++;
-      }while(!data.col.options.isEditable);
-      
-      //fire the select event by having the grid select the cell like so:
-      this.grid.selection.select(nextCell);
+        this.grid.selection.select(nextCell);
+      }
     },
     /**
      * APIMethod: getPrevCellInRow
@@ -30207,62 +33139,91 @@ Jx.Plugin.Grid.Editor = new Class({
      * otherwise the focus jumps to the previous editable cell in the previous row
      * or starts at the last cell in the last row at the end
      *
+     * @var  {Boolean} save (Optional, default: true)
      * @return void
      */
-    getPrevCellInRow: function() {
-      var prevCell, prevRow, i = 0;
-      do {
-        prevCell = i > 0 ? prevCell.getPrevious() : this.activeCell.cell.getPrevious();
-        // check if cell is still in row, otherwise returns null
-        if(prevCell == null) {
-          prevRow  = this.activeCell.cell.getParent('tr').getPrevious();
-          // check if this was the last row in the table
-          if(prevRow == null) {
-            // @todo this does not always work when shift+tab is hold pressed (out of grid error)
-            prevRow = this.activeCell.cell.getParent('tbody').getLast();
+    getPrevCellInRow: function(save) {
+      save = $defined(save) ? save : true;
+      if(this.activeCell.cell != null) {
+        var prevCell, prevRow, i = 0,
+            sumCols = this.grid.columns.columns.length,
+            jxCellClass = 'td.jxGridCell:not(.jxGridCellUnattached)';
+        do {
+          prevCell = i > 0 ? prevCell.getPrevious(jxCellClass) : this.activeCell.cell.getPrevious(jxCellClass);
+          // check if cell is still in row, otherwise returns null
+          if(prevCell == null) {
+            prevRow  = this.activeCell.cell.getParent('tr').getPrevious();
+            // check if this was the last row in the table
+            if(prevRow == null && this.options.keypressLoop) {
+              prevRow = this.activeCell.cell.getParent('tbody').getLast();
+            }else if(prevRow == null && !this.options.keypressLoop) {
+              return;
+            }
+            prevCell = prevRow.getLast(jxCellClass);
           }
-          prevCell = prevRow.getLast();
-        }
-        var data  = prevCell.retrieve('jxCellData'),
-            row   = data.row,
-            index = data.index;
-        i++;
-      }while(!data.col.options.isEditable);
+          var data  = prevCell.retrieve('jxCellData'),
+              row   = data.row,
+              index = data.index;
+          i++;
+          // if all columns are set to uneditable during runtime, jump out of the loop after
+          // running through 2 times to prevent an endless-loop and browser crash :)
+          if(i == sumCols*2) {
+            this.deactivate(save);
+            return;
+          }
+        }while(!data.col.options.isEditable);
 
-      //fire the select event by having the grid select the cell like so:
-      this.grid.selection.select(prevCell);
+        if(save === false) {
+          this.deactivate(save);
+        }
+        this.grid.selection.select(prevCell);
+      }
     },
     /**
      * APIMethod: getNextCellInCol
      * activates the next cell in a column under the currently active one
      * if the active cell is in the last row, the first one will be used
      *
+     * @var  {Boolean} save (Optional, default: true)
      * @return void
      */
-    getNextCellInCol : function() {
-      var nextRow, nextCell;
-      nextRow = this.activeCell.cell.getParent().getNext();
-      if(nextRow == null) {
-        nextRow = this.activeCell.cell.getParent('tbody').getFirst();
+    getNextCellInCol : function(save) {
+      save = $defined(save) ? save : true;
+      if(this.activeCell.cell != null) {
+        var nextRow, nextCell;
+        nextRow = this.activeCell.cell.getParent().getNext();
+        if(nextRow == null) {
+          nextRow = this.activeCell.cell.getParent('tbody').getFirst();
+        }
+        nextCell = nextRow.getElement('td.jxGridCol'+this.activeCell.coords.index);
+        if(save === false) {
+          this.deactivate(save);
+        }
+        this.grid.selection.select(nextCell);
       }
-      nextCell = nextRow.getElement('td.jxGridCol'+this.activeCell.coords.index);
-      this.grid.selection.select(nextCell);
     },
     /**
      * APIMethod: getPrevCellInCol
      * activates the previous cell in a column above the currently active one
      * if the active cell is in the first row, the last one will be used
      *
+     * @var  {Boolean} save (Optional, default: true)
      * @return void
      */
-    getPrevCellInCol : function() {
-      var prevRow, prevCell;
-      prevRow = this.activeCell.cell.getParent().getPrevious();
-      if(prevRow == null) {
-        prevRow = this.activeCell.cell.getParent('tbody').getLast();
+    getPrevCellInCol : function(save) {
+      save = $defined(save) ? save : true;
+      if(this.activeCell.cell != null) {
+        var prevRow, prevCell;
+        prevRow = this.activeCell.cell.getParent().getPrevious();
+        if(prevRow == null) {
+          prevRow = this.activeCell.cell.getParent('tbody').getLast();
+        }
+        prevCell = prevRow.getElement('td.jxGridCol'+this.activeCell.coords.index);
+        if(save === false) {
+          this.deactivate(save);
+        }
+        this.grid.selection.select(prevCell);
       }
-      prevCell = prevRow.getElement('td.jxGridCol'+this.activeCell.coords.index);
-      this.grid.selection.select(prevCell);
     },
     /**
      * Method: cellValueIncrement
@@ -30273,15 +33234,35 @@ Jx.Plugin.Grid.Editor = new Class({
      * @return void
      */
     cellValueIncrement : function(bool) {
-      var dataType = this.activeCell.colOptions.dataType;
-      if(dataType == 'numeric' || dataType == 'currency') {
-        var valueTmp = this.activeCell.field.getValue().toInt();
-        if(bool) {
-          valueTmp++;
-        }else{
-          valueTmp--;
-        }
-        this.activeCell.field.setValue(valueTmp);
+      var dataType = this.activeCell.colOptions.dataType,
+          valueNew = null;
+      switch(dataType) {
+        case 'numeric':
+        case 'currency':
+          valueNew = this.activeCell.field.getValue().toInt();
+          if(typeof(valueNew) == 'number') {
+            if(bool) {
+              valueNew++;
+            }else{
+              valueNew--;
+            }
+          }
+          break;
+        case 'date':
+          valueNew = Date.parse(this.activeCell.field.getValue());
+          if(valueNew instanceof Date) {
+            if(bool) {
+              valueNew.increment();
+            }else{
+              valueNew.decrement();
+            }
+            var formatter = new Jx.Formatter.Date();
+            valueNew = formatter.format(valueNew);
+          }
+          break;
+      }
+      if(valueNew != null) {
+        this.activeCell.field.setValue(valueNew);
       }
     },
     /**
@@ -30294,11 +33275,16 @@ Jx.Plugin.Grid.Editor = new Class({
      * @return {Boolean}
      */
     cellIsInGrid: function(row, index) {
-      if( row >= 0 && index >= 0 &&
-          row <= this.grid.gridTableBody.rows.length &&
-          index <= this.grid.gridTableBody.rows[row].cells.length
-      ) {
-        return true;
+      if($defined(row) && $defined(index)) {
+        //console.log("Row %i - max Rows: %i, Col %i - max Cols %i", row, this.grid.gridTableBody.rows.length, index, this.grid.gridTableBody.rows[row].cells.length);
+        if( row >= 0 && index >= 0 &&
+            row <= this.grid.gridTableBody.rows.length &&
+            index <= this.grid.gridTableBody.rows[row].cells.length
+        ) {
+          return true;
+        }else{
+          return false;
+        }
       }else{
         return false;
       }
@@ -30322,13 +33308,70 @@ Jx.Plugin.Grid.Editor = new Class({
         }
       }
       return r;
+    },
+    /**
+     * Method: addFormatterUriClickListener
+     *
+     * looks up for Jx.Formatter.Uri columns to disable the link and open the
+     * inline editor instead when CTRL is NOT pressed.
+     * set option linkClickListener to false to disable this
+     *
+     */
+    addFormatterUriClickListener : function() {
+      if(this.options.linkClickListener) {
+        // prevent a link from beeing opened if the editor should appear and the uri formatter is activated
+        var uriCols = [], tableCols, anchor;
+        // find out which columns are using a Jx.Formatter.Uri
+        this.grid.columns.columns.each(function(col,i) {
+          if(col.options.renderer.options.formatter != null && col.options.renderer.options.formatter instanceof Jx.Formatter.Uri) {
+            uriCols.push(i);
+          }
+        });
+        // add an event to all anchors inside these columns
+        this.grid.gridTable.getElements('tr').each(function(tr,i) {
+          tableCols = tr.getElements('td.jxGridCell');
+          for(var j = 0, k = uriCols.length; j < k; j++) {
+            anchor = tableCols[uriCols[j]-1].getElement('a');
+            if(anchor) {
+              anchor.removeEvent('click');
+              anchor.addEvent('click', function(ev) {
+                // open link if ctrl was clicked
+                if(!ev.control) {
+                  ev.preventDefault();
+                }
+              });
+            }
+          }
+        });
+      }
+    },
+    /**
+     * APIMethod: changeText
+     * This method should be overridden by subclasses. It should be used
+     * to change any language specific default text that is used by the widget.
+     *
+     * Parameters:
+     * lang - the language being changed to or that had it's data set of
+     * 		translations changed.
+     */
+    changeText: function (lang) {
+    	this.parent();
+    	if (this.options.popup.use && this.options.popup.useButtons) {
+        if(this.popup.button.submit != null) {
+          this.popup.button.submit.cleanup();
+          this.popup.button.cancel.cleanup();
+          this.popup.button.submit = null;
+          this.popup.button.cancel = null;
+          this.setPopUpButtons();
+        }
+    	}
     }
 }); 
 /**
  * Namespace: Jx.Plugin.DataView
  * The namespace for all dataview plugins
  */
-Jx.Plugin.DataView = {};
+Jx.Plugin.DataView = {};// $Id: slide.js 826 2010-03-31 18:46:16Z pagameba $
 /**
  * Class: Jx.Slide
  * Hides and shows an element without depending on a fixed width or height
@@ -30339,7 +33382,7 @@ Jx.Plugin.DataView = {};
 Jx.Slide = new Class({
     Family: 'Jx.Slide',
     Implements: Jx.Object,
-
+    Binds: ['handleClick'],
     options: {
         /**
          * Option: target
@@ -30373,25 +33416,25 @@ Jx.Slide = new Class({
         onSlideIn: $empty
     },
     /**
-     * APIMethod: init
+     * Method: init
      * sets up the slide
      */
     init: function () {
 
-        this.target = $(this.options.target);
+        this.target = document.id(this.options.target);
 
         this.target.set('tween', {onComplete: this.setDisplay.bind(this)});
 
         if ($defined(this.options.trigger)) {
-            this.trigger = $(this.options.trigger);
-            this.trigger.addEvent('click', this.handleClick.bindWithEvent(this));
+            this.trigger = document.id(this.options.trigger);
+            this.trigger.addEvent('click', this.handleClick);
         }
 
         this.target.store('slider', this);
 
     },
     /**
-     * APIMethod: handleClick
+     * Method: handleClick
      * event handler for clicks on the trigger. Starts the slide process
      */
     handleClick: function () {
@@ -30432,10 +33475,10 @@ Jx.Slide = new Class({
         if (dir === 'in') {
             h = this.target.retrieve(this.options.type);
             this.target.setStyles({
-                'overflow': 'hidden',
-                'display': 'block'
+                overflow: 'hidden',
+                display: 'block'
             });
-            this.target.setStyle(this.options.type, 0);
+            this.target.setStyles(this.options.type, 0);
             this.target.tween(this.options.type, h);
         } else {
             if (this.options.type === 'height') {
@@ -30564,7 +33607,7 @@ Jx.Plugin.DataView.GroupFolder = new Class({
  *
  * This file is licensed under an MIT style license
  */
-Jx.Plugin.Field = {};// $Id: field.validator.js 649 2009-11-30 22:19:48Z pagameba $
+Jx.Plugin.Field = {};// $Id: field.validator.js 754 2010-03-14 20:13:04Z conrad.barthelmes $
 /**
  * Class: Jx.Plugin.Field.Validator
  *
@@ -30634,6 +33677,7 @@ Jx.Plugin.Field.Validator = new Class({
      * storage for bound methods useful for working with events
      */
     bound: {},
+    validators : new Hash(),
     /**
      * APIMethod: init
      * construct a new instance of the plugin.  The plugin must be attached
@@ -30664,7 +33708,7 @@ Jx.Plugin.Field.Validator = new Class({
             if (t === 'string') {
                 this.field.field.addClass(v);
             } else if (t === 'object') {
-                this.validators.add(v.validator.name, new InputValidator(v.validator.name, v.validator.options));
+                this.validators.set(v.validator.name, new InputValidator(v.validator.name, v.validator.options));
                 this.field.field.addClass(v.validatorClass);
             }
         }, this);
@@ -30916,7 +33960,625 @@ Jx.Plugin.Form.Validator = new Class({
 
 
 });
-// $Id: context.js 663 2009-12-08 07:08:21Z jonlb@comcast.net $
+/**
+ * Class: Jx.Plugin.Toolbar
+ * Toolbar plugin namespace
+ *
+ *
+ * License:
+ * Copyright (c) 2009, Jon Bomgardner.
+ *
+ * This file is licensed under an MIT style license
+ */
+Jx.Plugin.ToolbarContainer = {};/**
+ * Class: Jx.Plugin.ToolbarContainer.TabMenu
+ *
+ * Extends: <Jx.Plugin>
+ *
+ * This plugin provides a menu of tabs in a toolbar (similar to the button in firefox at the end of the row of tabs).
+ * It is designed to be used only when the toolbar contains tabs and only when the container is allowed to scroll. Also,
+ * this plugin must be added directly to the Toolbar container. You can get a reference to the container for a
+ * <Jx.TabBox> by doing
+ *
+ * (code)
+ * var tabbox = new Jx.TabBox();
+ * var toolbarContainer = document.id(tabBox.tabBar).getParent('.jxBarContainer').retrieve('jxBarContainer');
+ * (end)
+ *
+ * You can then use the attach method to connect the plugin. Otherwise, you can add it via any normal means to a
+ * directly instantiated Container.
+ *
+ * License:
+ * Copyright (c) 2010, Jon Bomgardner.
+ *
+ * This file is licensed under an MIT style license
+ */
+
+
+Jx.Plugin.ToolbarContainer.TabMenu = new Class({
+
+    Family: 'Jx.Plugin.ToolbarContainer.TabMenu',
+    Extends: Jx.Plugin,
+
+    Binds: ['addButton'],
+
+    options: {
+    },
+    /**
+     * Property: tabs
+     * holds all of the tabs that we're tracking
+     */
+    tabs: [],
+
+    init: function () {
+        this.parent();
+    },
+
+    attach: function (toolbarContainer) {
+        this.parent(toolbarContainer);
+
+        this.container = toolbarContainer;
+
+        //we will only be used if the container is allowed to scroll
+        if (!this.container.options.scroll) {
+            return;
+        }
+
+        this.menu = new Jx.Menu({},{
+            buttonTemplate: '<span class="jxButtonContainer"><a class="jxButton jxButtonMenu jxDiscloser"><span class="jxButtonContent"><span class="jxButtonLabel"></span></span></a></span>'
+        }).addTo(this.container.controls,'bottom');
+        document.id(this.menu).addClass('jxTabMenuRevealer');
+        this.container.update();
+
+        //go through all of the existing tabs and add them to the menu
+        //grab the toolbar...
+        var tb = document.id(this.container).getElement('ul').retrieve('jxToolbar');
+        tb.list.each(function(item){
+            this.addButton(item);
+        },this);
+
+        //connect to the add event of the toolbar list to monitor the addition of buttons
+        tb.list.addEvent('add',this.addButton);
+    },
+
+    detach: function () {
+        this.parent();
+    },
+
+    addButton: function (item) {
+        var tab;
+        tab = (item instanceof Jx.Tab) ? item : document.id(item).getFirst().retrieve('jxTab');
+
+
+        var l = tab.getLabel();
+        if (!$defined(l)) {
+            l = '';
+        }
+        var mi = new Jx.Menu.Item({
+            label: l,
+            image: tab.options.image,
+            onClick: function() {
+                if (tab.isActive()) {
+                    this.container.scrollIntoView(tab);
+                } else {
+                    tab.setActive(true);
+                }
+            }.bind(this)
+        });
+
+        document.id(tab).store('menuItem', mi);
+
+        tab.addEvent('close', function() {
+            this.menu.remove(mi);
+        }.bind(this));
+
+        this.menu.add([mi]);
+    }
+});
+/**
+ * Class: Jx.Adaptor
+ * Base class for all adaptor implementations. Provides a place to locate all
+ * common code and the Jx.Adaptor namespace.  Since it extends <Jx.Plugin> all
+ * adaptors will be able to be used as plugins for their respective classes.
+ * Also as such, they must have the attach() and detach() methods.
+ * 
+ * Adaptors are specifically used to conform a <Jx.Store> to any one of 
+ * the different widgets (i.e. Jx.Tree, Jx.ListView, etc...) that could
+ * benefit from integration with the store. This approach was taken to minimize 
+ * data access code in the widgets themselves. Widgets should have no idea where 
+ * the data/items come from so that they will be usable in the broadest number
+ * of situations.
+ *
+ * Copyright 2010 by Jonathan Bomgardner
+ * License: mit-style
+ */
+Jx.Adaptor = new Class({
+	
+	Family: 'Jx.Adaptor',
+	Extends: Jx.Plugin,
+	
+	name: 'Jx.Adaptor',
+
+	options: {
+        /**
+         * Option: template
+         * The text template to use in creating the items for this adaptor
+         */
+	    template: '',
+        /**
+         * Option: useTemplate
+         * Whether or not to use the text template above. Defaults to true.
+         */
+	    useTemplate: true,
+        /**
+         * Option: store
+         * The store to use with the adaptor.
+         */
+	    store: null
+	},
+    /**
+     * Property: columnsNeeded
+     * Will hold an array of the column names needed for processing the
+     * template
+     */
+	columnsNeeded: null,
+	
+	init: function () {
+	    this.parent();
+	    
+	    this.store = this.options.store;
+	    
+	    if (this.options.useTemplate) {
+	        this.columnsNeeded = this.store.parseTemplate(this.options.template);
+	    }
+	},
+	
+	attach: function (widget) {
+		this.parent(widget);
+		this.widget = widget;
+	},
+	
+	detach: function () {
+		this.parent();
+	}
+	
+});/**
+ * Class: Jx.Adaptor.Tree
+ * This base class is used to change a store (a flat list of records) into the
+ * data structure needed for a Jx.Tree. It will have 2 subclasses:
+ * <Jx.Adapter.Tree.Mptt> and <Jx.Adapter.Tree.Parent>.
+ * 
+ * Copyright 2010 by Jonathan Bomgardner
+ * License: mit-style
+ */
+Jx.Adaptor.Tree = new Class({
+    
+    Family: 'Jx.Adaptor.Tree',
+    Extends: Jx.Adaptor,
+    
+    Binds: ['fill','checkFolder'],
+    
+    options: {
+        /**
+         * Option: monitorFolders
+         * Determines if this adapter should use monitor the TreeFolder items in
+         * order to request any items they should contain if they are empty.
+         */
+        monitorFolders: false,
+        /**
+         * Option: startingNodeKey
+         * The store primary key to use as the node that we're requesting.
+         * Initially set to -1 to indicate that we're request the first set of
+         * data
+         */
+        startingNodeKey: -1,
+        /**
+         * Option: folderOptions
+         * A Hash containing the options for <Jx.TreeFolder>. Defaults to null.
+         */
+        folderOptions: null,
+        /**
+         * Option: itemOptions
+         * A Hash containing the options for <Jx.TreeItem>. Defaults to null.
+         */
+        itemOptions: null
+    },
+    /**
+     * Property: folders
+     * A Hash containing all of the <Jx.TreeFolders> in this tree.
+     */
+    folders: new Hash(),
+    /**
+     * Property: currentRecord
+     * An integer indicating the last position we were at in the store. Used to
+     * allow the adaptor to pick up rendering items after we request additional
+     * data.
+     */
+    currentRecord: -1,
+    /**
+     * APIMethod: attach
+     * Attaches this adaptor to a specific tree instance.
+     *
+     * Parameters:
+     * tree - an instance of <Jx.Tree>
+     */
+    attach: function (tree) {
+        this.parent(tree);
+        
+        this.tree = tree;
+        
+        if (this.options.monitorFolders) {
+            this.strategy = this.store.getStrategy('progressive');
+        
+            if (!$defined(this.strategy)) {
+                this.strategy = new Jx.Store.Strategy.Progressive({
+                    dropRecords: false,
+                    getPaginationParams: function () { return {}; }
+                });
+                this.store.addStrategy(this.strategy);
+            } else {
+                this.strategy.options.dropRecords = false;
+                this.strategy.options.getPaginationParams = function () { return {}; };
+            }
+            
+        }
+        
+        this.store.addEvent('storeDataLoaded', this.fill);
+        
+        
+    },
+    /**
+     * APIMethod: detach
+     * removes this adaptor from the current tree.
+     */
+    detach: function () {
+    	this.parent();
+    	this.store.removeEvent('storeDataLoaded', this.fill);
+    },
+    /**
+     * APIMethod: firstLoad
+     * Method used to start the first store load.
+     */
+    firstLoad: function () {
+    	//initial store load
+    	this.busy = 'tree';
+    	this.tree.setBusy(true);
+        this.store.load({
+            node: this.options.startingNodeKey
+        });
+    },
+    
+    /**
+     * APIMethod: fill
+     * This function will start at this.currentRecord and add the remaining
+     * items to the tree. 
+     */
+    fill: function () {
+    	if (this.busy == 'tree') {
+    		this.tree.setBusy(false);
+    		this.busy = 'none';
+    	} else if (this.busy == 'folder') {
+    		this.busyFolder.setBusy(false);
+    		this.busy = 'none';
+    	}
+        var l = this.store.count() - 1;
+        for (var i = this.currentRecord + 1; i <= l; i++) {
+            var template = this.store.fillTemplate(i,this.options.template,this.columnsNeeded);
+
+            var item;
+            if (this.hasChildren(i)) {
+                //add as folder
+                var item = new Jx.TreeFolder($merge(this.options.folderOptions, {
+                    label: template
+                }));
+                
+                if (this.options.monitorFolders) {
+                	item.addEvent('disclosed', this.checkFolder);
+                }
+                
+                this.folders.set(i,item);
+            } else {
+                //add as item
+                var item = new Jx.TreeItem($merge(this.options.itemOptions, {
+                    label: template
+                }));
+            }
+            document.id(item).store('index', i);
+            document.id(item).store('jxAdaptor', this);
+            //check for a parent
+            if (this.hasParent(i)) {
+                //add as child of parent
+                var p = this.getParentIndex(i);
+                var folder = this.folders.get(p);
+                folder.add(item);
+            } else {
+                //otherwise add to the tree itself
+                this.tree.add(item);
+            }
+        }
+        this.currentRecord = l;
+    },
+    /**
+     * Method: checkFolder
+     * Called by the disclose event of the tree to determine if we need to
+     * request additional items for a branch of the tree.
+     */
+    checkFolder: function (folder) {
+        var items = folder.items();
+        if (!$defined(items) || items.length === 0) {
+            //get items via the store
+        	var index = document.id(folder).retrieve('index');
+        	var node = this.store.get('primaryKey', index);
+        	this.busyFolder = folder;
+        	this.busyFolder.setBusy(true);
+        	this.busy = 'folder';
+            this.store.load({
+                node: node
+            });
+        }
+    },
+    /**
+     * Method: hasChildren
+     * Virtual method to be overridden by sublcasses. Determines if a specific
+     * node has any children.
+     */
+    hasChildren: $empty,
+    /**
+     * Method: hasParent
+     * Virtual method to be overridden by sublcasses. Determines if a specific
+     * node has a parent node.
+     */
+    hasParent: $empty,
+    /**
+     * Method: getParentIndex
+     * Virtual method to be overridden by sublcasses. Determines the store index
+     * of the parent node.
+     */
+    getParentIndex: $empty
+    
+    
+    
+});/**
+ * Class: Jx.Adaptor.Tree.Mptt
+ * This class adapts a table adhering to the classic Parent-style "tree table".
+ * 
+ * This class requires an MPTT (Modified Preorder Tree Traversal) table. The MPTT
+ * has a 'left' and a 'right' column that indicates the order of nesting. For 
+ * more details see the sitepoint.com article at 
+ * http://articles.sitepoint.com/article/hierarchical-data-database
+ * 
+ * if useAjax option is set to true then this adapter will send an Ajax request
+ * to the server, through the store's strategy (should be Jx.Store.Strategy.Progressive)
+ * to request additional nodes.
+ *
+ * Copyright 2010 by Jonathan Bomgardner
+ * License: mit-style
+ */
+Jx.Adaptor.Tree.Mptt = new Class({
+    
+
+    Family: 'Jx.Adaptor.Tree.Mptt',
+    Extends: Jx.Adaptor.Tree,
+    
+    name: 'tree.mptt',
+    
+    options: {
+        left: 'left',
+        right: 'right'
+    },
+        
+    /**
+     * APIMethod: hasChildren
+     * 
+     * Parameters: 
+     * index - {integer} the array index of the row in the store (not the 
+     *          primary key).
+     */
+    hasChildren: function (index) {
+        var l = this.store.get(this.options.left, index).toInt();
+        var r = this.store.get(this.options.right, index).toInt();
+        return (l + 1 !== r);
+    },
+    
+    /**
+     * APIMethod: hasParent
+     * 
+     * Parameters: 
+     * index - {integer} the array index of the row in the store (not the 
+     *          primary key).
+     */
+    hasParent: function (index) {
+        var i = this.getParentIndex(index);
+        if ($defined(i)) {
+            return true;
+        }
+        return false;
+    },
+    
+    /**
+     * APIMethod: getParentIndex
+     * 
+     * Parameters: 
+     * index - {integer} the array index of the row in the store (not the 
+     *          primary key).
+     */
+    getParentIndex: function (index) {
+        var l = this.store.get(this.options.left, index).toInt();
+        var r = this.store.get(this.options.right, index).toInt();
+        for (var i = index-1; i >= 0; i--) {
+            var pl = this.store.get(this.options.left, i).toInt();
+            var pr = this.store.get(this.options.right, i).toInt();
+            if (pl < l && pr > r) {
+                return i;
+            }
+        }
+        return null;
+    }
+});/**
+ * Class: Jx.Adapter.Tree.Parent
+ * This class adapts a table adhering to the classic Parent-style "tree table".
+ * 
+ * Basically, the store needs to have a column that will indicate the
+ * parent of each row. The root(s) of the tree should be indicated by a "-1" 
+ * in this column. The name of the "parent" column is configurable in the 
+ * options.
+ * 
+ * if the monitorFolders option is set to true then this adapter will send
+ * an Ajax request to the server, through the store's strategy (should be
+ * Jx.Store.Strategy.Progressive) to request additional nodes. Also, a column
+ * indicating whether this is a folder needs to be set as there is no way to
+ * tell if a node has children without it.
+ *
+ * Copyright 2010 by Jonathan Bomgardner
+ * License: mit-style
+ */
+Jx.Adaptor.Tree.Parent = new Class({
+    
+    Family: 'Jx.Adaptor.Tree.Parent',
+    Extends: Jx.Adaptor.Tree,
+    
+    options: {
+        parentColumn: 'parent',
+        folderColumn: 'folder'
+    },
+        
+    /**
+     * APIMethod: hasChildren
+     * 
+     * Parameters: 
+     * index - {integer} the array index of the row in the store (not the 
+     *          primary key).
+     */
+    hasChildren: function (index) {
+    	return this.store.get(this.options.folderColumn, index);
+    },
+    
+    /**
+     * APIMethod: hasParent
+     * 
+     * Parameters: 
+     * index - {integer} the array index of the row in the store (not the 
+     *          primary key).
+     */
+    hasParent: function (index) {
+        if (this.store.get(this.options.parentColumn, index).toInt() !== -1) {
+            return true;
+        } 
+        return false;
+    },
+    
+    /**
+     * APIMethod: getParentIndex
+     * 
+     * Parameters: 
+     * index - {integer} the array index of the row in the store (not the 
+     *          primary key).
+     */
+    getParentIndex: function (index) {
+        //get the parent based on the index
+        var pk = this.store.get(this.options.parentColumn, index);
+        return this.store.findByColumn('primaryKey', pk);
+    }
+});/**
+ * Class: Jx.Adaptor.Combo
+ * The namespace for all combo adaptors
+ */
+Jx.Adaptor.Combo = {}
+Jx.Adaptor.Combo.Fill = new Class({
+
+    Family: 'Jx.Adaptor.Combo.Fill',
+    Extends: Jx.Adaptor,
+    name: 'combo.fill',
+    Binds: ['fill'],
+
+    /**
+     * Note: option.template is used for constructing the text for the label
+     */
+    options: {
+        /**
+         * Option: imagePathColumn
+         * points to a store column that holds the image information
+         * for the combo items.
+         */
+        imagePathColumn: null,
+        /**
+         * Option: imageClassColumn
+         * Points to a store column that holds the image class
+         * information for the combo items
+         */
+        imageClassColumn: null,
+        /**
+         * Option: selectedFn
+         * This should be a function that could be run to determine if
+         * an item should be selected. It will get passed the current store
+         * record as the only parameter. It should return either true or false.
+         */
+        selectedFn: null,
+        /**
+         * Option: noRepeats
+         * This option allows you to use any store even if it has duplicate
+         * values in it. With this option set to true the adaptor will keep
+         * track of all of teh labels it adds and will not add anything that's
+         * a duplicate.
+         */
+        noRepeats: false
+    },
+
+    labels: null,
+
+    init: function () {
+        this.parent();
+
+        if (this.options.noRepeat) {
+            this.labels = [];
+        }
+    },
+
+    attach: function (combo) {
+        this.parent(combo);
+
+        this.store.addEvent('storeDataLoaded', this.fill);
+        if (this.store.loaded) {
+            this.fill();
+        }
+    },
+
+    detach: function () {
+
+    },
+
+    fill: function () {
+        //empty the combo
+        this.widget.empty();
+        //reset the store and cycle through creating the objects
+        //to pass to combo.add()
+        this.store.first();
+        var items = [];
+        this.store.each(function(record){
+            var template = this.store.fillTemplate(record,this.options.template,this.columnsNeeded);
+            if (!this.options.noRepeat || (this.options.noRepeat && !this.labels.contains(template))) {
+                var selected = false;
+                if ($type(this.options.selectedFn) == 'function') {
+                    selected = this.options.selectedFn.run(record);
+                }
+                var obj = {
+                    label: template,
+                    image: record.get(this.options.imagePathColumn),
+                    imageClass: record.get(this.options.imageClassColumn),
+                    selected: selected
+                }
+                items.push(obj);
+
+                if (this.options.noRepeat) {
+                    this.labels.push(template);
+                }
+            }
+
+        },this);
+        //pass all of the objects at once
+        this.widget.add(items);
+    }
+});// $Id: context.js 844 2010-04-15 15:42:05Z pagameba $
 /**
  * Class: Jx.Menu.Context
  *
@@ -30965,6 +34627,8 @@ Jx.Menu.Context = new Class({
         if (this.list.count() ==0) {
             return;
         }
+        
+        this.target = e.target;
 
         this.contentContainer.setStyle('visibility','hidden');
         this.contentContainer.setStyle('display','block');
@@ -30984,8 +34648,8 @@ Jx.Menu.Context = new Class({
         this.contentContainer.setStyle('visibility','');
         this.showChrome(this.contentContainer);
 
-        document.addEvent('mousedown', this.bound.mousedown);
-        document.addEvent('keyup', this.bound.keypress);
+        document.addEvent('mousedown', this.hide);
+        document.addEvent('keyup', this.keypressHandler);
 
         e.stop();
     }
@@ -31054,7 +34718,7 @@ Jx.Menu.Separator = new Class({
      * Show the menu item
      */
     show: $empty
-});// $Id: submenu.js 626 2009-11-20 13:22:22Z pagameba $
+});// $Id: submenu.js 708 2010-03-01 15:45:27Z pagameba $
 /**
  * Class: Jx.Menu.SubMenu
  *
@@ -31201,6 +34865,13 @@ Jx.Menu.SubMenu = new Class({
     replace: function(item, withItem) {
         this.menu.replace(item, withItem);
         return this;
+    },
+    /**
+     * APIMethod: empty
+     * remove all items from the sub menu
+     */
+    empty: function() {
+      this.menu.empty();
     },
     /**
      * Method: deactivate
@@ -31388,17 +35059,225 @@ Jx.Splitter.Snap = new Class({
             }
         }
     }
-});// $Id: tabset.js 626 2009-11-20 13:22:22Z pagameba $
+});// $Id: tab.js 865 2010-04-23 14:09:28Z fred.warnock $
+/**
+ * Class: Jx.Tab
+ *
+ * Extends: <Jx.Button>
+ *
+ * A single tab in a tab set.  A tab has a label (displayed in the tab) and a
+ * content area that is displayed when the tab is active.  A tab has to be
+ * added to both a <Jx.TabSet> (for the content) and <Jx.Toolbar> (for the
+ * actual tab itself) in order to be useful.  Alternately, you can use
+ * a <Jx.TabBox> which combines both into a single control at the cost of
+ * some flexibility in layout options.
+ *
+ * A tab is a <Jx.ContentLoader> and you can specify the initial content of
+ * the tab using any of the methods supported by
+ * <Jx.ContentLoader::loadContent>.  You can acccess the actual DOM element
+ * that contains the content (if you want to dynamically insert content
+ * for instance) via the <Jx.Tab::content> property.
+ *
+ * A tab is a button of type *toggle* which means that it emits the *up*
+ * and *down* events.
+ *
+ * Example:
+ * (code)
+ * var tab1 = new Jx.Tab({
+ *     label: 'tab 1',
+ *     content: 'content1',
+ *     onDown: function(tab) {
+ *         console.log('tab became active');
+ *     },
+ *     onUp: function(tab) {
+ *         console.log('tab became inactive');
+ *     }
+ * });
+ * (end)
+ *
+ *
+ *
+ * License:
+ * Copyright (c) 2008, DM Solutions Group Inc.
+ *
+ * This file is licensed under an MIT style license
+ */
+Jx.Tab = new Class({
+    Family: 'Jx.Tab',
+    Extends: Jx.Button,
+    /**
+     * Property: content
+     * {HTMLElement} The content area that is displayed when the tab is
+     * active.
+     */
+    content: null,
+
+    options: {
+        /* Option: toggleClass
+         * the CSS class to use for the button, 'jxTabToggle' by default
+         */
+        toggleClass: 'jxTabToggle',
+        /* Option: pressedClass
+         * the CSS class to use when the tab is pressed, 'jxTabPressed' by
+         * default
+         */
+        pressedClass: 'jxTabPressed',
+        /* Option: activeClass
+         * the CSS class to use when the tab is active, 'jxTabActive' by 
+         * default.
+         */
+        activeClass: 'jxTabActive',
+        /* Option: activeTabClass
+         * the CSS class to use on the content area of the active tab,
+         * 'tabContentActive' by default.
+         */
+        activeTabClass: 'tabContentActive',
+        /* Option: template
+         * the HTML template for a tab
+         */
+        template: '<span class="jxTabContainer"><a class="jxTab"><span class="jxTabContent"><img class="jxTabIcon" src="'+Jx.aPixel.src+'"><span class="jxTabLabel"></span></span></a><a class="jxTabClose"></span>',
+        /* Option: contentTemplate
+         * the HTML template for a tab's content area
+         */
+        contentTemplate: '<div class="tabContent"></div>',
+        /* Option: close
+         * {Boolean} can the tab be closed by the user?  False by default.
+         */
+        close: false,
+        /* Option: shouldClose
+         * {Mixed} when a tab is closeable, the shouldClose option is checked
+         * first to see if the tab should close.  You can provide a function
+         * for this option that can be used to return a boolean value.  This
+         * is useful if your tab contains something the user can edit and you
+         * want to see if they want to discard the changes before closing.
+         * The default value is true, meaning the tab will close immediately.
+         * (code)
+         * new Jx.Tab({
+         *   label: 'test close',
+         *   close: true,
+         *   shouldClose: function() {
+         *     return window.confirm('Are you sure?');
+         *   }
+         * });
+         * (end)
+         */
+        shouldClose: true
+    },
+    /**
+     * Property: classes
+     * {<Hash>} a hash of object properties to CSS class names used to
+     * automatically extract references to important DOM elements when
+     * processing a widget template.  This allows developers to provide custom
+     * HTML structures without affecting the functionality of widgets.
+     */
+    classes: new Hash({
+        domObj: 'jxTabContainer',
+        domA: 'jxTab',
+        domImg: 'jxTabIcon',
+        domLabel: 'jxTabLabel',
+        domClose: 'jxTabClose',
+        content: 'tabContent'
+    }),
+
+    /**
+     * Method: render
+     * Create a new instance of Jx.Tab.  Any layout options passed are used
+     * to create a <Jx.Layout> for the tab content area.
+     */
+    render : function( ) {
+        this.options = $merge(this.options, {toggle:true});
+        this.parent();
+        this.domObj.store('jxTab', this);
+        this.processElements(this.options.contentTemplate, this.classes);
+        new Jx.Layout(this.content, this.options);
+        if(!this.options.loadOnDemand) {
+          this.loadContent(this.content);
+        }
+        this.addEvent('down', function(){
+            this.content.addClass(this.options.activeTabClass);
+        }.bind(this));
+        this.addEvent('up', function(){
+            this.content.removeClass(this.options.activeTabClass);
+        }.bind(this));
+
+        //remove the close button if necessary
+        if (this.domClose) {
+            if (this.options.close) {
+                this.domObj.addClass('jxTabClose');
+                this.domClose.addEvent('click', (function(){
+                  var shouldClose = true;
+                  if ($defined(this.options.shouldClose)) {
+                    if (typeof this.options.shouldClose == 'function') {
+                      shouldClose = this.options.shouldClose();
+                    } else {
+                      shouldClose = this.options.shouldClose;
+                    }
+                  }
+                  if (shouldClose) {
+                    this.fireEvent('close');
+                  }
+                }).bind(this));
+            } else {
+                this.domClose.dispose();
+            }
+        }
+    },
+    /**
+     * APIMethod: clicked
+     * triggered when the user clicks the button, processes the
+     * actionPerformed event
+     */
+    clicked : function(evt) {
+      if(this.options.enabled) {
+        /*
+        if((!this.contentIsLoaded && this.options.loadOnDemand) ||
+             this.contentIsLoaded && !this.options.cacheContent ) {
+          this.loadContent(this.content);
+          this.addEvent('contentLoaded', function(ev) {
+            this.setBusy(false);
+            this.setActive(true);
+          }.bind(this));
+        }else{
+          this.setActive(true);
+        }
+        */
+        if(this.contentIsLoaded && this.options.cacheContent) {
+          this.setActive(true);
+        }else if(this.options.loadOnDemand || !this.options.cacheContent){
+          this.loadContent(this.content);
+          this.addEvent('contentLoaded', function(ev) {
+            //this.setBusy(false);
+            this.setActive(true);
+          }.bind(this));
+        }else{
+          this.setActive(true);
+        }
+      }
+    }
+});
+
+/* keep the old location temporarily */
+Jx.Button.Tab = new Class({
+  Extends: Jx.Tab,
+  init: function() {
+    if (console.warn) {
+      console.warn('WARNING: Jx.Button.Tab has been renamed to Jx.Tab');
+    } else {
+      console.log('WARNING: Jx.Button.Tab has been renamed to Jx.Tab');
+    }
+    this.parent();
+  }
+});// $Id: tabset.js 848 2010-04-16 12:43:31Z pagameba $
 /**
  * Class: Jx.TabSet
  *
  * Extends: <Jx.Object>
  *
- * A TabSet manages a set of <Jx.Button.Tab> content areas by ensuring that only one
+ * A TabSet manages a set of <Jx.Tab> content areas by ensuring that only one
  * of the content areas is visible (i.e. the active tab).  TabSet does not
- * manage the actual tabs.  The instances of <Jx.Button.Tab> that are to be managed
+ * manage the actual tabs.  The instances of <Jx.Tab> that are to be managed
  * as a set have to be added to both a TabSet and a <Jx.Toolbar>.  The content
- * areas of the <Jx.Button.Tab>s are sized to fit the content area that the TabSet
+ * areas of the <Jx.Tab>s are sized to fit the content area that the TabSet
  * is managing.
  *
  * Example:
@@ -31406,10 +35285,10 @@ Jx.Splitter.Snap = new Class({
  * var tabBar = new Jx.Toolbar('tabBar');
  * var tabSet = new Jx.TabSet('tabArea');
  *
- * var tab1 = new Jx.Button.Tab('tab 1', {contentID: 'content1'});
- * var tab2 = new Jx.Button.Tab('tab 2', {contentID: 'content2'});
- * var tab3 = new Jx.Button.Tab('tab 3', {contentID: 'content3'});
- * var tab4 = new Jx.Button.Tab('tab 4', {contentURL: 'test_content.html'});
+ * var tab1 = new Jx.Tab('tab 1', {contentID: 'content1'});
+ * var tab2 = new Jx.Tab('tab 2', {contentID: 'content2'});
+ * var tab3 = new Jx.Tab('tab 3', {contentID: 'content3'});
+ * var tab4 = new Jx.Tab('tab 4', {contentURL: 'test_content.html'});
  *
  * tabSet.add(t1, t2, t3, t4);
  * tabBar.add(t1, t2, t3, t4);
@@ -31472,15 +35351,15 @@ Jx.TabSet = new Class({
 
     /**
      * Method: add
-     * Add one or more <Jx.Button.Tab>s to the TabSet.
+     * Add one or more <Jx.Tab>s to the TabSet.
      *
      * Parameters:
      * tab - {<Jx.Tab>} an instance of <Jx.Tab> to add to the tab set.  More
      * than one tab can be added by passing extra parameters to this method.
      */
     add: function() {
-        $A(arguments).each(function(tab) {
-            if (tab instanceof Jx.Button.Tab) {
+        $A(arguments).flatten().each(function(tab) {
+            if (tab instanceof Jx.Tab) {
                 tab.addEvent('down',this.setActiveTabFn);
                 tab.tabSet = this;
                 this.domObj.appendChild(tab.content);
@@ -31502,7 +35381,7 @@ Jx.TabSet = new Class({
      * tab - {<Jx.Tab>} the tab to remove.
      */
     remove: function(tab) {
-        if (tab instanceof Jx.Button.Tab && this.tabs.indexOf(tab) != -1) {
+        if (tab instanceof Jx.Tab && this.tabs.indexOf(tab) != -1) {
             this.tabs.erase(tab);
             if (this.activeTab == tab) {
                 if (this.tabs.length) {
@@ -31518,7 +35397,7 @@ Jx.TabSet = new Class({
      * Set the active tab to the one passed to this method
      *
      * Parameters:
-     * tab - {<Jx.Button.Tab>} the tab to make active.
+     * tab - {<Jx.Tab>} the tab to make active.
      */
     setActiveTab: function(tab) {
         if (this.activeTab && this.activeTab != tab) {
@@ -31715,7 +35594,7 @@ Jx.Toolbar.Separator = new Class({
         this.domObj.appendChild(this.domSpan);
     }
 });
-// $Id: tree.js 626 2009-11-20 13:22:22Z pagameba $
+// $Id: tree.js 755 2010-03-15 03:09:37Z jonlb@comcast.net $
 /**
  * Class: Jx.Tree
  *
@@ -31736,6 +35615,7 @@ Jx.Tree = new Class({
     Family: 'Jx.Tree',
     Extends: Jx.Widget,
     parameters: ['options','container', 'selection'],
+    pluginNamespace: 'Tree',
     /**
      * APIProperty: selection
      * {<Jx.Selection>} the selection object for this tree.
@@ -32021,7 +35901,7 @@ Jx.Tree = new Class({
     }
 });
 
-// $Id: treeitem.js 626 2009-11-20 13:22:22Z pagameba $
+// $Id: treeitem.js 849 2010-04-16 13:27:45Z pagameba $
 /**
  * Class: Jx.TreeItem
  *
@@ -32091,7 +35971,10 @@ Jx.TreeItem = new Class ({
          */
         imageClass: '',
         lastLeafClass: 'jxTreeLeafLast',
-        template: '<li class="jxTreeContainer jxTreeLeaf"><img class="jxTreeImage" src="'+Jx.aPixel.src+'" alt="" title=""><a class="jxTreeItem" href="javascript:void(0);"><img class="jxTreeIcon" src="'+Jx.aPixel.src+'" alt="" title=""><span class="jxTreeLabel"></span></a></li>'
+        template: '<li class="jxTreeContainer jxTreeLeaf"><img class="jxTreeImage" src="'+Jx.aPixel.src+'" alt="" title=""><a class="jxTreeItem" href="javascript:void(0);"><img class="jxTreeIcon" src="'+Jx.aPixel.src+'" alt="" title=""><span class="jxTreeLabel"></span></a></li>',
+        busyMask: {
+			message: null
+		}
     },
     classes: new Hash({
         domObj: 'jxTreeContainer',
@@ -32111,7 +35994,9 @@ Jx.TreeItem = new Class ({
         this.domObj = this.elements.get('jxTreeContainer');
         this.domObj.store('jxTreeItem', this);
         this.domA.store('jxTreeItem', this);
-
+        if (this.options.contextMenu) {
+          this.domA.store('jxContextMenu', this.options.contextMenu);
+        }
         /* the target for jxPressed, jxSelected, jxHover classes */
         this.domObj.store('jxListTarget', this.domA);
 
@@ -32138,15 +36023,14 @@ Jx.TreeItem = new Class ({
         }
 
         if (this.options.label && this.domLabel) {
-            this.domLabel.set('html',this.options.label);
+            this.setLabel(this.options.label);
         }
 
         if (this.domA) {
             this.domA.addEvents({
                 click: this.click.bind(this),
                 dblclick: this.dblclick.bind(this),
-                drag: function(e) { e.stop(); },
-                contextmenu: function(e) { e.stop(); }
+                drag: function(e) { e.stop(); }
             });
             if (typeof Drag != 'undefined') {
                 new Drag(this.domA, {
@@ -32208,7 +36092,7 @@ Jx.TreeItem = new Class ({
      */
     select: function() {
         if (this.selection && this.options.enabled) {
-            this.selection.select(document.id(this));
+            this.selection.select(this.domA);
         }
     },
 
@@ -32230,7 +36114,7 @@ Jx.TreeItem = new Class ({
     setLabel: function(label) {
         this.options.label = label;
         if (this.domLabel) {
-            this.domLabel.set('html',label);
+            this.domLabel.set('html',this.getText(label));
         }
     },
 
@@ -32279,6 +36163,33 @@ Jx.TreeItem = new Class ({
     },
     setSelection: function(selection){
         this.selection = selection;
+    },
+    
+    /**
+     * APIMethod: setBusy
+     * set the busy state of the widget
+     *
+     * Parameters:
+     * busy - {Boolean} true to set the widget as busy, false to set it as
+     *    idle.
+     */
+    setBusy: function(state) {
+      if (this.busy == state) {
+        return;
+      }
+      this.busy = state;
+      this.fireEvent('busy', this.busy);
+      if (this.busy) {
+        this.domImg.addClass(this.options.busyClass)
+      } else {
+        if (this.options.busyClass) {
+          this.domImg.removeClass(this.options.busyClass);
+        }
+      }
+    },
+    changeText : function(lang) {
+      this.parent();
+      this.setLabel(this.options.label);
     }
 });
 // $Id: treefolder.js 626 2009-11-20 13:22:22Z pagameba $
@@ -32541,7 +36452,7 @@ Jx.TreeFolder = new Class({
         this.tree.setSelection(selection);
         return this;
     }
-});// $Id: slider.js 673 2009-12-24 23:13:40Z jonlb@comcast.net $
+});// $Id: slider.js 727 2010-03-04 14:04:04Z pagameba $
 /**
  * Class: Jx.Slider
  * This class wraps the mootools-more slider class to make it more Jx friendly
@@ -32664,14 +36575,24 @@ Jx.Slider = new Class({
             this.slider = new Slider(this.domObj, this.knob, this.sliderOpts);
         }
         this.slider.set(this.options.startAt);
+    },
+    /**
+     * APIMethod: set
+     * set the value of the slider
+     */
+    set: function(value) {
+      this.slider.set(value);
     }
-});// $Id: notice.js 649 2009-11-30 22:19:48Z pagameba $
+});// $Id: notice.js 776 2010-03-22 14:35:16Z pagameba $
 /**
  * Class: Jx.Notice
  *
  * Extends: <Jx.ListItem>
  *
  * Events:
+ * 
+ * MooTools.lang Keys:
+ * - notice.closeTip
  *
  * License:
  * Copyright (c) 2009, DM Solutions Group.
@@ -32684,10 +36605,32 @@ Jx.Notice = new Class({
     Extends: Jx.ListItem,
 
     options: {
+        /**
+         * Option: fx
+         * the effect to use on the notice when it is shown and hidden,
+         * 'fade' by default
+         */
         fx: 'fade',
+        /**
+         * Option: chrome
+         * {Boolean} should the notice be displayed with chrome or not,
+         * default is false
+         */
         chrome: false,
+        /**
+         * Option: enabled
+         * {Boolean} default is false
+         */
         enabled: true,
-        template: '<li class="jxNoticeItemContainer"><div class="jxNoticeItem"><span class="jxNotice"></span><a class="jxNoticeClose" href="javascript:void(0);" title="close this notice"></a></div></li>',
+        /**
+         * Option: template
+         * {String} the HTML template of a notice
+         */
+        template: '<li class="jxNoticeItemContainer"><div class="jxNoticeItem"><span class="jxNotice"></span><a class="jxNoticeClose" href="javascript:void(0);" title="' + MooTools.lang.get('Jx','notice').closeTip + '"></a></div></li>',
+        /**
+         * Option: klass
+         * {String} css class to add to the notice
+         */
         klass: ''
     },
 
@@ -32699,7 +36642,7 @@ Jx.Notice = new Class({
     }),
 
     /**
-     * APIMethod: render
+     * Method: render
      */
     render: function () {
         this.parent();
@@ -32711,11 +36654,17 @@ Jx.Notice = new Class({
             this.domClose.addEvent('click', this.close.bind(this));
         }
     },
-
+    /**
+     * APIMethod: close
+     * close the notice
+     */
     close: function() {
         this.fireEvent('close', this);
     },
-    
+    /**
+     * APIMethod: show
+     * show the notice
+     */
     show: function(el, onComplete) {
         if (this.options.chrome) {
             this.showChrome();
@@ -32728,7 +36677,10 @@ Jx.Notice = new Class({
             if (onComplete) onComplete();
         }
     },
-    
+    /**
+     * APIMethod: hide
+     * hide the notice
+     */
     hide: function(onComplete) {
         if (this.options.chrome) {
             this.hideChrome();
@@ -32742,38 +36694,63 @@ Jx.Notice = new Class({
         }
     }
 });
-
+/**
+ * Class: Jx.Notice.Information
+ * A <Jx.Notice> subclass useful for displaying informational messages
+ */
 Jx.Notice.Information = new Class({
     Extends: Jx.Notice,
     options: {
-        template: '<li class="jxNoticeItemContainer"><div class="jxNoticeItem"><img class="jxNoticeIcon" src="'+Jx.aPixel.src+'" title="Success"><span class="jxNotice"></span><a class="jxNoticeClose" href="javascript:void(0);" title="close this notice"></a></div></li>',
+        template: '<li class="jxNoticeItemContainer"><div class="jxNoticeItem"><img class="jxNoticeIcon" src="'+Jx.aPixel.src+'" title="Success"><span class="jxNotice"></span><a class="jxNoticeClose" href="javascript:void(0);" title="' + MooTools.lang.get('Jx','notice').closeTip + '"></a></div></li>',
         klass: 'jxNoticeInformation'
     }
 });
+/**
+ * Class: Jx.Notice.Success
+ * A <Jx.Notice> subclass useful for displaying success messages
+ */
 Jx.Notice.Success = new Class({
     Extends: Jx.Notice,
     options: {
-        template: '<li class="jxNoticeItemContainer"><div class="jxNoticeItem"><img class="jxNoticeIcon" src="'+Jx.aPixel.src+'" title="Success"><span class="jxNotice"></span><a class="jxNoticeClose" href="javascript:void(0);" title="close this notice"></a></div></li>',
+        template: '<li class="jxNoticeItemContainer"><div class="jxNoticeItem"><img class="jxNoticeIcon" src="'+Jx.aPixel.src+'" title="Success"><span class="jxNotice"></span><a class="jxNoticeClose" href="javascript:void(0);" title="' + MooTools.lang.get('Jx','notice').closeTip + '"></a></div></li>',
         klass: 'jxNoticeSuccess'
     }
 });
+/**
+ * Class: Jx.Notice.Success
+ * A <Jx.Notice> subclass useful for displaying warning messages
+ */
 Jx.Notice.Warning = new Class({
     Extends: Jx.Notice,
     options: {
-        template: '<li class="jxNoticeItemContainer"><div class="jxNoticeItem"><img class="jxNoticeIcon" src="'+Jx.aPixel.src+'" title="Warning"><span class="jxNotice"></span><a class="jxNoticeClose" href="javascript:void(0);" title="close this notice"></a></div></li>',
+        template: '<li class="jxNoticeItemContainer"><div class="jxNoticeItem"><img class="jxNoticeIcon" src="'+Jx.aPixel.src+'" title="Warning"><span class="jxNotice"></span><a class="jxNoticeClose" href="javascript:void(0);" title="' + MooTools.lang.get('Jx','notice').closeTip + '"></a></div></li>',
         klass: 'jxNoticeWarning'
     }
 });
+/**
+ * Class: Jx.Notice.Error
+ * A <Jx.Notice> subclass useful for displaying error messages
+ */
 Jx.Notice.Error = new Class({
     Extends: Jx.Notice,
     options: {
-        template: '<li class="jxNoticeItemContainer"><div class="jxNoticeItem"><img class="jxNoticeIcon" src="'+Jx.aPixel.src+'" title="Error"><span class="jxNotice"></span><a class="jxNoticeClose" href="javascript:void(0);" title="close this notice"></a></div></li>',
+        template: '<li class="jxNoticeItemContainer"><div class="jxNoticeItem"><img class="jxNoticeIcon" src="'+Jx.aPixel.src+'" title="Error"><span class="jxNotice"></span><a class="jxNoticeClose" href="javascript:void(0);" title="' + MooTools.lang.get('Jx','notice').closeTip + '"></a></div></li>',
         klass: 'jxNoticeError'
     }
 });
-
-
-
+// $Id: notifier.js 776 2010-03-22 14:35:16Z pagameba $
+/**
+ * Class: Jx.Notifier
+ *
+ * Extends: <Jx.ListView>
+ *
+ * Events:
+ *
+ * License:
+ * Copyright (c) 2009, DM Solutions Group.
+ *
+ * This file is licensed under an MIT style license
+ */
 Jx.Notifier = new Class({
     
     Family: 'Jx.Notifier',
@@ -32805,10 +36782,10 @@ Jx.Notifier = new Class({
         listObj: 'jxNoticeList'
     }),
     
-    init: function () {
-        this.parent();
-    },
-    
+    /**
+     * Method: render
+     * render the widget
+     */
     render: function () {
         this.parent();
         
@@ -32826,6 +36803,13 @@ Jx.Notifier = new Class({
         }.bind(this));
     },
     
+    /**
+     * APIMethod: add
+     * Add a new notice to the notifier
+     *
+     * Parameters:
+     * notice - {<Jx.Notice>} the notice to add
+     */
     add: function (notice) {
         if (!(notice instanceof Jx.Notice)) {
             notice = new Jx.Notice({content: notice});
@@ -32834,36 +36818,89 @@ Jx.Notifier = new Class({
         notice.show(this.listObj);
     },
     
+    /**
+     * APIMethod: remove
+     * Add a new notice to the notifier
+     *
+     * Parameters:
+     * notice - {<Jx.Notice>} the notice to remove
+     */
     remove: function (notice) {
         if (this.domObj.hasChild(notice)) {
             notice.removeEvents('close');
             notice.hide();
         }
     }
-});Jx.Notifier.Float = new Class({
+});// $Id: notifier.float.js 776 2010-03-22 14:35:16Z pagameba $
+/**
+ * Class: Jx.Notice.Float
+ * A floating notice area for displaying notices, notices get chrome if
+ * the notifier has chrome
+ *
+ * Extends: <Jx.Notifier>
+ *
+ * Events:
+ *
+ * License:
+ * Copyright (c) 2009, DM Solutions Group.
+ *
+ * This file is licensed under an MIT style license
+ */
+Jx.Notifier.Float = new Class({
     
     Family: 'Jx.Notifier.Float',
     Extends: Jx.Notifier,
     
     options: {
+        /**
+         * Option: chrome
+         * {Boolean} should the notifier have chrome - default true
+         */
         chrome: true,
+        /**
+         * Option: fx
+         * {String} the effect to use when showing and hiding the notifier,
+         * default is null
+         */
         fx: null,
+        /**
+         * Option: width
+         * {Integer} the width in pixels of the notifier, default is 250
+         */
         width: 250,
+        /**
+         * Option: position
+         * {Object} position options to use with <Jx.Widget::position>
+         * for positioning the Notifier
+         */
         position: {
             horizontal: 'center center',
             vertical: 'top top'
         }
     },
 
+    /**
+     * Method: render
+     * render the widget
+     */
     render: function () {
         this.parent();
         this.domObj.setStyle('position','absolute');
         if ($defined(this.options.width)) {
             this.domObj.setStyle('width',this.options.width);
         }
-        this.position(this.domObj, this.options.parent, this.options.position);
+        this.position(this.domObj, 
+                      this.options.parent,
+                      this.options.position);
     },
     
+    /**
+     * APIMethod: add
+     * Add a new notice to the notifier
+     *
+     * Parameters:
+     * notice - {<Jx.Notice>} the notice to add
+     */
     add: function(notice) {
         if (!(notice instanceof Jx.Notice)) {
             notice = new Jx.Notice({content: notice});
@@ -32871,7 +36908,7 @@ Jx.Notifier = new Class({
         notice.options.chrome = this.options.chrome;
         this.parent(notice);
     }
-});// $Id$
+});// $Id: scrollbar.js 776 2010-03-22 14:35:16Z pagameba $
 /**
  * Class: Jx.Scrollbar
  * Creates a custom scrollbar either vertically or horizontally (determined by
@@ -32880,7 +36917,8 @@ Jx.Notifier = new Class({
  * Copyright 2009 by Jonathan Bomgardner
  * License: MIT-style
  * 
- * Based in part on 'Mootools CSS Styled Scrollbar' on http://solutoire.com/2008/03/10/mootools-css-styled-scrollbar/
+ * Based in part on 'Mootools CSS Styled Scrollbar' on
+ * http://solutoire.com/2008/03/10/mootools-css-styled-scrollbar/
  */
 Jx.Scrollbar = new Class({
     
@@ -32888,9 +36926,11 @@ Jx.Scrollbar = new Class({
     
     Extends: Jx.Widget,
     
+    Binds: ['scrollIt'],
+    
     options: {
         /**
-         * Option: bars
+         * Option: direction
          * Determines which bars are visible. Valid options are 'horizontal'
          * or 'vertical'
          */
@@ -32912,7 +36952,10 @@ Jx.Scrollbar = new Class({
          * useScrollers option must be true. Default is 50 (px).
          */
         scrollerInterval: 50,
-        
+        /**
+         * Option: template
+         * the HTML template for a scrollbar
+         */
         template: '<div class="jxScrollbarContainer"><div class="jxScrollLeft"></div><div class="jxSlider"></div><div class="jxScrollRight"></div></div>'
     },
     
@@ -32927,15 +36970,15 @@ Jx.Scrollbar = new Class({
     //element is the element we want to scroll. 
     parameters: ['element', 'options'],
     
+    /**
+     * Method: render
+     * render the widget
+     */
     render: function () {
-        
         this.parent();
-        
         this.el = document.id(this.options.element);
-        
         if (this.el) {
             this.el.addClass('jxHas'+this.options.direction.capitalize()+'Scrollbar');
-            
             
             //wrap content to make scroll work correctly
             var children = this.el.getChildren();
@@ -32966,7 +37009,7 @@ Jx.Scrollbar = new Class({
                 max: this.steps,
                 step: 1,
                 mode: this.options.direction,
-                onChange: this.scrollIt.bind(this)
+                onChange: this.scrollIt
                 
             });
             
@@ -33017,11 +37060,7 @@ Jx.Scrollbar = new Class({
                     this.sliderHolder.setStyle('height', holderSize + 'px');
                 }
             }
-            
-            
-            
             document.id(this.slider).inject(this.sliderHolder);
-            
             
             //allows mouse wheel to function
             if (this.options.useMouseWheel) {
@@ -33038,11 +37077,13 @@ Jx.Scrollbar = new Class({
             }.bind(this));
 
             this.slider.start();
-            
-            
         }
     },
     
+    /**
+     * Method: scrollIt
+     * scroll the content in response to the slider being moved.
+     */
     scrollIt: function (step) {
         var x = this.options.direction==='horizontal'?step:0;
         var y = this.options.direction==='horizontal'?0:step;
@@ -33075,7 +37116,7 @@ Jx.Formatter = new Class({
      * the needed formatting functionality.
      */
     format: $empty
-});// $Id: number.js 649 2009-11-30 22:19:48Z pagameba $
+});// $Id: number.js 770 2010-03-18 21:12:28Z jonlb@comcast.net $
 /**
  * Class: Jx.Formatter.Number
  *
@@ -33091,6 +37132,10 @@ Jx.Formatter = new Class({
  * Example:
  * (code)
  * (end)
+ * 
+ * MooTools.lang Keys:
+ * - 'formatter.number'.decimalSeparator
+ * - 'formatter.number'.thousandsSeparator
  *
  * License:
  * Copyright (c) 2009, Jon Bomgardner.
@@ -33102,16 +37147,6 @@ Jx.Formatter.Number = new Class({
     Extends: Jx.Formatter,
 
     options: {
-        /**
-         * Option: decimalSeparator
-         * Character to use as the decimal separator
-         */
-        decimalSeparator: '.',
-        /**
-         * Option: thousandSeparator
-         * Character to use as the thousands separator
-         */
-        thousandsSeparator: ',',
         /**
          * Option: precision
          * The number of decimal places to round to
@@ -33169,11 +37204,11 @@ Jx.Formatter.Number = new Class({
             for (var i = 0; i < l; i++) {
                 ret = ret + main.charAt(i);
                 if (i === left - 1 && i !== l - 1) {
-                    ret = ret + this.options.thousandsSeparator;
+                    ret = ret + MooTools.lang.get('Jx','formatter.number').thousandsSeparator;
                 } else if (i >= left) {
                     j++;
                     if (j === 3 && i !== l - 1) {
-                        ret = ret + this.options.thousandsSeparator;
+                        ret = ret + MooTools.lang.get('Jx','formatter.number').thousandsSeparator;
                         j = 0;
                     }
                 }
@@ -33184,7 +37219,7 @@ Jx.Formatter.Number = new Class({
         }
 
         if (dec) {
-            ret = ret + this.options.decimalSeparator + parts[1];
+            ret = ret + MooTools.lang.get('Jx','formatter.number').decimalSeparator + parts[1];
         }
         if (neg && this.options.useParens) {
             ret = "(" + ret + ")";
@@ -33193,8 +37228,21 @@ Jx.Formatter.Number = new Class({
         }
 
         return ret;
+    },
+    
+    /**
+     * APIMethod: changeText
+     * This method should be overridden by subclasses. It should be used
+     * to change any language specific default text that is used by the widget.
+     * 
+     * Parameters:
+     * lang - the language being changed to or that had it's data set of 
+     * 		translations changed.
+     */
+    changeText: function (lang) {
+    	this.parent();
     }
-});// $Id: currency.js 649 2009-11-30 22:19:48Z pagameba $
+});// $Id: currency.js 770 2010-03-18 21:12:28Z jonlb@comcast.net $
 /**
  * Class: Jx.Formatter.Currency
  *
@@ -33207,6 +37255,9 @@ Jx.Formatter.Number = new Class({
  * Example:
  * (code)
  * (end)
+ * 
+ * MooTools.lang Keys:
+ * - 'formatter.currency'.sign
  *
  * License:
  * Copyright (c) 2009, Jon Bomgardner.
@@ -33217,14 +37268,7 @@ Jx.Formatter.Currency = new Class({
 
     Extends: Jx.Formatter.Number,
 
-    options: {
-        /**
-         * Option: sign
-         * The sign to use for this currency. Defaults to
-         * the US '$'.
-         */
-        sign: "$"
-    },
+    options: {},
     /**
      * APIMethod: format
      * Takes a number and formats it as currency.
@@ -33246,12 +37290,25 @@ Jx.Formatter.Currency = new Class({
 
         var ret;
         if (neg && !this.options.useParens) {
-            ret = "-" + this.options.sign + value.substring(1, value.length);
+            ret = "-" + MooTools.lang.get('Jx','formatter.currency').sign + value.substring(1, value.length);
         } else {
-            ret = this.options.sign + value;
+            ret = MooTools.lang.get('Jx','formatter.currency').sign + value;
         }
 
         return ret;
+    },
+    
+    /**
+     * APIMethod: changeText
+     * This method should be overridden by subclasses. It should be used
+     * to change any language specific default text that is used by the widget.
+     * 
+     * Parameters:
+     * lang - the language being changed to or that had it's data set of 
+     * 		translations changed.
+     */
+    changeText: function (lang) {
+    	this.parent();
     }
 });// $Id: date.js 649 2009-11-30 22:19:48Z pagameba $
 /**
@@ -33296,7 +37353,7 @@ Jx.Formatter.Date = new Class({
         var d = Date.parse(value);
         return d.format(this.options.format);
     }
-});// $Id: $
+});// $Id: uri.js 767 2010-03-17 19:35:02Z pagameba $
 /**
  * Class: Jx.Formatter.URI
  *
@@ -33361,7 +37418,7 @@ Jx.Formatter.Uri = new Class({
       }
       return this.options.format.substitute(uriContent);
     }
-});// $Id: boolean.js 649 2009-11-30 22:19:48Z pagameba $
+});// $Id: boolean.js 770 2010-03-18 21:12:28Z jonlb@comcast.net $
 /**
  * Class: Jx.Formatter.Boolean
  *
@@ -33374,6 +37431,10 @@ Jx.Formatter.Uri = new Class({
  * (code)
  * (end)
  *
+ * MooTools.lang Keys:
+ * - 'formatter.boolean'.true
+ * - 'formatter.boolean'.false
+ * 
  * License:
  * Copyright (c) 2009, Jon Bomgardner.
  *
@@ -33383,18 +37444,7 @@ Jx.Formatter.Boolean = new Class({
 
     Extends: Jx.Formatter,
 
-    options: {
-        /**
-         * Option: true
-         * The text to display for true values
-         */
-        'true': 'Yes',
-        /**
-         * Option: false
-         * The text to display for false values
-         */
-        'false': 'No'
-    },
+    options: {},
     /**
      * APIMethod: format
      * Takes a value, determines boolean equivalent and
@@ -33423,7 +37473,20 @@ Jx.Formatter.Boolean = new Class({
         default:
             b = true;
         }
-        return b ? this.options['true'] : this.options['false'];
+        return b ? MooTools.lang.get('Jx','formatter.boolean')['true'] : MooTools.lang.get('Jx','formatter.boolean')['false'];
+    },
+    
+    /**
+     * APIMethod: changeText
+     * This method should be overridden by subclasses. It should be used
+     * to change any language specific default text that is used by the widget.
+     * 
+     * Parameters:
+     * lang - the language being changed to or that had it's data set of 
+     * 		translations changed.
+     */
+    changeText: function (lang) {
+    	this.parent();
     }
 
 });// $Id: phone.js 649 2009-11-30 22:19:48Z pagameba $
@@ -33496,147 +37559,7 @@ Jx.Formatter.Phone = new Class({
         ret = ret + v.substring(0, 3) + sep + v.substring(3);
         return ret;
     }
-});// $Id: fieldset.js 649 2009-11-30 22:19:48Z pagameba $
-/**
- * Class: Jx.Fieldset
- *
- * Extends: <Jx.Widget>
- *
- * This class represents a fieldset. It can be used to group fields together.
- *
- * Example:
- * (code)
- * (end)
- *
- * License:
- * Copyright (c) 2009, Jon Bomgardner.
- *
- * This file is licensed under an MIT style license
- *
- */
-Jx.Fieldset = new Class({
-    Family: 'Jx.Fieldset',
-    Extends : Jx.Widget,
-
-    options : {
-        /**
-         * Option: legend
-         * The text for the legend of a fieldset. Default is null
-         * or no legend.
-         */
-        legend : null,
-        /**
-         * Option: id
-         * The id to assign to this element
-         */
-        id : null,
-        /**
-         * Option: fieldsetClass
-         * A CSS class to assign to the fieldset. Useful for custom styling of
-         * the element
-         */
-        fieldsetClass : null,
-        /**
-         * Option: legendClass
-         * A CSS class to assign to the legend. Useful for custom styling of
-         * the element
-         */
-        legendClass : null,
-        /**
-         * Option: template
-         * a template for how this element should be rendered
-         */
-        template : '<fieldset class="jxFieldset"><legend><span class="jxFieldsetLegend"></span></legend></fieldset>',
-        /**
-         * Option: form
-         * The <Jx.Form> that this fieldset should be added to
-         */
-        form : null
-    },
-
-    classes: new Hash({
-        domObj: 'jxFieldset',
-        legend: 'jxFieldsetLegend'
-    }),
-
-    /**
-     * Property: legend
-     * a holder for the legend Element
-     */
-    legend : null,
-
-    /**
-     * APIMethod: render
-     * Creates a fieldset.
-     */
-    render : function () {
-        this.parent();
-
-        this.id = this.options.id;
-
-        if ($defined(this.options.form)
-                && this.options.form instanceof Jx.Form) {
-            this.form = this.options.form;
-        }
-
-        //FIELDSET
-        if (this.domObj) {
-            if ($defined(this.options.id)) {
-                this.domObj.set('id', this.options.id);
-            }
-            if ($defined(this.options.fieldsetClass)) {
-                this.domObj.addClass(this.options.fieldsetClass);
-            }
-        }
-
-        if (this.legend) {
-            if ($defined(this.options.legend)) {
-                this.legend.set('html', this.options.legend);
-                if ($defined(this.options.legendClass)) {
-                    this.legend.addClass(this.options.legendClass);
-                }
-            } else {
-                this.legend.destroy();
-            }
-        }
-    },
-    /**
-     * APIMethod: add
-     * Adds fields to this fieldset
-     *
-     * Parameters:
-     * pass as many fields to this method as you like. They should be
-     * <Jx.Field> objects
-     */
-    add : function () {
-        var field;
-        for (var x = 0; x < arguments.length; x++) {
-            field = arguments[x];
-            //add form to the field and field to the form if not already there
-            if (!$defined(field.form) && $defined(this.form)) {
-                field.form = this.form;
-                this.form.addField(field);
-            }
-            this.domObj.grab(field);
-        }
-        return this;
-    },
-    
-    /**
-     * APIMethod: addTo
-     *
-     */
-    addTo: function(what) {
-        if (what instanceof Jx.Form) {
-            this.form = what;
-        } else if (what instanceof Jx.Fieldset) {
-            this.form = what.form;
-        }
-        return this.parent(what);
-    }
-    
-});
-// $Id: checkbox.js 681 2010-01-15 05:45:28Z jonlb@comcast.net $
+});// $Id: checkbox.js 859 2010-04-20 21:34:00Z jonlb@comcast.net $
 /**
  * Class: Jx.Field.Check
  *
@@ -33693,7 +37616,7 @@ Jx.Field.Checkbox = new Class({
                     sibling = this.field.getPrevious();
                 }
                 this.field.setStyle('visibility','hidden');
-                this.field.inject($(document.body));
+                this.field.inject(document.id(document.body));
                 this.field.checked = true;
                 this.field.defaultChecked = true;
                 this.field.dispose();
@@ -33707,6 +37630,13 @@ Jx.Field.Checkbox = new Class({
                 this.field.set("checked", "checked");
                 this.field.set("defaultChecked", "checked");
             }
+        }
+
+        // add click event to the label to toggle the checkbox
+        if(this.label) {
+          this.label.addEvent('click', function(ev) {
+            this.setValue(this.getValue() != null ? false : true)
+          }.bind(this));
         }
     },
 
@@ -33752,10 +37682,14 @@ Jx.Field.Checkbox = new Class({
         } else {
             this.field.erase('checked');
         }
+    },
+
+    getChecked: function () {
+        return this.field.get("checked");
     }
 
 });
-// $Id: radio.js 681 2010-01-15 05:45:28Z jonlb@comcast.net $
+// $Id: radio.js 826 2010-03-31 18:46:16Z pagameba $
 /**
  * Class: Jx.Field.Radio
  *
@@ -33811,7 +37745,7 @@ Jx.Field.Radio = new Class({
                     sibling = this.field.getPrevious();
                 }
                 this.field.setStyle('visibility','hidden');
-                this.field.inject($(document.body));
+                this.field.inject(document.id(document.body));
                 this.field.checked = true;
                 this.field.defaultChecked = true;
                 this.field.dispose();
@@ -33876,7 +37810,7 @@ Jx.Field.Radio = new Class({
 
 
 
-// $Id: select.js 681 2010-01-15 05:45:28Z jonlb@comcast.net $
+// $Id: select.js 836 2010-04-12 13:41:45Z pagameba $
 /**
  * Class: Jx.Field.Select
  *
@@ -33912,18 +37846,33 @@ Jx.Field.Select = new Class({
 
     options: {
         /**
+         * Option: multiple
+         * {Boolean} optional, defaults to false.  If true, then the select
+         * will support multi-select
+         */
+        mulitple: false,
+        /**
+         * Option: size
+         * {Integer} optional, defaults to 1.  If set, then this specifies
+         * the number of rows of the select that are visible
+         */
+        size: 1,
+        /**
          * Option: comboOpts
-         * Optional, defaults to null. if not null, this should be an array of objects
-         * formated like [{value:'', selected: true|false, text:''},...]
+         * Optional, defaults to null. if not null, this should be an array of
+         * objects formated like [{value:'', selected: true|false,
+         * text:''},...]
          */
         comboOpts: null,
         /**
          * Option: optGroups
-         * Optional, defaults to null. if not null this should be an array of objects
-         * defining option groups for this select. The comboOpts and optGroups options
-         * are mutually exclusive. optGroups will always be shown if defined.
+         * Optional, defaults to null. if not null this should be an array of
+         * objects defining option groups for this select. The comboOpts and
+         * optGroups options are mutually exclusive. optGroups will always be
+         * shown if defined.
          *
-         * define them like [{name: '', options: [{value:'', selected: '', text: ''}...]},...]
+         * define them like [{name: '', options: [{value:'', selected: '',
+         * text: ''}...]},...]
          */
         optGroups: null,
         /**
@@ -33945,6 +37894,12 @@ Jx.Field.Select = new Class({
     render: function () {
         this.parent();
         this.field.addEvent('change', function() {this.fireEvent('change', this);}.bind(this));
+        if ($defined(this.options.multiple)) {
+          this.field.set('multiple', this.options.multiple);
+        }
+        if ($defined(this.options.size)) {
+          this.field.set('size', this.options.size);
+        }
         if ($defined(this.options.optGroups)) {
             this.options.optGroups.each(function(group){
                 var gr = new Element('optGroup');
@@ -34155,6 +38110,18 @@ Jx.Field.Button = new Class({
 
     options: {
         /**
+         * Option: buttonClass
+         * choose the actual Jx.Button subclass to create for this form
+         * field.  The default is to create a basic Jx.Button.  To create
+         * a different kind of button, pass the class to this option, for
+         * instance:
+         * (code)
+         * buttonClass: Jx.Button.Color
+         * (end)
+         */
+        buttonClass: Jx.Button,
+        
+        /**
          * Option: buttonOptions
          */
         buttonOptions: {},
@@ -34175,7 +38142,7 @@ Jx.Field.Button = new Class({
 
     processTemplate: function(template, classes, container) {
         var h = this.parent(template, classes, container);
-        this.button = new Jx.Button(this.options.buttonOptions);
+        this.button = new this.options.buttonClass(this.options.buttonOptions);
         var c = h.get('jxInputButton');
         if (c) {
             this.button.domObj.replaces(c);
@@ -34185,6 +38152,242 @@ Jx.Field.Button = new Class({
     
     click: function() {
         this.button.clicked();
+    }
+});// $Id: jxcombo.js 877 2010-04-25 21:54:03Z jonlb@comcast.net $
+/**
+ * Class: Jx.Field.Combo
+ *
+ * Extends: <Jx.Field>
+ *
+ *
+ * Example:
+ * (code)
+ * (end)
+ *
+ * Events:
+ * change - 
+ *
+ * License:
+ * Copyright (c) 2008, DM Solutions Group Inc.
+ *
+ * This file is licensed under an MIT style license
+ */
+Jx.Field.Combo = new Class({
+    Family: 'Jx.Field.Combo',
+    Extends: Jx.Field,
+    pluginNamespace: 'Combo',
+
+    options: {
+        buttonTemplate: '<a class="jxButtonContainer jxButton" href="javascript:void(0);"><img class="jxButtonIcon" src="'+Jx.aPixel.src+'"></a>',
+        /* Option: template
+         */
+         template: '<span class="jxInputContainer"><label class="jxInputLabel"></label><span class="jxInputWrapper"><input type="text" class="jxInputCombo"  name="{name}"><img class="jxInputIcon" src="'+Jx.aPixel.src+'"><span class="jxInputRevealer"></span></span><span class="jxInputTag"></span></span>'
+     },
+     
+     type: 'Combo',
+     
+    /**
+     * APIMethod: render
+     * create a new instance of Jx.Field.Combo
+     */
+    render: function() {
+        this.classes.combine({
+          wrapper: 'jxInputWrapper',
+          revealer: 'jxInputRevealer',
+          icon: 'jxInputIcon'
+        });
+        this.parent();
+        
+        var button = new Jx.Button({
+          template: this.options.buttonTemplate,
+          imageClass: 'jxInputRevealerIcon'
+        }).addTo(this.revealer);
+
+        this.menu = new Jx.Menu();
+        this.menu.button = button;
+        this.buttonSet = new Jx.ButtonSet();
+
+        this.buttonSet = new Jx.ButtonSet({
+            onChange: (function(set) {
+                var button = set.activeButton;
+                var l = button.options.label;
+                if (l == '&nbsp;') {
+                    l = '';
+                }
+                this.setLabel(l);
+                var img = button.options.image;
+                if (img.indexOf('a_pixel') != -1) {
+                    img = '';
+                }
+                this.setImage(img, button.options.imageClass);
+
+                this.fireEvent('change', this);
+            }).bind(this)
+        });
+        if (this.options.items) {
+            this.add(this.options.items);
+        }
+        button.addEvent('click', function(e) {
+            if (this.list.count() === 0) {
+                return;
+            }
+            if (!button.options.enabled) {
+                return;
+            }
+            this.contentContainer.setStyle('visibility','hidden');
+            this.contentContainer.setStyle('display','block');
+            document.id(document.body).adopt(this.contentContainer);
+            /* we have to size the container for IE to render the chrome correctly
+             * but just in the menu/sub menu case - there is some horrible peekaboo
+             * bug in IE related to ULs that we just couldn't figure out
+             */
+            this.contentContainer.setContentBoxSize(this.subDomObj.getMarginBoxSize());
+
+            this.showChrome(this.contentContainer);
+
+            this.position(this.contentContainer, this.button.domObj, {
+                horizontal: ['right right'],
+                vertical: ['bottom top', 'top bottom'],
+                offsets: this.chromeOffsets
+            });
+
+            this.contentContainer.setStyle('visibility','');
+
+            document.addEvent('mousedown', this.hide);
+            document.addEvent('keyup', this.keypressHandler);
+
+            this.fireEvent('show', this);
+        }.bindWithEvent(this.menu));
+
+        this.menu.addEvents({
+            'show': (function() {
+                //this.setActive(true);
+            }).bind(this),
+            'hide': (function() {
+                //this.setActive(false);
+            }).bind(this)
+        });
+        
+        this.addEvent('change', function(){
+          window.console ? console.log('on change detected') : false;
+        })
+    },
+    
+    setLabel: function(label) {
+      if ($defined(this.field)) {
+        this.field.value = this.getText(label);
+      }
+    },
+    
+    setImage: function(url, imageClass) {
+      if ($defined(this.icon)) {
+        this.icon.setStyle('background-image', 'url('+url+')');
+        this.icon.setStyle('background-repeat', 'no-repeat');
+
+        if (this.options.imageClass) {
+            this.icon.removeClass(this.options.imageClass);
+        }
+        if (imageClass) {
+            this.options.imageClass = imageClass;
+            this.icon.addClass(imageClass);
+            this.icon.setStyle('background-position','');
+        } else {
+            this.options.imageClass = null;
+            this.icon.setStyle('background-position','center center');
+        }
+      }
+      if (!url) {
+        this.wrapper.addClass('jxInputIconHidden');
+      } else {
+        this.wrapper.removeClass('jxInputIconHidden');
+      }
+    },
+
+    /**
+     * Method: valueChanged
+     * invoked when the current value is changed
+     */
+    valueChanged: function() {
+        this.fireEvent('change', this);
+    },
+
+    setValue: function(value) {
+        this.field.set('value', value);
+        this.buttonSet.buttons.each(function(button){
+          button.setActive(button.options.label === value);
+        },this);
+    },
+
+    /**
+     * Method: onKeyPress
+     * Handle the user pressing a key by looking for an ENTER key to set the
+     * value.
+     *
+     * Parameters:
+     * e - {Event} the keypress event
+     */
+    onKeyPress: function(e) {
+        if (e.key == 'enter') {
+            this.valueChanged();
+        }
+    },
+
+    /**
+     * Method: add
+     * add a new item to the pick list
+     *
+     * Parameters:
+     * options - {Object} object with properties suitable to be passed to
+     * a <Jx.Menu.Item.Options> object.  More than one options object can be
+     * passed, comma separated or in an array.
+     */
+    add: function() {
+        $A(arguments).flatten().each(function(opt) {
+            var button = new Jx.Menu.Item($merge(opt,{
+                toggle: true
+            }));
+            this.menu.add(button);
+            this.buttonSet.add(button);
+            if (opt.selected) {
+              this.buttonSet.setActiveButton(button);
+            }
+        }, this);
+    },
+
+    /**
+     * Method: remove
+     * Remove the item at the given index.  Not implemented.
+     *
+     * Parameters:
+     * idx - {Mixed} the item to remove by reference or by index.
+     */
+    remove: function(idx) {
+      var item;
+      if ($type(idx) == 'number' && idx < this.buttonSet.buttons.length) {
+        item = this.buttonSet.buttons[idx];
+      } else if ($type(idx) == 'string'){
+        this.buttonSet.buttons.some(function(button){
+            if (button.options.label === idx) {
+                item = button;
+                return true;
+            }
+            return false;
+        },this);
+      }
+      if (item) {
+        this.buttonSet.remove(item);
+        this.menu.remove(item);
+      }
+    },
+    /**
+     * APIMethod: empty
+     * remove all values from the combo
+     */
+    empty: function() {
+      this.menu.empty();
+      this.buttonSet.empty();
+      this.setLabel('');
+      this.setImage(Jx.aPixel.src);
     }
 });// $Id: password.js 649 2009-11-30 22:19:48Z pagameba $
 /**
@@ -34212,4 +38415,166 @@ Jx.Field.Password = new Class({
     },
 
     type: 'Password'
-});
+});/**
+ * Class: Jx.Field.Color
+ *
+ * Extends: <Jx.Field>
+ *
+ * This class provides a Jx.Field.Text in combination with a Jx.Button.Color
+ * to have a Colorpicker with an input field.
+ *
+ * License:
+ * Copyright (c) 2010, Paul Spener, Fred Warnock, Conrad Barthelmes
+ *
+ * This file is licensed under an MIT style license
+ */
+  Jx.Field.Color = new Class({
+    Extends: Jx.Field,
+    Binds: ['changed','hide','keyup','changeText'],
+    type: 'Color',
+    options: {
+      buttonTemplate: '<a class="jxButtonContainer jxButton" href="javascript:void(0);"><img class="jxButtonIcon" src="'+Jx.aPixel.src+'"></a>',
+      /**
+       * Option: template
+       * The template used to render this field
+       */
+      template: '<span class="jxInputContainer"><label class="jxInputLabel"></label><span class="jxInputWrapper"><input type="text" class="jxInputColor"  name="{name}"><img class="jxInputIcon" src="'+Jx.aPixel.src+'"><span class="jxInputRevealer"></span></span><span class="jxInputTag"></span></span>',
+      /**
+       * Option: showOnHover
+       * {Boolean} show the color palette when hovering over the input, default 
+       * is false
+       */
+      showOnHover: false,
+      /**
+       *  Option: showDelay
+       *  set time in milliseconds when to show the color field on mouseenter
+       */
+      showDelay: 250,
+      /**
+       * Option: errorMsg
+       * error message for the validator.
+       */
+      errorMsg: 'Invalid Web-Color',
+      /**
+       * Option: color
+       * a color to initialize the field with, defaults to #000000
+       * (black) if not specified.
+       */
+      color: '#000000'
+
+    },
+    button: null,
+    validator: null,
+    render: function() {
+        this.classes.combine({
+          wrapper: 'jxInputWrapper',
+          revealer: 'jxInputRevealer',
+          icon: 'jxInputIcon'
+        });
+        this.parent();
+
+      var self = this;
+      if (!Jx.Field.Color.ColorPalette) {
+          Jx.Field.Color.ColorPalette = new Jx.ColorPalette(this.options);
+      }
+      this.button = new Jx.Button.Flyout({
+          template: this.options.buttonTemplate,
+          imageClass: 'jxInputRevealerIcon',
+          onBeforeOpen: function() {
+            if (Jx.Field.Color.ColorPalette.currentButton) {
+                Jx.Field.Color.ColorPalette.currentButton.hide();
+            }
+            Jx.Field.Color.ColorPalette.currentButton = this;
+            Jx.Field.Color.ColorPalette.addEvent('change', self.changed);
+            Jx.Field.Color.ColorPalette.addEvent('click', self.hide);
+            this.content.appendChild(Jx.Field.Color.ColorPalette.domObj);
+            Jx.Field.Color.ColorPalette.domObj.setStyle('display', 'block');
+          },
+          onOpen: function() {
+            /* setting these before causes an update problem when clicking on
+             * a second color button when another one is open - the color
+             * wasn't updating properly
+             */
+            Jx.Field.Color.ColorPalette.options.color = self.options.color;
+            Jx.Field.Color.ColorPalette.updateSelected();
+          }
+        }).addTo(this.revealer);
+
+      this.validator = new Jx.Plugin.Field.Validator({
+        validators: [{
+            validatorClass: 'colorHex',
+            validator: {
+              name: 'colorValidator',
+              options: {
+                validateOnChange: false,
+                errorMsg: self.options.errorMsg,
+                test: function(field,props) {
+                  try {
+                    var c = field.get('value').hexToRgb(true);
+                    if(c == null) return false;
+                    for(var i = 0; i < 3; i++) {
+                      if(c[i].toString() == 'NaN') {
+                        return false;
+                      }
+                    }
+                  }catch(e) {
+                    return false;
+                  }
+                  c = c.rgbToHex().toUpperCase();
+                  self.setColor(c);
+                  return true;
+                }
+              }
+            }
+        }],
+        validateOnBlur: true,
+        validateOnChange: true
+      });
+      this.validator.attach(this);
+      this.field.addEvent('keyup', this.onKeyUp.bind(this));
+      if (this.options.showOnHover) {
+        this.field.addEvent('mouseenter', function(ev) {
+          self.button.clicked.delay(self.options.showDelay, self.button);
+        });
+      }
+      this.setValue(this.options.color);
+      this.icon.setStyle('background-color', this.options.color);
+      //this.addEvent('change', self.changed);
+    },
+    /*
+     * Method: onKeyUp
+     *
+     * listens to the keyup event and validates the input for a hex color
+     *
+     */
+    onKeyUp : function(ev) {
+      var color = this.getValue();
+      if (color.substring(0,1) == '#') {
+          color = color.substring(1);
+      }
+      if (color.toLowerCase().match(/^[0-9a-f]{6}$/)) {
+          this.options.color = '#' +color.toUpperCase();
+          this.setColor(this.options.color);
+      }
+    },
+    setColor: function(c) {
+        this.options.color = c;
+        this.setValue(c);
+        this.icon.setStyle('background-color', c);
+    },
+    changed: function() {
+        var c = Jx.Field.Color.ColorPalette.options.color;
+        this.setColor(c);
+    },
+    hide: function() {
+        this.button.setActive(false);
+        Jx.Field.Color.ColorPalette.removeEvent('change', this.changed);
+        Jx.Field.Color.ColorPalette.removeEvent('click', this.hide);
+
+        this.button.hide();
+        Jx.Field.Color.ColorPalette.currentButton = null;
+    },
+    changeText: function(lang) {
+      this.parent();
+    }
+  });
