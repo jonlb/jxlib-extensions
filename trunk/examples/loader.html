@@ -1,0 +1,36 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Jx.Dialog.Wizard Example</title>
+
+    <!-- need to load up the options first, then load the loader -->
+    <script type="text/javascript" src="options.js"></script>
+    <script type="text/javascript" src="../loader/loader.php?file[]=loader&compress=false&allDeps=true&clearSession=true"></script>
+
+    <!--
+    <script type="text/javascript" src="../deps/mootools-more.js"></script>
+    <script type="text/javascript" src="../deps/jxlib.standalone.uncompressed.js"></script>
+    <link href="../deps/themes/crispin/jxtheme.uncompressed.css" type="text/css" rel="stylesheet" media="screen, projection" />
+    <link href="../" type="text/css" rel="stylesheet" media="screen, projection" />
+    <script type="text/javascript" src="../build/lib/jxlib-extensions.uncompressed.js"></script>
+    -->
+
+    <script type="text/javascript">
+        $uses(['Jx.form'],function(){
+            if ($defined(Jx.Form)) {
+                console.log('Good to go!');
+            } else {
+                console.log('Something is amiss!');
+            }
+        });
+    </script>
+
+    <style>
+
+    </style>
+</head>
+<body>
+
+</body>
+</html>
