@@ -77,9 +77,9 @@ J.Bomgardner    April 5, 2009   initial version copied from jx project
   <property name="deploy.home" value="${basedir}/www"/>
   <property name="docs.home" value="${basedir}/www/reference"/>
 
-  <property name="deps.core" value="${basedir}/../../jxlib/branches/jon-moo1.3-experimental/vendor/mootools-core/"/>
-  <property name="deps.more" value="${basedir}/../../jxlib/branches/jon-moo1.3-experimental/vendor/mootools-more/"/>
-  <property name="deps.jxlib" value="${basedir}/../../jxlib/branches/jon-moo1.3-experimental/src"/>
+  <property name="deps.core" value="${basedir}/../../jxlib/trunk/vendor/mootools-core/"/>
+  <property name="deps.more" value="${basedir}/../../jxlib/trunk/vendor/mootools-more/"/>
+  <property name="deps.jxlib" value="${basedir}/../../jxlib/trunk/src"/>
 <!-- ==================== External Dependencies =========================== -->
 
 <!--
