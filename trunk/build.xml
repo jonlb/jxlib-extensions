@@ -76,10 +76,11 @@ J.Bomgardner    April 5, 2009   initial version copied from jx project
   <property name="dist.home" value="${basedir}/dist"/>
   <property name="deploy.home" value="${basedir}/www"/>
   <property name="docs.home" value="${basedir}/www/reference"/>
+  <property name="examples" value="${basedir}/examples"/>
 
-  <property name="deps.core" value="${basedir}/../../jxlib/trunk/vendor/mootools-core/"/>
-  <property name="deps.more" value="${basedir}/../../jxlib/trunk/vendor/mootools-more/"/>
-  <property name="deps.jxlib" value="${basedir}/../../jxlib/trunk/src"/>
+  <property name="deps.core" value="${basedir}/../../../jxlib/trunk/vendor/mootools-core/current"/>
+  <property name="deps.more" value="${basedir}/../../../jxlib/trunk/vendor/mootools-more/current"/>
+  <property name="deps.jxlib" value="${basedir}/../../../jxlib/trunk/src"/>
 <!-- ==================== External Dependencies =========================== -->
 
 <!--
@@ -253,25 +254,37 @@ J.Bomgardner    April 5, 2009   initial version copied from jx project
 
   <target description="Copy all files to repos" name="repos">
       <!-- Call build files in all other projects -->
-      <delete dir="${basedir}/repos"/>
-      <mkdir dir="${basedir}/repos" />
-      <mkdir dir="${basedir}/repos/core" />
-      <mkdir dir="${basedir}/repos/more" />
-      <mkdir dir="${basedir}/repos/jxlib" />
-      <mkdir dir="${basedir}/repos/jxlibext" />
-      <copy todir="${basedir}/repos/core">
+      <delete dir="${examples}/repos"/>
+      <mkdir dir="${examples}/repos" />
+      <mkdir dir="${examples}/repos/core" />
+      <mkdir dir="${examples}/repos/more" />
+      <mkdir dir="${examples}/repos/jxlib" />
+      <mkdir dir="${examples}/repos/jxlibext" />
+      <mkdir dir="${examples}/repos/app" />
+      <copy todir="${examples}/repos/core">
           <fileset dir="${deps.core}" includes="**"/>
       </copy>
-      <copy todir="${basedir}/repos/more">
+      <copy todir="${examples}/repos/more">
           <fileset dir="${deps.more}" includes="**"/>
       </copy>
-      <copy todir="${basedir}/repos/jxlib">
+      <copy todir="${examples}/repos/jxlib">
           <fileset dir="${deps.jxlib}" includes="Source/** images/** themes/**"/>
       </copy>
-      <copy todir="${basedir}/repos/jxlibext">
+      <copy todir="${examples}/repos/jxlibext">
           <fileset dir="${basedir}" includes="Source/** css/**"/>
       </copy>
-
+      <copy todir="${examples}/loader">
+          <fileset dir="${basedir}/loader/src" includes="**" excludes="config.php loader.js"/>
+      </copy>
+      <copy todir="${examples}/repos/app">
+          <fileset dir="${basedir}/loader/example/repos/app" includes="Source/**" />
+      </copy>
+      <copy todir="${examples}/repos/app/Source">
+          <fileset file="${basedir}/loader/loader.js" />
+      </copy>
+      <copy todir="${examples}/">
+          <fileset dir="${basedir}/loader/example/" includes="grid.html options.js" />
+      </copy>
   </target>
 
 </project>
