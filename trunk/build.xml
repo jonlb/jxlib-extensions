@@ -279,9 +279,11 @@ J.Bomgardner    April 5, 2009   initial version copied from jx project
       <copy todir="${examples}/repos/app">
           <fileset dir="${basedir}/loader/example/repos/app" includes="Source/**" />
       </copy>
+      <echo message="loader.js"/>
       <copy todir="${examples}/repos/app/Source">
-          <fileset file="${basedir}/loader/loader.js" />
+          <fileset dir="${basedir}/loader/src/" includes="loader.js" />
       </copy>
+      <echo message="grid.html options.js"/>
       <copy todir="${examples}/">
           <fileset dir="${basedir}/loader/example/" includes="grid.html options.js" />
       </copy>
