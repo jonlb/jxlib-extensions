@@ -274,14 +274,14 @@ J.Bomgardner    April 5, 2009   initial version copied from jx project
           <fileset dir="${basedir}" includes="Source/** css/**"/>
       </copy>
       <copy todir="${examples}/loader">
-          <fileset dir="${basedir}/loader/src" includes="**" excludes="config.php loader.js"/>
+          <fileset dir="${basedir}/loader/src" includes="**" excludes="config.php loader.js option.page.js"/>
       </copy>
       <copy todir="${examples}/repos/app">
-          <fileset dir="${basedir}/loader/example/repos/app" includes="Source/**" />
+          <fileset dir="${basedir}/loader/example/repos/app" includes="Source/** css/**" />
       </copy>
       <echo message="loader.js"/>
       <copy todir="${examples}/repos/app/Source">
-          <fileset dir="${basedir}/loader/src/" includes="loader.js" />
+          <fileset dir="${basedir}/loader/src/" includes="loader.js option.page.js" />
       </copy>
       <echo message="grid.html options.js"/>
       <copy todir="${examples}/">

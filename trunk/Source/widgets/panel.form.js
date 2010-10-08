@@ -125,6 +125,13 @@ Jx.Panel.Form = new Class({
             }
         },this);
     },
+
+    add: function(options) {
+        if (Jx.type(options) !== 'array') {
+            options = [options];
+        }
+        this.addFields(this.form,options)
+    },
     
     fieldPassed: function (field, validator) {
         if (this.notices.has(field.id)) {
