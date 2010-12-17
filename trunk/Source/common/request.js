@@ -84,19 +84,8 @@ Jx.Request = new Class({
 		
 		//flags
 		debug: false,
-		showLoading: {
-            el: null,
-            opts: {
-                baseHref: '',
-                img: {
-                    src: '/images/load.gif',
-                    styles: {
-                        width: 16,
-                        height: 16
-                    }
-                }
-            }
-        },
+		showLoading: false,
+        loadingObject: null,
 		
 			
 		//options
@@ -111,7 +100,7 @@ Jx.Request = new Class({
 	},
 	
 	/**
-	 * Method: init
+	 * Method: initRequest
 	 * Function used to initialize the mootools request object for this request.
 	 * 
 	 * Parameters:
@@ -120,7 +109,7 @@ Jx.Request = new Class({
 	 * returns: 
 	 * A hash including the options and the request
 	 */
-	init: function (options) {
+	initRequest: function (options) {
 		
 		//merge the passed options with the base options
 		var opts = $merge(this.options, options);
@@ -235,19 +224,10 @@ Jx.Request = new Class({
 		var d;
 			
 		if ($defined(data)) {
-            var type = $type(data);
-            if (type !== 'hash') {
-                d = new Hash(data);
-            } else {
-                d = data;
-            }
+            d = ($type(data) === 'hash') ? data : new Hash(data);
         } else {
             if ($type(options) === 'hash') {
-                if (!options.has('data')) {
-                    d = new Hash();
-                } else {
-                    d = options.get('data');
-                }
+                d = options.has('data') ? options.get('data') : new Hash();
             } else {
                 d = new Hash();
             }
@@ -256,7 +236,7 @@ Jx.Request = new Class({
 		var req;
 		if ($type(options) !== 'hash') {
 		    options.data = d;
-			req = this.init(options);
+			req = this.initRequest(options);
 			req.set('data', d);
 		} else {
 			req = options;
