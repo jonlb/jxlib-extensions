@@ -82,12 +82,14 @@ Jx.Adaptor.ListView.Fill = new Class({
         var maxRecords = this.store.count();
         if (maxRecords > 0) {
             for (var i = 0; i < maxRecords; i++) {
-                var template = this.store.fillTemplate(this.store.getRecord(i), this.options.template, this.columnsNeeded);
+                var record = this.store.getRecord(i);
+                var template = this.store.fillTemplate(record, this.options.template, this.columnsNeeded);
                 var o = {label: template};
-                var theTemplate = this.store.fillTemplate(this.store.getRecord(i), this.options.itemTemplate, this.columnsNeeded, o);
+                var theTemplate = this.store.fillTemplate(record, this.options.itemTemplate, this.columnsNeeded, o);
                 var item = new Jx.ListItem({template:theTemplate});
                 document.id(item).store('storeId',i);
                 items.push(item);
+                this.fireEvent('itemCreated', [item,record]);
             }
         } else {
             var template = "<li class='jxListItemContainer'><a class='jxListItem' href='javascript:void(0);'><span class='itemLabel'>{label}</span></a></li>";

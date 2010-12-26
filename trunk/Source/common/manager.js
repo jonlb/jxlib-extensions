@@ -69,6 +69,7 @@ Jx.Manager = new Class({
 			id = el.options.id;
 		} else {
 			id = this.generateId('jx-'+this.options.type+'-');
+            el.id = id;
 		}
 		
 		this.list.include(id,el);
